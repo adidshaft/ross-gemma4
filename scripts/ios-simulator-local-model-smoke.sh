@@ -218,6 +218,11 @@ if [[ -n "$draft_model_path" && ! -e "$draft_model_path" ]]; then
   exit 2
 fi
 
+if [[ "$require_draft_acceleration" == "1" && -z "$draft_model_path" ]]; then
+  echo "Draft acceleration proof requires --draft-model so identity cannot pass with draft_model=nil." >&2
+  exit 2
+fi
+
 if [[ -z "$pack_id" ]]; then
   if [[ "$model_path" == "system-model" ]]; then
     pack_id="simulator-system-model-smoke"

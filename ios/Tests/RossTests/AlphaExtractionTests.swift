@@ -6516,6 +6516,21 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testRuntimeHealthShowsConfiguredGGUFDraftAcceleration() throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 0 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .draftModelSpeculative }
+            func executionPathLabel() -> String { "Gemma GGUF with draft acceleration" }
+        }
+
         let mainURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-gguf-main-\(UUID().uuidString)")
             .appendingPathExtension("gguf")
@@ -6529,11 +6544,14 @@ final class AlphaExtractionTests: XCTestCase {
             try? FileManager.default.removeItem(at: draftURL)
         }
 
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
         let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
         let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in StubLlamaContext() }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
         AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in true }
         defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
             AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
             AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
         }
@@ -6565,6 +6583,21 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testRuntimeHealthSuppressesInvalidGGUFDraftAccelerationClaim() throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 0 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
         let mainURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-gguf-main-invalid-draft-\(UUID().uuidString)")
             .appendingPathExtension("gguf")
@@ -6578,11 +6611,14 @@ final class AlphaExtractionTests: XCTestCase {
             try? FileManager.default.removeItem(at: draftURL)
         }
 
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
         let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
         let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in StubLlamaContext() }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
         AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in false }
         defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
             AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
             AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
         }

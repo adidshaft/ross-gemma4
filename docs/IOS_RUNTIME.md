@@ -21,6 +21,7 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 - The cabled-device smoke helpers fail a run if a pass marker arrives without `ROSS_RUNTIME_IDENTITY`, or if the requested runtime does not match the actual runtime reported by the app. MLX/CoreAI/MTP numbers must not be recorded from a GGUF identity marker.
 - `scripts/ios-device-installed-pack-smoke.sh` also preflights the selected manifest before launching the app: MLX requires `artifactKind=mlx_directory`, GGUF requires a GGUF/local-model artifact kind, and Apple Foundation/CoreAI requires a system/foundation/CoreAI/CoreML adapter kind. This prevents an impossible manifest/runtime pair from consuming a device benchmark slot.
 - MTP proof requires `--require-draft-acceleration` plus an identity marker with `acceleration=draftModelSpeculative`, non-`nil` `draft_tokens`, and non-`nil` `draft_model`. The `mtp_quick` smoke profile exists for a short, low-output validation pass; it is not a long stress benchmark.
+- Simulator MTP proof also requires `--draft-model`; the helper now fails before launch if `--require-draft-acceleration` is requested without a draft artifact path. As of June 19, 2026, the local repo scan only found the main simulator GGUF and the 12B GGUF artifact, not a usable draft GGUF, so no new simulator MTP acceleration number is claimed from this checkpoint.
 - `docs/REAL_MODEL_QA_RESULTS.md` records the June 2, 2026 simulator GGUF smoke:
   - runtime: `gemma_local_runtime`
   - tier: `quick_start`
