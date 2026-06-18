@@ -438,8 +438,7 @@ struct AlphaExpectedDownloadedAssistantArtifact {
 func alphaPackUsesSystemFoundationModel(_ pack: AlphaInstalledModelPack) -> Bool {
     pack.runtimeMode == .appleFoundationModels &&
         (
-            pack.artifactKind == "system_model" ||
-                pack.installPath == "system-model" ||
+            pack.installPath == "system-model" ||
                 pack.installPath.hasPrefix("system://")
         )
 }

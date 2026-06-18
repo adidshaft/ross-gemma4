@@ -90,6 +90,11 @@ if ! grep -q "alphaPackUsesSystemFoundationModel" ios/Ross/AlphaFoundation/Alpha
     FAIL=1
 fi
 
+if ! grep -q 'artifactKind=system_model only with model path system-model' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator CoreAI system-model path preflight missing."
+    FAIL=1
+fi
+
 if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1

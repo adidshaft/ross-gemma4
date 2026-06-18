@@ -18995,6 +18995,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotEqual(health?.modelPathLabel, "system-model")
     }
 
+    func testRuntimeHealthDoesNotTreatFileBackedSystemKindAsBuiltInFoundationModel() {
+        let pack = AlphaInstalledModelPack(
+            packId: "caseAssociate-mislabeled-system-pack",
+            tier: .caseAssociate,
+            installPath: "model-packs/caseAssociate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            isActive: true
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.mlmodelc")
+        XCTAssertNotEqual(health?.modelPathLabel, "system-model")
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+    }
+
     func testRuntimeHealthRedactsConfiguredModelPathToBasename() {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let environment = AlphaLocalRuntimeEnvironment(

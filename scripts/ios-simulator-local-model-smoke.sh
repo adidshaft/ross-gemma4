@@ -222,6 +222,14 @@ case "$normalized_runtime" in
         exit 2
         ;;
     esac
+    if [[ "$artifact_kind" == "system_model" && "$model_path" != "system-model" ]]; then
+      echo "CoreAI/CoreML simulator smoke uses artifactKind=system_model only with model path system-model, got: $model_path" >&2
+      exit 2
+    fi
+    if [[ "$artifact_kind" != "system_model" && "$model_path" == "system-model" ]]; then
+      echo "CoreAI/CoreML adapter smoke requires an adapter path, not system-model, for artifactKind=$artifact_kind" >&2
+      exit 2
+    fi
     if [[ "$model_path" != "system-model" && ! -e "$model_path" ]]; then
       echo "CoreAI/CoreML adapter path not found: $model_path" >&2
       exit 2

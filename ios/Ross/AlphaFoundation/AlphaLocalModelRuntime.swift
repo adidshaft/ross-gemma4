@@ -3157,7 +3157,8 @@ enum AlphaLocalModelRuntime {
         case .appleFoundationModels:
             #if canImport(FoundationModels)
             if #available(iOS 26.0, macOS 26.0, *) {
-                let usesSystemModel = activePack?.artifactKind == "system_model" || modelPath == "system-model"
+                let usesSystemModel = modelPath == "system-model" ||
+                    activePack.map { alphaPackUsesSystemFoundationModel($0) } == true
                 return AlphaFoundationModelsLocalProvider(
                     capabilityTier: tier,
                     modelPathLabel: usesSystemModel ? "system-model" : (modelPathLabel ?? "system-model"),
@@ -3192,7 +3193,10 @@ enum AlphaLocalModelRuntime {
         guard let activePack else { return nil }
         switch activePack.runtimeMode {
         case .appleFoundationModels:
-            guard usesBundledAdapterArtifact(activePack) else { return nil }
+            if alphaPackUsesSystemFoundationModel(activePack) {
+                return nil
+            }
+            guard usesBundledAdapterArtifact(activePack) || activePack.artifactKind == "system_model" else { return nil }
         case .mediapipeLlm, .llamaCppGguf, .mlxSwiftLm:
             break
         case .deterministicDev, .unavailable:
