@@ -1668,12 +1668,51 @@ func alphaCurrentDeviceModelIdentifier(
 }
 
 struct AlphaPrivateAIDeviceProofProfile: Hashable, Sendable {
+    let captureSource: AlphaPrivateAIDeviceProofCaptureSource
     let deviceModelLabel: String
     let systemVersionLabel: String
     let memoryGB: Int
+    let representativeClass: AlphaPrivateAIDeviceProofRepresentativeClass
     let freeStorageGB: Int
     let lowPowerModeEnabled: Bool
     let thermalCondition: String
+}
+
+enum AlphaPrivateAIDeviceProofCaptureSource: Hashable, Sendable {
+    case simulator
+    case physicalIPhone
+    case physicalAppleDevice
+
+    var localizedLabel: String {
+        switch self {
+        case .simulator:
+            return rossLocalized("private_assistant_device_capture_source_simulator")
+        case .physicalIPhone:
+            return rossLocalized("private_assistant_device_capture_source_physical_iphone")
+        case .physicalAppleDevice:
+            return rossLocalized("private_assistant_device_capture_source_physical_device")
+        }
+    }
+}
+
+enum AlphaPrivateAIDeviceProofRepresentativeClass: Hashable, Sendable {
+    case simulatorOnly
+    case belowTarget
+    case class8GB
+    case class12GBOrHigher
+
+    var localizedLabel: String {
+        switch self {
+        case .simulatorOnly:
+            return rossLocalized("private_assistant_device_representative_class_simulator_only")
+        case .belowTarget:
+            return rossLocalized("private_assistant_device_representative_class_below_target")
+        case .class8GB:
+            return rossLocalized("private_assistant_device_representative_class_8gb")
+        case .class12GBOrHigher:
+            return rossLocalized("private_assistant_device_representative_class_12gb")
+        }
+    }
 }
 
 func alphaCurrentOperatingSystemName() -> String {
@@ -1693,6 +1732,38 @@ func alphaCurrentOperatingSystemLabel(
     "\(operatingSystemName) \(operatingSystemVersion.majorVersion).\(operatingSystemVersion.minorVersion).\(operatingSystemVersion.patchVersion)"
 }
 
+func alphaCurrentPrivateAIDeviceProofCaptureSource(
+    environment: [String: String] = ProcessInfo.processInfo.environment,
+    deviceModelLabel: String? = nil
+) -> AlphaPrivateAIDeviceProofCaptureSource {
+    if let simulatorIdentifier = environment["SIMULATOR_MODEL_IDENTIFIER"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !simulatorIdentifier.isEmpty {
+        return .simulator
+    }
+
+    let modelLabel = (deviceModelLabel ?? alphaCurrentDeviceModelIdentifier(environment: environment)).lowercased()
+    if modelLabel.hasPrefix("iphone") {
+        return .physicalIPhone
+    }
+    return .physicalAppleDevice
+}
+
+func alphaPrivateAIDeviceProofRepresentativeClass(
+    memoryGB: Int,
+    captureSource: AlphaPrivateAIDeviceProofCaptureSource
+) -> AlphaPrivateAIDeviceProofRepresentativeClass {
+    guard captureSource != .simulator else {
+        return .simulatorOnly
+    }
+    if memoryGB >= 12 {
+        return .class12GBOrHigher
+    }
+    if memoryGB >= 8 {
+        return .class8GB
+    }
+    return .belowTarget
+}
+
 func alphaCurrentPrivateAIDeviceProofProfile(
     environment: [String: String] = ProcessInfo.processInfo.environment,
     operatingSystemName: String = alphaCurrentOperatingSystemName(),
@@ -1702,13 +1773,24 @@ func alphaCurrentPrivateAIDeviceProofProfile(
     lowPowerMode: Bool = alphaCurrentLowPowerMode(),
     thermalCondition: String = alphaCurrentThermalCondition()
 ) -> AlphaPrivateAIDeviceProofProfile {
-    AlphaPrivateAIDeviceProofProfile(
-        deviceModelLabel: alphaCurrentDeviceModelIdentifier(environment: environment),
+    let deviceModelLabel = alphaCurrentDeviceModelIdentifier(environment: environment)
+    let captureSource = alphaCurrentPrivateAIDeviceProofCaptureSource(
+        environment: environment,
+        deviceModelLabel: deviceModelLabel
+    )
+    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
+    return AlphaPrivateAIDeviceProofProfile(
+        captureSource: captureSource,
+        deviceModelLabel: deviceModelLabel,
         systemVersionLabel: alphaCurrentOperatingSystemLabel(
             operatingSystemName: operatingSystemName,
             operatingSystemVersion: operatingSystemVersion
         ),
-        memoryGB: max(2, Int(physicalMemoryBytes / 1_073_741_824)),
+        memoryGB: memoryGB,
+        representativeClass: alphaPrivateAIDeviceProofRepresentativeClass(
+            memoryGB: memoryGB,
+            captureSource: captureSource
+        ),
         freeStorageGB: freeStorageGB,
         lowPowerModeEnabled: lowPowerMode,
         thermalCondition: thermalCondition
@@ -3492,9 +3574,11 @@ func alphaMatterBundleComparisonExportBodyLines(
     if let deviceProofProfile {
         lines.append("")
         lines.append(rossLocalized("private_assistant_device_profile_title"))
+        lines.append("  \(rossLocalized("private_assistant_device_capture_source_label")): \(deviceProofProfile.captureSource.localizedLabel)")
         lines.append("  \(rossLocalized("private_assistant_device_model_label")): \(deviceProofProfile.deviceModelLabel)")
         lines.append("  \(rossLocalized("private_assistant_device_system_label")): \(deviceProofProfile.systemVersionLabel)")
         lines.append("  \(rossLocalized("private_assistant_device_memory_label")): \(deviceProofProfile.memoryGB) GB")
+        lines.append("  \(rossLocalized("private_assistant_device_representative_class_label")): \(deviceProofProfile.representativeClass.localizedLabel)")
         lines.append("  \(rossLocalized("private_assistant_device_storage_label")): \(deviceProofProfile.freeStorageGB) GB")
         lines.append("  \(rossLocalized("private_assistant_device_low_power_label")): \(deviceProofProfile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))")
         lines.append("  \(rossLocalized("private_assistant_device_thermal_label")): \(deviceProofProfile.thermalCondition)")

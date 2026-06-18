@@ -21,7 +21,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Support details now surface a small comparison readout from the latest per-runtime runs, including current leaders on first response, token speed, and visible coverage
 - hidden iOS Support details now also show a single per-runtime device-proof coverage summary, combining whether each lane already has sample-file evidence, longer-bundle evidence, or both
 - hidden iOS Support details now also spell out the exact next device runs still needed from that coverage summary, so the resume path no longer has to be reconstructed by hand
-- hidden iOS Support details now also stamp a small device-proof profile with model identifier, OS version, memory class, storage, and device condition so saved evidence is tied to the actual iPhone class that produced it
+- hidden iOS Support details now also stamp a small device-proof profile with capture source, model identifier, OS version, representative memory class, storage, and device condition so saved evidence is tied more clearly to the actual proof target that produced it
 - hidden iOS Support details now also summarize whether CoreAI, MLX, and GGUF are active now, ready now, need setup, need repair, or are unavailable on the current iPhone before the next proof run starts
 - hidden iOS Support details can now save the current multi-runtime comparison set into `Notes & Drafts` as a local PDF note, so device QA evidence is easier to keep and share without exposing it in the main flow
 
@@ -67,6 +67,7 @@ Most recent commits that define this pause point:
 - hidden iOS Support details now turn those remaining gaps into ordered next-step guidance in both the hidden view and the exported device note
 - hidden iOS Support details can now export the current comparison evidence set straight into `Notes & Drafts` for later device-proof handoff, including the latest per-runtime sample-file readiness snapshot and the current iPhone proof profile
 - hidden iOS device-proof note now also includes current lane readiness, so the saved artifact shows which runtime lanes were actually runnable on that iPhone at capture time
+- hidden iOS device-proof profile now explicitly says whether the evidence came from a simulator or a physical device and whether it counts as below-target, 8 GB class, or 12 GB+ class evidence
 
 Most recent verification commands:
 

@@ -4695,12 +4695,37 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             thermalCondition: "Nominal"
         )
 
+        XCTAssertEqual(profile.captureSource, .simulator)
         XCTAssertEqual(profile.deviceModelLabel, "iPhone17,2")
         XCTAssertEqual(profile.systemVersionLabel, "iOS 26.4.1")
         XCTAssertEqual(profile.memoryGB, 8)
+        XCTAssertEqual(profile.representativeClass, .simulatorOnly)
         XCTAssertEqual(profile.freeStorageGB, 28)
         XCTAssertFalse(profile.lowPowerModeEnabled)
         XCTAssertEqual(profile.thermalCondition, "Nominal")
+    }
+
+    func testPrivateAIDeviceProofProfileClassifiesPhysicalIPhoneMemoryTargets() {
+        let physicalIPhoneCaptureSource = alphaCurrentPrivateAIDeviceProofCaptureSource(
+            environment: [:],
+            deviceModelLabel: "iPhone17,2"
+        )
+
+        XCTAssertEqual(physicalIPhoneCaptureSource, .physicalIPhone)
+        XCTAssertEqual(
+            alphaPrivateAIDeviceProofRepresentativeClass(
+                memoryGB: 8,
+                captureSource: physicalIPhoneCaptureSource
+            ),
+            .class8GB
+        )
+        XCTAssertEqual(
+            alphaPrivateAIDeviceProofRepresentativeClass(
+                memoryGB: 12,
+                captureSource: physicalIPhoneCaptureSource
+            ),
+            .class12GBOrHigher
+        )
     }
 
     func testPrivateAIRuntimeLaneReadinessStatusesDescribeActiveReadySetupAndRepair() {
@@ -5073,9 +5098,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             )
         ]
         let deviceProofProfile = AlphaPrivateAIDeviceProofProfile(
+            captureSource: .physicalIPhone,
             deviceModelLabel: "iPhone17,2",
             systemVersionLabel: "iOS 26.4.1",
             memoryGB: 8,
+            representativeClass: .class8GB,
             freeStorageGB: 28,
             lowPowerModeEnabled: false,
             thermalCondition: "Nominal"
@@ -5097,9 +5124,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertTrue(joined.contains("Private assistant runtime comparison note"))
         XCTAssertTrue(joined.contains("Device proof profile"))
+        XCTAssertTrue(joined.contains("Capture source: Physical iPhone"))
         XCTAssertTrue(joined.contains("Device model: iPhone17,2"))
         XCTAssertTrue(joined.contains("System version: iOS 26.4.1"))
         XCTAssertTrue(joined.contains("Memory: 8 GB"))
+        XCTAssertTrue(joined.contains("Representative class: 8 GB class"))
         XCTAssertTrue(joined.contains("Runtime lane readiness"))
         XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Needs setup"))

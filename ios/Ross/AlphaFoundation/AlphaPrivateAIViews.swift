@@ -896,9 +896,17 @@ private struct AlphaPrivateAIDeviceProofProfileSection: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.rossInk)
 
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_device_capture_source_label"),
+                value: profile.captureSource.localizedLabel
+            )
             AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_model_label"), value: profile.deviceModelLabel)
             AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_system_label"), value: profile.systemVersionLabel)
             AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_memory_label"), value: "\(profile.memoryGB) GB")
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_device_representative_class_label"),
+                value: profile.representativeClass.localizedLabel
+            )
             AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_storage_label"), value: "\(profile.freeStorageGB) GB")
             AlphaSettingsValueRow(
                 label: rossLocalized("private_assistant_device_low_power_label"),

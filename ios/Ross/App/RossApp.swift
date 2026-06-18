@@ -3060,11 +3060,39 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "Device proof profile"
         ],
         "private_assistant_device_profile_note": [
-            "en": "Use this to confirm the saved note came from the intended iPhone memory class and OS version.",
-            "hi": "इससे confirm करें कि saved note intended iPhone memory class और OS version से आया है.",
-            "bn": "এটি দিয়ে confirm করুন যে saved note intended iPhone memory class এবং OS version থেকেই এসেছে.",
-            "ta": "saved note intended iPhone memory class மற்றும் OS version-இலிருந்துதான் வந்தது என்பதை இதனால் confirm செய்யவும்.",
-            "te": "saved note intended iPhone memory class మరియు OS version నుంచే వచ్చిందో దీతో confirm చేయండి."
+            "en": "Use this to confirm the saved note came from the intended device type, memory class, and OS version.",
+            "hi": "इससे confirm करें कि saved note intended device type, memory class और OS version से आया है.",
+            "bn": "এটি দিয়ে confirm করুন যে saved note intended device type, memory class এবং OS version থেকেই এসেছে.",
+            "ta": "saved note intended device type, memory class மற்றும் OS version-இலிருந்துதான் வந்தது என்பதை இதனால் confirm செய்யவும்.",
+            "te": "saved note intended device type, memory class మరియు OS version నుంచే వచ్చిందో దీతో confirm చేయండి."
+        ],
+        "private_assistant_device_capture_source_label": [
+            "en": "Capture source",
+            "hi": "Capture source",
+            "bn": "Capture source",
+            "ta": "Capture source",
+            "te": "Capture source"
+        ],
+        "private_assistant_device_capture_source_simulator": [
+            "en": "Simulator",
+            "hi": "Simulator",
+            "bn": "Simulator",
+            "ta": "Simulator",
+            "te": "Simulator"
+        ],
+        "private_assistant_device_capture_source_physical_iphone": [
+            "en": "Physical iPhone",
+            "hi": "Physical iPhone",
+            "bn": "Physical iPhone",
+            "ta": "Physical iPhone",
+            "te": "Physical iPhone"
+        ],
+        "private_assistant_device_capture_source_physical_device": [
+            "en": "Physical Apple device",
+            "hi": "Physical Apple device",
+            "bn": "Physical Apple device",
+            "ta": "Physical Apple device",
+            "te": "Physical Apple device"
         ],
         "private_assistant_device_model_label": [
             "en": "Device model",
@@ -3086,6 +3114,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Memory",
             "ta": "Memory",
             "te": "Memory"
+        ],
+        "private_assistant_device_representative_class_label": [
+            "en": "Representative class",
+            "hi": "Representative class",
+            "bn": "Representative class",
+            "ta": "Representative class",
+            "te": "Representative class"
+        ],
+        "private_assistant_device_representative_class_simulator_only": [
+            "en": "Simulator only",
+            "hi": "Simulator only",
+            "bn": "Simulator only",
+            "ta": "Simulator only",
+            "te": "Simulator only"
+        ],
+        "private_assistant_device_representative_class_below_target": [
+            "en": "Below 8 GB target",
+            "hi": "Below 8 GB target",
+            "bn": "Below 8 GB target",
+            "ta": "Below 8 GB target",
+            "te": "Below 8 GB target"
+        ],
+        "private_assistant_device_representative_class_8gb": [
+            "en": "8 GB class",
+            "hi": "8 GB class",
+            "bn": "8 GB class",
+            "ta": "8 GB class",
+            "te": "8 GB class"
+        ],
+        "private_assistant_device_representative_class_12gb": [
+            "en": "12 GB+ class",
+            "hi": "12 GB+ class",
+            "bn": "12 GB+ class",
+            "ta": "12 GB+ class",
+            "te": "12 GB+ class"
         ],
         "private_assistant_device_storage_label": [
             "en": "Free storage",
