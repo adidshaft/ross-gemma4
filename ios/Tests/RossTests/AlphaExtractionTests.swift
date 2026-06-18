@@ -20950,6 +20950,42 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.warnings, [AlphaLocalModelWarningCopy.assistantCouldNotFinish])
     }
 
+    @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderReportsMissingAdapterArtifactBeforeGeneration() async {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            XCTFail("Missing CoreAI/CoreML adapter should fail before generation.")
+            return AlphaFoundationModelsGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "missing-coreml-adapter.mlmodelc",
+            modelPath: "/tmp/private/device/debug/missing-coreml-adapter.mlmodelc",
+            checksumVerified: true
+        )
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+    }
+
     func testModelInvocationStorePreservesMeasuredTokenPrecisionFlag() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

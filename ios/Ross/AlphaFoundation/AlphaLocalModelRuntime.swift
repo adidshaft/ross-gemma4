@@ -2778,6 +2778,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             sourceExcerptChars: taskInput.sourceExcerptCharsOverride
         ).build(input: taskInput)
         guard let model = try? resolvedModel(), Self.modelAvailabilityProbe(model) else {
+            let status = availabilityStatus()
             return AlphaLocalModelOutput(
                 rawText: "",
                 parsedJson: nil,
@@ -2787,7 +2788,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: promptPack.includedSourceRefs.count,
                 omittedSourceCount: promptPack.omittedSourceRefs.count,
                 omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
-                errorCategory: "unsupported_runtime_on_platform"
+                errorCategory: status.lastErrorCategory ?? "unsupported_runtime_on_platform"
             )
         }
 
