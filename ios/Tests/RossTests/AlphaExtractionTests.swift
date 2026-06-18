@@ -7013,14 +7013,14 @@ final class AlphaExtractionTests: XCTestCase {
                     displayName: "Gemma 4 12B MLX",
                     tier: .caseAssociate,
                     sizeBytes: 11_020_138_609,
-                    checksumSha256: "66730766ab582aaf9cea04dd8c0cbca931686a6b7395396b0c686678557c3dc2",
+                    checksumSha256: "c13638bb7068b40b95d4c977de1de1bc3952bdcca6b6f54f51b2692e0f07f7c1",
                     artifactKind: "mlx_directory",
                     runtimeMode: .mlxSwiftLm,
                     developmentOnly: false,
                     draftArtifact: AlphaBackendCatalogDraftArtifact(
                         fileName: "gemma-4-12B-it-qat-assistant-4bit",
                         sizeBytes: 270_093_545,
-                        checksumSha256: "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311",
+                        checksumSha256: "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8",
                         artifactKind: "mlx_directory",
                         draftTokens: 6
                     )
@@ -7038,8 +7038,28 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(descriptors.first?.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit")
         XCTAssertEqual(descriptors.first?.draftArtifact?.sizeBytes, 270_093_545)
-        XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311")
+        XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8")
         XCTAssertEqual(descriptors.first?.draftArtifact?.draftTokens, 6)
+    }
+
+    func testPreferredAssistantDownloadFallbackUsesRossDirectoryDigestChecksumsForBundledDirectMLX() {
+        let quickStart = alphaPreferredAssistantDownloadFallback(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+        XCTAssertEqual(quickStart.packId, "gemma-4-e4b-mlx")
+        XCTAssertEqual(quickStart.checksumSha256, "2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c")
+        XCTAssertEqual(quickStart.draftArtifact?.checksumSha256, "6c3171c6ce77320de39ab8eb3a206daecd221b7dfb965ec689ae450bf868c8f3")
+
+        let caseAssociate = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+        XCTAssertEqual(caseAssociate.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(caseAssociate.checksumSha256, "c13638bb7068b40b95d4c977de1de1bc3952bdcca6b6f54f51b2692e0f07f7c1")
+        XCTAssertEqual(caseAssociate.draftArtifact?.checksumSha256, "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8")
     }
 
     func testShouldPrimeAssistantSetupCatalogsAcceptsBundledPreferredMLXDescriptorWhenCatalogIsFresh() {
@@ -12681,7 +12701,7 @@ final class AlphaExtractionTests: XCTestCase {
             artifact: AlphaBackendArtifact(
                 fileName: "gemma-4-12B-it-qat-4bit",
                 sizeBytes: 11_020_138_609,
-                finalSha256: "66730766ab582aaf9cea04dd8c0cbca931686a6b7395396b0c686678557c3dc2",
+                finalSha256: "c13638bb7068b40b95d4c977de1de1bc3952bdcca6b6f54f51b2692e0f07f7c1",
                 artifactKind: "mlx_directory",
                 runtimeMode: .mlxSwiftLm,
                 developmentOnly: false,
@@ -12691,7 +12711,7 @@ final class AlphaExtractionTests: XCTestCase {
                 draftArtifact: AlphaBackendArtifactDraft(
                     fileName: "gemma-4-12B-it-qat-assistant-4bit",
                     sizeBytes: 270_093_545,
-                    finalSha256: "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311",
+                    finalSha256: "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8",
                     artifactKind: "mlx_directory",
                     downloadPath: nil,
                     downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
@@ -17962,6 +17982,104 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.accelerationDraftTokens, 4)
         XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
         XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
+    }
+
+    func testExperimentalMLXProviderRetriesWithoutDraftWhenSpeculativeGenerationFails() async throws {
+        enum DraftFailure: Error {
+            case speculativeGenerationFailed
+        }
+
+        actor AttemptCapture {
+            var attempts: [(draftPath: String?, draftTokens: Int?)] = []
+
+            func record(draftPath: String?, draftTokens: Int?) {
+                attempts.append((draftPath, draftTokens))
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-retry-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-draft-retry-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        for folder in [directory, draftDirectory] {
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: folder.appendingPathComponent("model.safetensors"))
+        }
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = AttemptCapture()
+        AlphaMLXLocalProvider.streamGenerator = { _, draftURL, draftTokens, _, _, _, onChunk in
+            await capture.record(draftPath: draftURL?.path, draftTokens: draftTokens)
+            if draftURL != nil {
+                throw DraftFailure.speculativeGenerationFailed
+            }
+            onChunk?("Recovered standard answer")
+            return AlphaMLXGenerationSnapshot(text: "Recovered standard answer")
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "1", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        let attempts = await capture.attempts
+        XCTAssertEqual(attempts.count, 2)
+        XCTAssertEqual(attempts.first?.draftPath, draftDirectory.path)
+        XCTAssertEqual(attempts.first?.draftTokens, 4)
+        XCTAssertNil(attempts.last?.draftPath)
+        XCTAssertNil(attempts.last?.draftTokens)
+        XCTAssertEqual(output?.rawText, "Recovered standard answer")
+        XCTAssertEqual(output?.accelerationMode, .standard)
+        XCTAssertNil(output?.accelerationDraftTokens)
+        XCTAssertNil(output?.accelerationDraftModelLabel)
+        XCTAssertEqual(output?.executionPathLabel, "MLX standard generation")
+        XCTAssertNil(output?.errorCategory)
     }
 
     func testExperimentalMLXProviderPreservesMeasuredGenerationMetrics() async throws {

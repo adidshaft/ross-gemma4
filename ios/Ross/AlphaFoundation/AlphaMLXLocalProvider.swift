@@ -13,6 +13,20 @@ private final class AlphaUnsafeSendableBox<Value>: @unchecked Sendable {
     }
 }
 
+private func alphaLocalModelSmokeEnabled() -> Bool {
+    ProcessInfo.processInfo.environment["ROSS_LOCAL_MODEL_SMOKE_PROFILE"] != nil
+}
+
+private func alphaLocalModelSmokeTechnicalFailure(_ stage: String, mode: String, error: any Error) {
+    guard alphaLocalModelSmokeEnabled() else { return }
+    let nsError = error as NSError
+    let detail = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+    let message = detail.isEmpty ? "Unknown error." : detail
+    print(
+        "ROSS_LOCAL_MODEL_SMOKE_TECHNICAL_FAILURE stage=\(stage) mode=\(mode) domain=\(nsError.domain) code=\(nsError.code) detail=\(message)"
+    )
+}
+
 enum AlphaMLXRuntimeProfile {
     private enum IPhonePerformanceClass {
         case baseline
@@ -795,43 +809,13 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         let prompt = usesPlainMatterAnswerPrompt ? (matterPromptPack?.promptText ?? "") : pack.promptText
         let parameters = generateParameters(for: taskInput)
 
-        do {
-            let generation = try await Self.streamGenerator(
-                directoryURL,
-                draftDirectoryURL,
-                draftTokens,
-                prompt,
-                instructions,
-                parameters
-            ) { partialText in
-                guard let onPartial else { return }
-                let cleanedPartial = self.cleanedModelText(partialText)
-                guard !cleanedPartial.isEmpty else { return }
-                onPartial(
-                    AlphaLocalModelOutput(
-                        rawText: cleanedPartial,
-                        parsedJson: nil,
-                        schemaValid: false,
-                        warnings: activePromptPack?.truncated == true ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
-                        sourceRefs: usesPlainMatterAnswerPrompt
-                            ? (matterPromptPack?.includedSourceRefs.isEmpty == false
-                                ? (matterPromptPack?.includedSourceRefs ?? [])
-                                : Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)))
-                            : pack.includedSourceRefs,
-                        packedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.includedSourceRefs.count : pack.includedSourceRefs.count,
-                        omittedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.omittedSourceRefs.count : pack.omittedSourceRefs.count,
-                        omittedSourceLabels: usesPlainMatterAnswerPrompt
-                            ? matterPromptPack?.omittedSourceRefs.map(\.label)
-                            : pack.omittedSourceRefs.map(\.label),
-                        executionPathLabel: executionPathLabel,
-                        accelerationMode: accelerationMode,
-                        accelerationDraftTokens: draftTokens,
-                        accelerationDraftModelLabel: draftModelLabel,
-                        inputChars: activePromptPack?.inputChars
-                    )
-                    )
-                }
-
+        func generationOutput(
+            from generation: AlphaMLXGenerationSnapshot,
+            executionPathLabel: String,
+            accelerationMode: AlphaLocalRuntimeAccelerationMode,
+            draftTokens: Int?,
+            draftModelLabel: String?
+        ) -> AlphaLocalModelOutput {
             let cleanedResponse = cleanedModelText(generation.text)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
                 ? Self.sourceLanguageFallbackIfNeeded(for: taskInput, generatedText: cleanedResponse)
@@ -871,6 +855,97 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 outputTokensPerSecond: generation.outputTokensPerSecond,
                 timeToFirstTokenMs: generation.timeToFirstTokenMs
             )
+        }
+
+        do {
+            let partialOutput: @Sendable (String, String, AlphaLocalRuntimeAccelerationMode, Int?, String?) -> Void = {
+                partialText, executionPathLabel, accelerationMode, draftTokens, draftModelLabel in
+                guard let onPartial else { return }
+                let cleanedPartial = self.cleanedModelText(partialText)
+                guard !cleanedPartial.isEmpty else { return }
+                onPartial(
+                    AlphaLocalModelOutput(
+                        rawText: cleanedPartial,
+                        parsedJson: nil,
+                        schemaValid: false,
+                        warnings: activePromptPack?.truncated == true ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
+                        sourceRefs: usesPlainMatterAnswerPrompt
+                            ? (matterPromptPack?.includedSourceRefs.isEmpty == false
+                                ? (matterPromptPack?.includedSourceRefs ?? [])
+                                : Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)))
+                            : pack.includedSourceRefs,
+                        packedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.includedSourceRefs.count : pack.includedSourceRefs.count,
+                        omittedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.omittedSourceRefs.count : pack.omittedSourceRefs.count,
+                        omittedSourceLabels: usesPlainMatterAnswerPrompt
+                            ? matterPromptPack?.omittedSourceRefs.map(\.label)
+                            : pack.omittedSourceRefs.map(\.label),
+                        executionPathLabel: executionPathLabel,
+                        accelerationMode: accelerationMode,
+                        accelerationDraftTokens: draftTokens,
+                        accelerationDraftModelLabel: draftModelLabel,
+                        inputChars: activePromptPack?.inputChars
+                    )
+                )
+            }
+
+            do {
+                let generation = try await Self.streamGenerator(
+                    directoryURL,
+                    draftDirectoryURL,
+                    draftTokens,
+                    prompt,
+                    instructions,
+                    parameters
+                ) { partialText in
+                    partialOutput(
+                        partialText,
+                        executionPathLabel,
+                        accelerationMode,
+                        draftTokens,
+                        draftModelLabel
+                    )
+                }
+                return generationOutput(
+                    from: generation,
+                    executionPathLabel: executionPathLabel,
+                    accelerationMode: accelerationMode,
+                    draftTokens: draftTokens,
+                    draftModelLabel: draftModelLabel
+                )
+            } catch {
+                alphaLocalModelSmokeTechnicalFailure(
+                    "mlx_generation",
+                    mode: draftDirectoryURL == nil ? "standard" : "draft",
+                    error: error
+                )
+                guard draftDirectoryURL != nil else { throw error }
+                let fallbackGeneration = try await Self.streamGenerator(
+                    directoryURL,
+                    nil,
+                    nil,
+                    prompt,
+                    instructions,
+                    parameters
+                ) { partialText in
+                    partialOutput(
+                        partialText,
+                        "MLX standard generation",
+                        .standard,
+                        nil,
+                        nil
+                    )
+                }
+                if alphaLocalModelSmokeEnabled() {
+                    print("ROSS_LOCAL_MODEL_SMOKE_TRACE mlx_generation_recovered_without_draft")
+                }
+                return generationOutput(
+                    from: fallbackGeneration,
+                    executionPathLabel: "MLX standard generation",
+                    accelerationMode: .standard,
+                    draftTokens: nil,
+                    draftModelLabel: nil
+                )
+            }
         } catch {
             return AlphaLocalModelOutput(
                 rawText: "",
