@@ -10,6 +10,21 @@ METRICS = [
     "measured_tokens",
 ]
 
+RUNTIME_ARTIFACT_RULES = {
+    "gemma_local_runtime": {
+        "formats": {"local_model_artifact", "gguf", "gguf_model"},
+        "path_types": {"file"},
+    },
+    "mlx_swift_lm": {
+        "formats": {"mlx_directory"},
+        "path_types": {"directory"},
+    },
+    "apple_foundation_models": {
+        "formats": {"system_model", "foundation_adapter", "coreai_adapter", "coreml_model"},
+        "path_types": {"system", "file", "directory"},
+    },
+}
+
 
 class MissingBenchmarkMatrixError(ValueError):
     """Raised when a pass marker lacks the benchmark matrix marker."""
@@ -29,6 +44,25 @@ def parse_fields(line, skip_prefix=True):
 def summary_value(fields, key):
     value = fields.get(key)
     return value if value not in (None, "") else "nil"
+
+
+def runtime_identity_artifact_error(identity, expected_runtime):
+    rules = RUNTIME_ARTIFACT_RULES.get(expected_runtime)
+    if not rules:
+        return None
+
+    model_format = identity.get("model_format")
+    artifact_path_type = identity.get("artifact_path_type")
+    if model_format not in rules["formats"]:
+        return f"model_format={summary_value(identity, 'model_format')}"
+    if artifact_path_type not in rules["path_types"]:
+        return f"artifact_path_type={summary_value(identity, 'artifact_path_type')}"
+    if expected_runtime == "apple_foundation_models":
+        if model_format == "system_model" and artifact_path_type != "system":
+            return f"system_model_path_type={summary_value(identity, 'artifact_path_type')}"
+        if model_format != "system_model" and artifact_path_type == "system":
+            return f"adapter_path_type={summary_value(identity, 'artifact_path_type')}"
+    return None
 
 
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):

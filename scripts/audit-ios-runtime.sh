@@ -85,6 +85,18 @@ if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; t
     FAIL=1
 fi
 
+if ! grep -q "runtime_identity_artifact_error" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared smoke parser omits runtime artifact identity validation."
+    FAIL=1
+fi
+
+for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
+    if ! grep -q "runtime_identity_artifact_mismatch" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script does not reject mismatched runtime artifact identity."
+        FAIL=1
+    fi
+done
+
 if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke runtime identity guard missing."
     FAIL=1

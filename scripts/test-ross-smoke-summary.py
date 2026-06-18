@@ -6,6 +6,7 @@ from ross_smoke_summary import (
     benchmark_summary_line,
     failure_summary_line,
     parse_fields,
+    runtime_identity_artifact_error,
 )
 
 
@@ -74,6 +75,48 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("runtime=nil", summary)
         self.assertIn("matrix_cases=english_source_bound_document_qa", summary)
         self.assertIn("matrix_stages=source:document_qa", summary)
+
+    def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):
+        self.assertIsNone(
+            runtime_identity_artifact_error(
+                {"model_format": "local_model_artifact", "artifact_path_type": "file"},
+                "gemma_local_runtime",
+            )
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {"model_format": "local_model_artifact", "artifact_path_type": "file"},
+                "mlx_swift_lm",
+            ),
+            "model_format=local_model_artifact",
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {"model_format": "mlx_directory", "artifact_path_type": "file"},
+                "mlx_swift_lm",
+            ),
+            "artifact_path_type=file",
+        )
+        self.assertIsNone(
+            runtime_identity_artifact_error(
+                {"model_format": "system_model", "artifact_path_type": "system"},
+                "apple_foundation_models",
+            )
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {"model_format": "system_model", "artifact_path_type": "file"},
+                "apple_foundation_models",
+            ),
+            "system_model_path_type=file",
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {"model_format": "coreml_model", "artifact_path_type": "system"},
+                "apple_foundation_models",
+            ),
+            "adapter_path_type=system",
+        )
 
     def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
         identity = parse_fields(

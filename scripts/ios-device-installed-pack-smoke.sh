@@ -444,6 +444,7 @@ from ross_smoke_summary import (
     benchmark_summary_line,
     failure_summary_line,
     parse_fields,
+    runtime_identity_artifact_error,
 )
 
 (
@@ -524,6 +525,17 @@ def validate_identity_guard(identity, *, require_identity):
             file=sys.stderr,
         )
         sys.exit(1)
+
+    if require_identity:
+        artifact_error = runtime_identity_artifact_error(identity, runtime_mode)
+        if artifact_error:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                f"reason=runtime_identity_artifact_mismatch requested={runtime_mode} "
+                f"{artifact_error}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     if require_draft_acceleration == "1":
         acceleration = identity.get("acceleration")
