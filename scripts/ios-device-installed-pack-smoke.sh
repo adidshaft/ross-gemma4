@@ -515,9 +515,12 @@ def validate_identity_guard(identity, *, require_identity):
         return
 
     actual_runtime = identity.get("actual_runtime")
-    if actual_runtime != runtime_mode:
+    requested_runtime = identity.get("requested_runtime")
+    if actual_runtime != runtime_mode or requested_runtime not in (runtime_mode, "nil"):
         print(
-            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested={runtime_mode} actual={actual_runtime}",
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_mismatch requested={runtime_mode} "
+            f"identity_requested={requested_runtime} actual={actual_runtime}",
             file=sys.stderr,
         )
         sys.exit(1)

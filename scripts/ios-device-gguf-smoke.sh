@@ -220,9 +220,12 @@ def validate_identity_guard(identity, *, require_identity):
         return
 
     actual_runtime = identity.get("actual_runtime")
-    if actual_runtime != "gemma_local_runtime":
+    requested_runtime = identity.get("requested_runtime")
+    if actual_runtime != "gemma_local_runtime" or requested_runtime not in ("gemma_local_runtime", "nil"):
         print(
-            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested=gemma_local_runtime actual={actual_runtime}",
+            "ROSS_SMOKE_GUARD_FAIL "
+            "reason=runtime_identity_mismatch requested=gemma_local_runtime "
+            f"identity_requested={requested_runtime} actual={actual_runtime}",
             file=sys.stderr,
         )
         sys.exit(1)

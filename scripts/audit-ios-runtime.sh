@@ -95,6 +95,16 @@ if ! grep -q "runtime_identity_mismatch" scripts/ios-device-installed-pack-smoke
     FAIL=1
 fi
 
+if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
+    FAIL=1
+fi
+
+if ! grep -q "identity_requested" scripts/ios-device-gguf-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: GGUF device smoke does not validate requested runtime identity."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: assistant-download smoke runtime pass guard missing."
     FAIL=1
