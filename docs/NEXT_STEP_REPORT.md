@@ -34,6 +34,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - iOS installer acceptance now also enforces the current single-segment artifact contract directly, so multi-segment or mismatched segment-size payloads are rejected until the client has real segmented-download support
 - hidden iOS Support details and the saved runtime comparison note now also summarize the current assistant download delivery contract and latest on-device verification status, so physical-device proof exports can carry delivery-check evidence alongside runtime comparisons
 - saved physical iPhone comparison-note records now also persist whether the note included a verified assistant download delivery check, and device-target readiness now treats missing delivery verification as incomplete physical proof even when runtime coverage is otherwise present
+- hidden iOS saved device-proof coverage now also shows the persisted delivery-check status and delivery contract per saved target, so later reviews can tell which physical note actually carried verified download evidence without reopening the PDF
 
 ## Visible Pack Mapping
 
@@ -88,6 +89,7 @@ Most recent commits that define this pause point:
 - focused iOS extraction tests now also prove the installer rejects multi-segment or mismatched single-segment delivery metadata, so the current client contract stays aligned with the single full-artifact GGUF path it actually knows how to verify and download
 - focused iOS tests now also prove the device-proof export path includes download delivery verification details, and that the summary helper reports signed-session GGUF delivery as verified when the on-device ledger already recorded a verified assistant download check
 - focused iOS usability tests now also prove that saved device-proof targets remain incomplete until the exported note includes a verified download delivery check, and that the rerun guidance and ladder-decision readiness text follow that stricter proof rule
+- focused iOS usability tests now also prove the saved proof export includes persisted delivery-check details for each saved physical target, so proof history stays auditable after multiple exports
 
 Most recent verification commands:
 

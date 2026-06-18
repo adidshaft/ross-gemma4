@@ -1063,6 +1063,22 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                         .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.68))
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let latestSavedRecord = status.latestSavedRecord,
+                       let deliveryStatus = alphaPrivateAIDeviceComparisonSavedDeliveryStatus(latestSavedRecord) {
+                        Text(rossLocalized("private_assistant_device_comparison_delivery_status_label") + ": " + deliveryStatus)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let latestSavedRecord = status.latestSavedRecord,
+                       let deliveryContract = alphaPrivateAIDeviceComparisonSavedDeliveryContract(latestSavedRecord) {
+                        Text(rossLocalized("private_assistant_device_comparison_delivery_contract_label") + ": " + deliveryContract)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .padding(.vertical, 2)
             }
@@ -1574,6 +1590,20 @@ func alphaPrivateAIDeviceComparisonProofSummary(_ status: AlphaPrivateAIDeviceCo
         format: rossLocalized("private_assistant_device_comparison_saved_partial"),
         latestSavedRecord.profile.deviceModelLabel
     )
+}
+
+func alphaPrivateAIDeviceComparisonSavedDeliveryStatus(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String? {
+    let trimmed = record.downloadDeliveryStatusLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonSavedDeliveryContract(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String? {
+    let trimmed = record.downloadDeliveryContractLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
 }
 
 func alphaPrivateAIDeviceComparisonMissingTargetLabels(

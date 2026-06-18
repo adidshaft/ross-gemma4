@@ -3143,6 +3143,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
             "te": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check."
         ],
+        "private_assistant_device_comparison_delivery_status_label": [
+            "en": "Saved delivery check",
+            "hi": "Saved delivery check",
+            "bn": "Saved delivery check",
+            "ta": "Saved delivery check",
+            "te": "Saved delivery check"
+        ],
+        "private_assistant_device_comparison_delivery_contract_label": [
+            "en": "Saved delivery contract",
+            "hi": "Saved delivery contract",
+            "bn": "Saved delivery contract",
+            "ta": "Saved delivery contract",
+            "te": "Saved delivery contract"
+        ],
         "private_assistant_device_comparison_next_steps_title": [
             "en": "Physical note next steps",
             "hi": "Physical note next steps",
