@@ -11,6 +11,7 @@ enum AlphaLlamaRuntimeProfile {
     }
 
     private static let constrainedE4BProfileMemoryCeilingBytes: UInt64 = 8_500_000_000
+    private static let constrainedE4BDraftTokenCeiling = 2
 
     private static func containsAny(_ value: String, fragments: [String]) -> Bool {
         let lowered = value.lowercased()
@@ -332,9 +333,14 @@ enum AlphaLlamaRuntimeProfile {
 
     static func supportsDraftAcceleration(
         forModelPath path: String?,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        draftTokens: Int? = nil
     ) -> Bool {
-        !usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)
+        guard usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) else {
+            return true
+        }
+        guard let draftTokens else { return false }
+        return max(1, min(draftTokens, 8)) <= constrainedE4BDraftTokenCeiling
     }
 
 }
@@ -481,7 +487,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func contextCacheKey(path: String) -> String {
         let draftKey = effectiveDraftModelPath() ?? ""
-        let tokenKey = effectiveDraftTokenCount().map(String.init) ?? ""
+        let tokenKey = draftKey.isEmpty ? "" : (effectiveDraftTokenCount().map(String.init) ?? "")
         return [path, draftKey, tokenKey].joined(separator: "|")
     }
 
@@ -497,7 +503,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         AlphaLlamaCppProvider.cachedContext = nil
 
         let draftPath = effectiveDraftModelPath()
-        let draftTokens = effectiveDraftTokenCount()
+        let draftTokens = draftPath == nil ? nil : effectiveDraftTokenCount()
         let newContext = try AlphaLlamaCppProvider.contextFactory(
             path,
             draftPath,
@@ -883,7 +889,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func effectiveDraftTokenCount() -> Int? {
-        guard let _ = effectiveDraftModelPath() else {
+        guard let _ = stagedDraftModelPath() else {
             return nil
         }
         if let draftModelTokens {
@@ -895,13 +901,23 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         )
     }
 
-    private func effectiveDraftModelPath() -> String? {
+    private func stagedDraftModelPath() -> String? {
         guard
             let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
-            draftPath.isEmpty == false,
+            draftPath.isEmpty == false
+        else {
+            return nil
+        }
+        return draftPath
+    }
+
+    private func effectiveDraftModelPath() -> String? {
+        guard
+            let draftPath = stagedDraftModelPath(),
             AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
                 forModelPath: modelPath,
-                physicalMemory: Self.physicalMemoryBytesProvider()
+                physicalMemory: Self.physicalMemoryBytesProvider(),
+                draftTokens: effectiveDraftTokenCount()
             )
         else {
             return nil

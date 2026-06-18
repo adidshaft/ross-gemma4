@@ -13,7 +13,7 @@ Options:
   --pack-id <id>          Exact installed pack id to target.
   --runtime <mode>        gguf | mlx | coreai | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
-  --smoke-profile <mode>  full | quick. Default: full
+  --smoke-profile <mode>  full | quick | mtp_quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
                           has a usable draft companion.
   --require-draft-acceleration
