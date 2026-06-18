@@ -13,6 +13,7 @@ Options:
   --pack-id <id>          Exact installed pack id to target.
   --runtime <mode>        gguf | mlx | coreai | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
+  --smoke-profile <mode>  full | quick. Default: full
   --list-only             Only list installed manifest-backed packs from the device.
   --allow-device-proof-pack
                           Allow packs whose id ends with -device-proof. By default
@@ -32,6 +33,7 @@ selected_tier=""
 selected_pack_id=""
 selected_runtime=""
 stage_timeout="45"
+smoke_profile="full"
 list_only="0"
 allow_device_proof_pack="0"
 
@@ -59,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stage-timeout)
       stage_timeout="${2:-}"
+      shift 2
+      ;;
+    --smoke-profile)
+      smoke_profile="${2:-}"
       shift 2
       ;;
     --list-only)
@@ -359,7 +365,7 @@ if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
 fi
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" <<'PY'
 import os
 import re
 import signal
@@ -378,6 +384,7 @@ import sys
     draft_model_path,
     draft_model_tokens,
     stage_timeout,
+    smoke_profile,
 ) = sys.argv[1:]
 
 env = os.environ.copy()
@@ -391,6 +398,7 @@ env.update(
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_TIER": tier_raw,
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_PACK_ID": pack_id,
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS": stage_timeout,
+        "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_PROFILE": smoke_profile,
     }
 )
 if draft_model_path:

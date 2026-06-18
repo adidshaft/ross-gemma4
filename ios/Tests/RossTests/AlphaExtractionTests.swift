@@ -15176,6 +15176,28 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.checksumVerified)
     }
 
+    func testLocalModelSmokeProfileParsesQuickAliases() {
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "quick"
+            ]),
+            .quick
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "source-only"
+            ]),
+            .quick
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "full"
+            ]),
+            .full
+        )
+        XCTAssertEqual(RossLocalModelSmokeProfile.fromEnvironment([:]), .full)
+    }
+
     func testModelInvocationStoreRecordsFirstTokenLatencyAndThroughput() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
