@@ -16,6 +16,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Technical details now also include a longer matter-bundle check for the current runtime, with persisted history for answer preview, source refs, first response, and token speed
 - hidden iOS Support details now include a direct runtime switcher for immediately-available lanes on the current tier, so the longer-bundle comparison loop no longer has to go back through setup
 - hidden iOS longer-bundle comparison history now also retains runtime-choice, execution-path, and acceleration detail for each run
+- hidden iOS Support details now summarize the latest longer-bundle result per runtime and call out which of GGUF / MLX / CoreAI still need a run
 
 ## Visible Pack Mapping
 
@@ -52,6 +53,7 @@ Most recent commits that define this pause point:
 - hidden iOS Technical details now keep recent longer-bundle comparison runs for the current runtime without adding more front-stage UI
 - hidden iOS Support details now expose a direct GGUF / MLX / CoreAI switcher whenever more than one runtime is immediately available for the current tier
 - hidden iOS longer-bundle comparison runs now capture why that runtime was selected and whether draft acceleration was active
+- hidden iOS Support details now make it obvious whether the current comparison set already covers all three runtime lanes
 
 Most recent verification commands:
 

@@ -631,6 +631,13 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 }
             }
 
+            if !model.matterBundleComparisonReports.isEmpty {
+                Divider()
+                AlphaMatterBundleComparisonRuntimeSummarySection(
+                    reports: model.matterBundleComparisonReports
+                )
+            }
+
             Divider()
 
             Button(model.matterBundleComparisonRunning ? rossLocalized("checking_private_assistant_longer_bundle") : rossLocalized("check_private_assistant_with_longer_bundle")) {
@@ -804,6 +811,61 @@ private struct AlphaMatterBundleComparisonReportCard: View {
     }
 }
 
+private struct AlphaMatterBundleComparisonRuntimeSummarySection: View {
+    let reports: [AlphaMatterBundleComparisonReport]
+
+    private var latestReports: [AlphaMatterBundleComparisonReport] {
+        alphaMatterBundleLatestReportsByRuntime(reports)
+    }
+
+    private var missingRuntimeLabels: String? {
+        let labels = alphaMatterBundleMissingRuntimeLabels(reports)
+        guard !labels.isEmpty else { return nil }
+        return labels.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_runtime_summary_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            if let missingRuntimeLabels {
+                Text(String(format: rossLocalized("private_assistant_runtime_summary_missing"), missingRuntimeLabels))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(rossLocalized("private_assistant_runtime_summary_ready"))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(Array(latestReports.enumerated()), id: \.offset) { _, report in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(alphaMatterBundleComparisonMetricsSummary(report))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+
+                    if let runtimeSelectionReason = report.runtimeSelectionReason?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !runtimeSelectionReason.isEmpty {
+                        Text(runtimeSelectionReason)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.60))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+}
+
 private struct AlphaMatterBundleComparisonHistorySection: View {
     let reports: [AlphaMatterBundleComparisonReport]
 
@@ -903,6 +965,26 @@ func alphaMatterBundleComparisonMetricsSummary(_ report: AlphaMatterBundleCompar
         parts.append("\(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
     }
     return parts.joined(separator: " · ")
+}
+
+func alphaMatterBundleLatestReportsByRuntime(_ reports: [AlphaMatterBundleComparisonReport]) -> [AlphaMatterBundleComparisonReport] {
+    var latestByRuntime: [AlphaPackRuntimeMode: AlphaMatterBundleComparisonReport] = [:]
+    for report in reports {
+        guard let runtimeMode = AlphaPackRuntimeMode(rawValue: report.runtimeUsed) else { continue }
+        if latestByRuntime[runtimeMode] == nil {
+            latestByRuntime[runtimeMode] = report
+        }
+    }
+    let orderedModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+    return orderedModes.compactMap { latestByRuntime[$0] }
+}
+
+func alphaMatterBundleMissingRuntimeLabels(_ reports: [AlphaMatterBundleComparisonReport]) -> [String] {
+    let presentModes = Set(alphaMatterBundleLatestReportsByRuntime(reports).compactMap { AlphaPackRuntimeMode(rawValue: $0.runtimeUsed) })
+    let requiredModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+    return requiredModes
+        .filter { !presentModes.contains($0) }
+        .map(\.displayLabel)
 }
 
 func alphaAssistantComparisonRuntimeOptions(

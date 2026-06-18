@@ -2912,6 +2912,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Runtime comparison",
             "te": "Runtime comparison"
         ],
+        "private_assistant_runtime_summary_title": [
+            "en": "Latest by runtime",
+            "hi": "Latest by runtime",
+            "bn": "Latest by runtime",
+            "ta": "Latest by runtime",
+            "te": "Latest by runtime"
+        ],
+        "private_assistant_runtime_summary_missing": [
+            "en": "Still needed for this comparison: %@",
+            "hi": "इस comparison के लिए अभी भी चाहिए: %@",
+            "bn": "এই comparison-এর জন্য এখনও দরকার: %@",
+            "ta": "இந்த comparison-க்கு இன்னும் தேவை: %@",
+            "te": "ఈ comparison కోసం ఇంకా కావాలి: %@"
+        ],
+        "private_assistant_runtime_summary_ready": [
+            "en": "All three runtime lanes now have recent longer-bundle evidence.",
+            "hi": "तीनों runtime lanes के लिए recent longer-bundle evidence अब मौजूद है.",
+            "bn": "তিনটি runtime lane-এর জন্য recent longer-bundle evidence এখন আছে.",
+            "ta": "மூன்று runtime lane-களுக்கும் recent longer-bundle evidence இப்போது உள்ளது.",
+            "te": "మూడు runtime lane‌లకూ recent longer-bundle evidence ఇప్పుడు ఉంది."
+        ],
         "private_assistant_runtime_comparison_hint": [
             "en": "Switch runtime here, then rerun the longer bundle check and compare the hidden history below.",
             "hi": "Runtime यहां बदलें, फिर longer bundle check दोबारा चलाकर नीचे की hidden history compare करें.",

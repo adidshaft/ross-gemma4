@@ -4569,6 +4569,106 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(summary.contains("First response"))
     }
 
+    func testMatterBundleLatestReportsByRuntimeKeepsMostRecentPerLaneInDisplayOrder() {
+        let reports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 9,
+                sourceRefsReturned: 3,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: "gguf latest",
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "gguf latest"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 8,
+                sourceRefsReturned: 3,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: "mlx latest",
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "mlx latest"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 7,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: "coreai latest",
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "coreai latest"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 6,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: "gguf older",
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "gguf older"
+            )
+        ]
+
+        let latest = alphaMatterBundleLatestReportsByRuntime(reports)
+        XCTAssertEqual(latest.map(\.runtimeUsed), [
+            AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            AlphaPackRuntimeMode.llamaCppGguf.rawValue
+        ])
+        XCTAssertEqual(latest.last?.message, "gguf latest")
+    }
+
+    func testMatterBundleMissingRuntimeLabelsReportsUncoveredLanes() {
+        let reports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 9,
+                sourceRefsReturned: 3,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "gguf latest"
+            )
+        ]
+
+        XCTAssertEqual(alphaMatterBundleMissingRuntimeLabels(reports), ["CoreAI", "MLX"])
+    }
+
     func testAssistantComparisonRuntimeOptionsOnlyKeepImmediatelyAvailableRuntimes() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
