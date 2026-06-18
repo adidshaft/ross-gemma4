@@ -838,13 +838,16 @@ struct RossLocalModelSmokeView: View {
         requestedRuntime: AlphaPackRuntimeMode?
     ) -> String {
         let artifactURL = URL(fileURLWithPath: activePack.installPath)
+        let resolvedArtifactURL = activePack.installPath.hasPrefix("/")
+            ? artifactURL
+            : alphaAbsoluteURL(for: activePack.installPath)
         let artifactPathType: String
-        if (try? artifactURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-            artifactPathType = "directory"
-        } else if FileManager.default.fileExists(atPath: activePack.installPath) {
-            artifactPathType = "file"
-        } else if alphaPackUsesSystemFoundationModel(activePack) {
+        if alphaPackUsesSystemFoundationModel(activePack) {
             artifactPathType = "system"
+        } else if (try? resolvedArtifactURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            artifactPathType = "directory"
+        } else if FileManager.default.fileExists(atPath: resolvedArtifactURL.path) {
+            artifactPathType = "file"
         } else {
             artifactPathType = "missing"
         }

@@ -16379,6 +16379,102 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=nil"))
     }
 
+    func testRuntimeIdentityLineResolvesRelativeInstalledGGUFPath() throws {
+        let relativePath = "model-packs/quick_start/relative-identity.gguf"
+        let modelURL = alphaAbsoluteURL(for: relativePath)
+        try FileManager.default.createDirectory(
+            at: modelURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("gguf".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "relative-gguf",
+            installPath: relativePath,
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: modelURL.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 22_000,
+            estimatedContextTokens: 4_096,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "no_draft_configured",
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: RossLocalModelSmokeView.preflightProviderName(for: .llamaCppGguf),
+            actualRuntime: .llamaCppGguf,
+            providerHealth: health,
+            requestedRuntime: .llamaCppGguf
+        )
+
+        XCTAssertTrue(line.contains("artifact_path_type=file"))
+        XCTAssertTrue(line.contains("artifact_path=relative-identity.gguf"))
+        XCTAssertFalse(line.contains("artifact_path_type=missing"))
+    }
+
+    func testRuntimeIdentityLineResolvesRelativeInstalledMLXDirectoryPath() throws {
+        let relativePath = "model-packs/case_associate/relative-identity-mlx"
+        let directory = alphaAbsoluteURL(for: relativePath)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "relative-mlx",
+            installPath: relativePath,
+            checksum: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .mlxSwiftLm,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: directory.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 40_000,
+            estimatedContextTokens: 20_480,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "no_draft_configured",
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: RossLocalModelSmokeView.preflightProviderName(for: .mlxSwiftLm),
+            actualRuntime: .mlxSwiftLm,
+            providerHealth: health,
+            requestedRuntime: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(line.contains("artifact_path_type=directory"))
+        XCTAssertTrue(line.contains("artifact_path=relative-identity-mlx"))
+        XCTAssertFalse(line.contains("artifact_path_type=missing"))
+    }
+
     func testRuntimeIdentityLineIncludesUnavailableMLXPreflightError() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross identity invalid mlx \(UUID().uuidString)", isDirectory: true)
