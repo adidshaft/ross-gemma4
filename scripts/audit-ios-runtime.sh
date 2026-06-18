@@ -90,6 +90,11 @@ if ! grep -q 'draft_status != "active"' scripts/ios-device-installed-pack-smoke.
     FAIL=1
 fi
 
+if ! grep -Fq 'draft_status=\(providerHealth.draftAccelerationStatus' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: app-side MTP failure marker does not report draft status."
+    FAIL=1
+fi
+
 if [ ! -f docs/IOS_RUNTIME.md ]; then
     echo "❌ FAIL: docs/IOS_RUNTIME.md missing."
     FAIL=1
