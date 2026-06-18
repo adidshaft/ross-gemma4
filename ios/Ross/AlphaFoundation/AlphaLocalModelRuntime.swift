@@ -2972,8 +2972,7 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     }
 
     private static func parseRuntimeMode(_ raw: String?) -> AlphaPackRuntimeMode? {
-        guard let raw else { return nil }
-        return AlphaPackRuntimeMode(rawValue: raw)
+        AlphaPackRuntimeMode(runtimeAlias: raw)
     }
 
     private static func parseCapabilityTier(_ raw: String?) -> AlphaCapabilityTier? {

@@ -95,17 +95,7 @@ struct RossAssistantDownloadSmokeConfig: Equatable {
         }
 
         func parseRuntime(_ raw: String?) -> AlphaPackRuntimeMode? {
-            guard let raw else { return nil }
-            switch raw.lowercased() {
-            case "gguf", AlphaPackRuntimeMode.llamaCppGguf.rawValue:
-                return .llamaCppGguf
-            case "mlx", AlphaPackRuntimeMode.mlxSwiftLm.rawValue:
-                return .mlxSwiftLm
-            case "coreai", AlphaPackRuntimeMode.appleFoundationModels.rawValue:
-                return .appleFoundationModels
-            default:
-                return nil
-            }
+            AlphaPackRuntimeMode(runtimeAlias: raw)
         }
 
         func parseBool(_ raw: String?, default fallback: Bool) -> Bool {

@@ -10,7 +10,7 @@ Options:
   --device <udid>         Physical iPhone UDID accepted by devicectl.
   --bundle-id <id>        App bundle identifier. Default: com.ross.ios
   --tier <tier>           quickStart | caseAssociate | seniorDraftingSupport | flash
-  --runtime <mode>        auto | mlx | gguf | coreai. Default: auto
+  --runtime <mode>        auto | mlx | gguf | coreai | coreml. Default: auto
   --mobile-allowed        Allow the download flow to run without Wi-Fi-only gating.
   --force-refresh         Force a fresh download instead of reusing an installed matching pack.
   --wait-seconds <sec>    App-side smoke wait budget. Default: 900

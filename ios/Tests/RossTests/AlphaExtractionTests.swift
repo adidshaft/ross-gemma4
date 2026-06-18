@@ -15781,6 +15781,27 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.modelKind, "foundation_adapter")
     }
 
+    func testRuntimeAliasesNormalizeToCanonicalRuntimeModes() {
+        XCTAssertEqual(AlphaPackRuntimeMode(runtimeAlias: "gguf"), .llamaCppGguf)
+        XCTAssertEqual(AlphaPackRuntimeMode(runtimeAlias: "mlx"), .mlxSwiftLm)
+        XCTAssertEqual(AlphaPackRuntimeMode(runtimeAlias: "coreai"), .appleFoundationModels)
+        XCTAssertEqual(AlphaPackRuntimeMode(runtimeAlias: "coreml"), .appleFoundationModels)
+        XCTAssertEqual(AlphaPackRuntimeMode(runtimeAlias: "apple_foundation_models"), .appleFoundationModels)
+        XCTAssertNil(AlphaPackRuntimeMode(runtimeAlias: "not-a-runtime"))
+    }
+
+    func testCanonicalRuntimeConfigParsesCoreMLAlias() {
+        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "1",
+            "ROSS_LOCAL_RUNTIME": "coreml",
+            "ROSS_LOCAL_MODEL_KIND": "coreml_model",
+        ])
+
+        XCTAssertTrue(environment.enableRealInference)
+        XCTAssertEqual(environment.runtimeModeOverride, .appleFoundationModels)
+        XCTAssertEqual(environment.modelKind, "coreml_model")
+    }
+
     func testCanonicalRuntimeConfigParsesMLXEnvironment() {
         let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
             "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "true",
@@ -15914,6 +15935,15 @@ final class AlphaExtractionTests: XCTestCase {
                 waitSeconds: 120
             )
         )
+    }
+
+    func testAssistantDownloadSmokeConfigParsesCoreMLRuntimeAlias() {
+        let config = RossAssistantDownloadSmokeConfig.fromEnvironment([
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER": "caseAssociate",
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_RUNTIME": "coreml",
+        ])
+
+        XCTAssertEqual(config?.runtimeMode, .appleFoundationModels)
     }
 
     func testAssistantDownloadSmokeConfigRequiresTier() {

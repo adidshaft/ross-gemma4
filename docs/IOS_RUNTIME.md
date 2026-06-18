@@ -36,7 +36,7 @@ Do not claim release-ready physical iPhone inference until these are recorded:
 
 The MLX lane remains unproven on physical iPhone hardware. It now supports both developer-supplied local directories and ZIP-packaged MLX installs, but physical-device validation is still pending.
 
-Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI benchmark must show `actual_runtime=apple_foundation_models`. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI benchmark.
+Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI/CoreML benchmark must show `actual_runtime=apple_foundation_models`. In this codebase, `coreai` and `coreml` are smoke/runtime aliases for Apple's Foundation Models path, not separate benchmark lanes. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI/CoreML benchmark.
 
 Clear unavailable categories for benchmark triage:
 

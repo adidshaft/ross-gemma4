@@ -1872,6 +1872,26 @@ enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
 }
 
 extension AlphaPackRuntimeMode {
+    init?(runtimeAlias rawValue: String?) {
+        guard let rawValue else { return nil }
+        switch rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "gguf", AlphaPackRuntimeMode.llamaCppGguf.rawValue:
+            self = .llamaCppGguf
+        case "mlx", AlphaPackRuntimeMode.mlxSwiftLm.rawValue:
+            self = .mlxSwiftLm
+        case "coreai", "coreml", AlphaPackRuntimeMode.appleFoundationModels.rawValue:
+            self = .appleFoundationModels
+        case AlphaPackRuntimeMode.deterministicDev.rawValue:
+            self = .deterministicDev
+        case AlphaPackRuntimeMode.mediapipeLlm.rawValue:
+            self = .mediapipeLlm
+        case AlphaPackRuntimeMode.unavailable.rawValue:
+            self = .unavailable
+        default:
+            return nil
+        }
+    }
+
     var displayLabel: String {
         switch self {
         case .appleFoundationModels:

@@ -11,7 +11,7 @@ Options:
   --bundle-id <id>        App bundle identifier. Default: com.ross.ios
   --tier <tier>           quickStart | caseAssociate | seniorDraftingSupport | flash
   --pack-id <id>          Exact installed pack id to target.
-  --runtime <mode>        gguf | mlx | coreai | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
+  --runtime <mode>        gguf | mlx | coreai | coreml | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
   --smoke-profile <mode>  full | quick | mtp_quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
@@ -214,6 +214,7 @@ runtime_aliases = {
     "mlx": "mlx_swift_lm",
     "mlx_swift_lm": "mlx_swift_lm",
     "coreai": "apple_foundation_models",
+    "coreml": "apple_foundation_models",
     "apple_foundation_models": "apple_foundation_models",
 }
 
