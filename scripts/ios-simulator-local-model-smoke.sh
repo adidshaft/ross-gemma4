@@ -367,15 +367,18 @@ def validate_identity_guard(identity, *, require_identity):
         acceleration = identity.get("acceleration")
         draft_tokens_value = identity.get("draft_tokens")
         draft_model_value = identity.get("draft_model")
+        draft_status = identity.get("draft_status")
         if (
             acceleration != "draftModelSpeculative"
             or draft_tokens_value in (None, "nil")
             or draft_model_value in (None, "nil")
+            or draft_status != "active"
         ):
             print(
                 "ROSS_SMOKE_GUARD_FAIL "
                 f"reason=draft_acceleration_inactive acceleration={acceleration} "
-                f"draft_tokens={draft_tokens_value} draft_model={draft_model_value}",
+                f"draft_tokens={draft_tokens_value} draft_model={draft_model_value} "
+                f"draft_status={draft_status}",
                 file=sys.stderr,
             )
             sys.exit(1)

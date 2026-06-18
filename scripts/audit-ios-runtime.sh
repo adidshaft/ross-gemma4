@@ -80,6 +80,16 @@ if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smo
     FAIL=1
 fi
 
+if ! grep -q 'draft_status != "active"' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP guard does not require active draft status."
+    FAIL=1
+fi
+
+if ! grep -q 'draft_status != "active"' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MTP guard does not require active draft status."
+    FAIL=1
+fi
+
 if [ ! -f docs/IOS_RUNTIME.md ]; then
     echo "❌ FAIL: docs/IOS_RUNTIME.md missing."
     FAIL=1
