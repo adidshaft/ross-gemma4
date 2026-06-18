@@ -461,6 +461,14 @@ if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin"
         file=sys.stderr,
     )
     sys.exit(1)
+
+if runtime == "mlx_swift_lm" and artifact_bytes <= 1_000_000:
+    print(
+        "Selected MLX manifest reports an implausibly small artifact for device smoke: "
+        f"bytes={artifact_bytes} relativePath={relative_path}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 PY
 
 if [[ "$require_draft_acceleration" == "1" ]]; then
@@ -517,6 +525,14 @@ if runtime == "mlx_swift_lm" and draft_relative_path.lower().endswith((".gguf", 
     print(
         "Selected MLX manifest points its draft companion at a file-like artifact instead of an MLX directory: "
         f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if runtime == "mlx_swift_lm" and draft_bytes <= 1_000_000:
+    print(
+        "Selected MLX manifest reports an implausibly small draft artifact for device smoke: "
+        f"draftArtifact.bytes={draft_bytes} draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
         file=sys.stderr,
     )
     sys.exit(1)

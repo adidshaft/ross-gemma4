@@ -257,6 +257,16 @@ if ! grep -q "Selected GGUF/MTP manifest reports an implausibly small draft arti
     FAIL=1
 fi
 
+if ! grep -q "Selected MLX manifest reports an implausibly small artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MLX smoke does not reject implausibly small primary artifacts before launch."
+    FAIL=1
+fi
+
+if ! grep -q "Selected MLX manifest reports an implausibly small draft artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MLX draft proof does not reject implausibly small draft artifacts before launch."
+    FAIL=1
+fi
+
 if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1
