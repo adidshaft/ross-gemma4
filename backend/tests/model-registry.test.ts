@@ -487,6 +487,116 @@ test("ios production catalog defaults to the three primary Gemma 4 packs", async
   }
 });
 
+test("ios production sessions preserve multi-gb GGUF delivery descriptors end to end", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const expectedPacks = [
+    {
+      packId: "gemma-4-12b-q4",
+      fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+      downloadUrl:
+        "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+      sizeBytes: 7_366_421_920,
+      finalSha256: "2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637",
+      draftFileName: "mtp-gemma-4-12b-it.gguf",
+      draftSizeBytes: 465_109_248
+    },
+    {
+      packId: "gemma-4-26b-a4b-q4",
+      fileName: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
+      downloadUrl:
+        "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
+      sizeBytes: 17_010_978_592,
+      finalSha256: "7e9c7880585fbf09ab31f3c042bd4c2c20d1c8036441163cdd839fd16670736d",
+      draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
+      draftSizeBytes: 461_766_816
+    }
+  ] as const;
+
+  for (const expectedPack of expectedPacks) {
+    const response = await app.inject({
+      method: "POST",
+      url: "/model-download/session",
+      payload: {
+        accountToken: "acct_test_token_1234567890",
+        packId: expectedPack.packId,
+        platform: "ios",
+        appVersion: "1.0.0",
+        deviceIdHash: "a1b2c3d4e5f6a7b8"
+      }
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = JSON.parse(response.body) as {
+      downloadSession: {
+        payload: {
+          deliveryMode: string;
+          artifactKind: string;
+          runtimeMode: string;
+          artifact: {
+            downloadPath?: string;
+            fileName: string;
+            downloadUrl: string;
+            sizeBytes: number;
+            segmentSizeBytes: number;
+            segmentCount: number;
+            finalSha256: string;
+            rangeUnit: string;
+            resumeStrategy: string;
+            segments: Array<{
+              index: number;
+              startByte: number;
+              endByteInclusive: number;
+              sizeBytes: number;
+              sha256: string;
+              rangeHeader: string;
+            }>;
+            draftArtifact?: {
+              fileName: string;
+              sizeBytes: number;
+              finalSha256: string;
+            };
+          };
+        };
+      };
+    };
+
+    assert.equal(body.downloadSession.payload.deliveryMode, "signed_segmented_local_model_artifact");
+    assert.equal(body.downloadSession.payload.artifactKind, "local_model_artifact");
+    assert.equal(body.downloadSession.payload.runtimeMode, "gemma_local_runtime");
+    assert.equal(body.downloadSession.payload.artifact.downloadPath, undefined);
+    assert.equal(body.downloadSession.payload.artifact.fileName, expectedPack.fileName);
+    assert.equal(body.downloadSession.payload.artifact.downloadUrl, expectedPack.downloadUrl);
+    assert.equal(body.downloadSession.payload.artifact.sizeBytes, expectedPack.sizeBytes);
+    assert.equal(body.downloadSession.payload.artifact.segmentSizeBytes, expectedPack.sizeBytes);
+    assert.equal(body.downloadSession.payload.artifact.segmentCount, 1);
+    assert.equal(body.downloadSession.payload.artifact.finalSha256, expectedPack.finalSha256);
+    assert.equal(body.downloadSession.payload.artifact.rangeUnit, "bytes");
+    assert.equal(body.downloadSession.payload.artifact.resumeStrategy, "range_request_segments");
+    assert.equal(body.downloadSession.payload.artifact.segments.length, 1);
+
+    const firstSegment = body.downloadSession.payload.artifact.segments[0];
+    assert.ok(firstSegment);
+    assert.equal(firstSegment.index, 0);
+    assert.equal(firstSegment.startByte, 0);
+    assert.equal(firstSegment.endByteInclusive, expectedPack.sizeBytes - 1);
+    assert.equal(firstSegment.sizeBytes, expectedPack.sizeBytes);
+    assert.equal(firstSegment.sha256, expectedPack.finalSha256);
+    assert.equal(firstSegment.rangeHeader, `bytes=0-${expectedPack.sizeBytes - 1}`);
+
+    assert.equal(body.downloadSession.payload.artifact.draftArtifact?.fileName, expectedPack.draftFileName);
+    assert.equal(body.downloadSession.payload.artifact.draftArtifact?.sizeBytes, expectedPack.draftSizeBytes);
+    assert.match(body.downloadSession.payload.artifact.draftArtifact?.finalSha256 ?? "", /^[a-f0-9]{64}$/);
+  }
+});
+
 test("ios production catalog keeps the default lineup to three packs even on iphone tiers", async (t) => {
   const app = await buildApp({
     env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
