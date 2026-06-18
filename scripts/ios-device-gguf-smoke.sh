@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -160,14 +162,17 @@ xcrun devicectl device copy to \
   --destination "Library/Application Support/RossAlpha/model-packs/$tier/" \
   > /dev/null
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$checksum" "$stage_timeout" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
 import subprocess
 import sys
 
-device_id, bundle_id, device_model_path, checksum, stage_timeout = sys.argv[1:]
+sys.path.insert(0, sys.argv[-1])
+from ross_smoke_summary import benchmark_summary_line, parse_fields
+
+device_id, bundle_id, device_model_path, checksum, stage_timeout = sys.argv[1:-1]
 
 env = os.environ.copy()
 env.update(
@@ -199,58 +204,8 @@ pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
 matrix_re = re.compile(r"^ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX\b")
-
-def parse_fields(line, skip_prefix=True):
-    fields = {}
-    chunks = line.split()[1:] if skip_prefix else line.split()
-    for chunk in chunks:
-        if "=" not in chunk:
-            continue
-        key, value = chunk.split("=", 1)
-        fields[key] = value
-    return fields
-
-def summary_value(fields, key):
-    value = fields.get(key)
-    return value if value not in (None, "") else "nil"
-
 def print_benchmark_summary(identity, pass_fields, matrix_fields):
-    stages = [
-        "source",
-        "general",
-        "bengali",
-        "hindi",
-        "tamil",
-        "telugu",
-    ]
-    summary = {
-        "runtime": summary_value(identity, "actual_runtime"),
-        "requested_runtime": summary_value(identity, "requested_runtime"),
-        "model_format": summary_value(identity, "model_format"),
-        "artifact_path_type": summary_value(identity, "artifact_path_type"),
-        "acceleration": summary_value(identity, "acceleration"),
-        "draft_tokens": summary_value(identity, "draft_tokens"),
-        "draft_model": summary_value(identity, "draft_model"),
-        "draft_status": summary_value(identity, "draft_status"),
-        "profile": summary_value(pass_fields, "profile"),
-        "matrix_profile": summary_value(matrix_fields, "profile"),
-        "matrix_stages": summary_value(matrix_fields, "stages"),
-        "elapsed": summary_value(pass_fields, "elapsed"),
-    }
-    for stage in stages:
-        for metric in [
-            "input_tokens",
-            "output_tokens",
-            "token_speed",
-            "first_token_ms",
-            "measured_tokens",
-        ]:
-            key = f"{stage}_{metric}"
-            if key in pass_fields:
-                summary[key] = pass_fields[key]
-
-    line = " ".join(f"{key}={value}" for key, value in summary.items())
-    print(f"ROSS_SMOKE_BENCHMARK_SUMMARY {line}")
+    print(benchmark_summary_line(identity, pass_fields, matrix_fields))
 
 def validate_identity_guard(identity, *, require_identity):
     if identity is None:

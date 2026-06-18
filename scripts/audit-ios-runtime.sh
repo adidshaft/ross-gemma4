@@ -60,11 +60,16 @@ for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-devic
         echo "❌ FAIL: $smoke_script does not require benchmark matrix before benchmark summary."
         FAIL=1
     fi
-    if ! grep -q "matrix_stages" "$smoke_script" 2>/dev/null; then
-        echo "❌ FAIL: $smoke_script benchmark summary omits matrix stages."
+    if ! grep -q "benchmark_summary_line" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script does not use the shared benchmark summary parser."
         FAIL=1
     fi
 done
+
+if ! grep -q "matrix_stages" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser omits matrix stages."
+    FAIL=1
+fi
 
 if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke runtime identity guard missing."
@@ -98,6 +103,11 @@ fi
 
 if [ ! -x scripts/test-ios-runtime-smoke-preflights.sh ]; then
     echo "❌ FAIL: executable iOS runtime smoke preflight test script missing."
+    FAIL=1
+fi
+
+if [ ! -x scripts/test-ross-smoke-summary.py ]; then
+    echo "❌ FAIL: executable smoke benchmark summary parser test missing."
     FAIL=1
 fi
 
@@ -156,6 +166,7 @@ if [ "$FAIL" -eq 1 ]; then
     exit 1
 else
     scripts/test-ios-runtime-smoke-preflights.sh
+    scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
     echo "benchmark guardrails: READY"
