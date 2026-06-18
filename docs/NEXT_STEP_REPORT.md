@@ -45,6 +45,14 @@ Most recent commits that define this pause point:
 - MLX and CoreAI decision paths are implemented in code and covered by unit tests
 - hidden answer details already include `Tokens processed` and `Token speed`
 
+Most recent verification commands:
+
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testAskRuntimeSourcePackChunksLongTaggedPageIntoMultipleBlocks|testAskRuntimeSourcePackHonorsChunkSizingFromOverridePolicy)'`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones)'`
+- `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
+  Run from `/Users/amanpandey/projects/ross-gemma4/backend`
+- `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
+
 ## What Is Still Not Proven
 
 - physical iPhone proof for the full GGUF and MLX setup lifecycle on representative 8 GB and 12 GB devices
