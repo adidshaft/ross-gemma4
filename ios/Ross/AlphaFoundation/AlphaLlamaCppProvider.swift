@@ -476,6 +476,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             accelerationMode: accelerationMode,
             accelerationDraftTokens: draftValidation.metadata?.tokens,
             draftModelPathLabel: draftValidation.metadata?.label,
+            draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftValidation.status,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
@@ -919,6 +920,20 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return nil
         }
         return draftPath
+    }
+
+    private func draftModelPathType() -> String? {
+        guard let draftPath = stagedDraftModelPath() else {
+            return nil
+        }
+        let draftURL = URL(fileURLWithPath: draftPath)
+        if (try? draftURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            return "directory"
+        }
+        if FileManager.default.fileExists(atPath: draftURL.path) {
+            return "file"
+        }
+        return "missing"
     }
 
     private func effectiveDraftModelPath() -> String? {

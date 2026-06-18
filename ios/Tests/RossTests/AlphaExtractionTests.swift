@@ -16288,6 +16288,7 @@ final class AlphaExtractionTests: XCTestCase {
             accelerationMode: .draftModelSpeculative,
             accelerationDraftTokens: 2,
             draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
+            draftModelPathType: "file",
             draftAccelerationStatus: "active",
             lastErrorCategory: nil,
             userFacingStatus: "Ready",
@@ -16311,6 +16312,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("acceleration=draftModelSpeculative"))
         XCTAssertTrue(line.contains("draft_tokens=2"))
         XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
+        XCTAssertTrue(line.contains("draft_model_path_type=file"))
         XCTAssertTrue(line.contains("draft_status=active"))
         XCTAssertTrue(line.contains("context_tokens=4096"))
         XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:"))
@@ -16372,6 +16374,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("acceleration=standard"))
         XCTAssertTrue(line.contains("draft_tokens=nil"))
         XCTAssertTrue(line.contains("draft_model=nil"))
+        XCTAssertTrue(line.contains("draft_model_path_type=nil"))
         XCTAssertTrue(line.contains("context_tokens=20480"))
         XCTAssertTrue(line.contains("gpu_offload=mlx_default"))
         XCTAssertTrue(line.contains("fallback=none"))
@@ -16578,6 +16581,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("acceleration=standard"))
         XCTAssertTrue(line.contains("draft_tokens=nil"))
         XCTAssertTrue(line.contains("draft_model=nil"))
+        XCTAssertTrue(line.contains("draft_model_path_type=nil"))
         XCTAssertTrue(line.contains("draft_status=not_supported"))
         XCTAssertTrue(line.contains("context_tokens=14336"))
         XCTAssertTrue(line.contains("gpu_offload=system_managed"))

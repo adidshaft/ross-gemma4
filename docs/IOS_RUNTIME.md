@@ -14,7 +14,7 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 ## Verified Evidence
 
 - Swift package tests cover registry parsing, artifact validation, download-state recovery, Ask routing, imported text/PDF/image behavior, and multilingual source-preserving fallback.
-- Local model smoke runs now emit `ROSS_RUNTIME_IDENTITY` before generation. Treat this as the authority for provider name, requested runtime, actual runtime, artifact kind/path type, acceleration mode, draft metadata, context size, GPU/offload summary, fallback state, and availability.
+- Local model smoke runs now emit `ROSS_RUNTIME_IDENTITY` before generation. Treat this as the authority for provider name, requested runtime, actual runtime, artifact kind/path type, acceleration mode, draft metadata including draft artifact path type, context size, GPU/offload summary, fallback state, and availability.
 - Explicit debug/smoke runtime overrides do not borrow artifact paths from an installed pack with a different runtime. MLX, GGUF, and CoreAI/CoreML lanes must use an explicit debug artifact path, a matching installed pack, or a system-model sentinel where that runtime supports one.
 - If an active runtime fails health before generation, smoke now emits the same identity marker with `available=false` and the concrete error category. This is expected for missing or malformed MLX/CoreAI artifacts and is still routing evidence, not a generation benchmark.
 - Smoke pass/fail lines include stage-prefixed benchmark fields such as `source_input_tokens`, `source_output_tokens`, `source_token_speed`, `source_first_token_ms`, and `source_measured_tokens`. Prefer measured token fields when `*_measured_tokens=true`; otherwise treat counts/speeds as runtime estimates.

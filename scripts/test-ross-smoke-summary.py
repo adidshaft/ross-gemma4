@@ -16,7 +16,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "model_format=gguf artifact_path_type=file acceleration=standard "
-            "draft_tokens=nil draft_model=nil draft_status=no_draft_configured"
+            "draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured"
         )
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
@@ -43,6 +43,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "matrix_cases=english_source_bound_document_qa,bengali_source_bound_document_qa,english_open_no_document_query",
             summary,
         )
+        self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
         self.assertIn("source_token_speed=9.00", summary)
         self.assertIn("bengali_token_speed=8.84", summary)
@@ -123,7 +124,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "model_format=local_model_artifact artifact_path_type=file acceleration=standard "
-            "draft_tokens=nil draft_model=nil draft_status=no_draft_configured"
+            "draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured"
         )
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
@@ -143,6 +144,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("draft_status=no_draft_configured", summary)
+        self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_profile=full", summary)
         self.assertIn("matrix_cases=nil", summary)
         self.assertIn("tamil_grounded=false", summary)

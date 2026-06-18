@@ -210,6 +210,7 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil
     var accelerationDraftTokens: Int? = nil
     var draftModelPathLabel: String? = nil
+    var draftModelPathType: String? = nil
     var draftAccelerationStatus: String? = nil
     var lastErrorCategory: String?
     var userFacingStatus: String

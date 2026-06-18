@@ -1017,6 +1017,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             accelerationMode: draftStatus.mode,
             accelerationDraftTokens: draftStatus.tokens,
             draftModelPathLabel: draftStatus.label,
+            draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftStatus.status,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
@@ -1352,6 +1353,19 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return nil
         }
         return draftDirectoryURL
+    }
+
+    private func draftModelPathType() -> String? {
+        guard let draftDirectoryURL = configuredDraftDirectoryURL() else {
+            return nil
+        }
+        if (try? draftDirectoryURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            return "directory"
+        }
+        if FileManager.default.fileExists(atPath: draftDirectoryURL.path) {
+            return "file"
+        }
+        return "missing"
     }
 
     private func draftTokensForGeneration() -> Int? {

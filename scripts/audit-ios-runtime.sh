@@ -50,6 +50,11 @@ if ! grep -q "draft_status" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; t
     FAIL=1
 fi
 
+if ! grep -q "draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: draft model path type missing from runtime identity marker."
+    FAIL=1
+fi
+
 if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: smoke benchmark matrix marker missing."
     FAIL=1
@@ -82,6 +87,11 @@ fi
 
 if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared smoke parser omits failure summaries."
+    FAIL=1
+fi
+
+if ! grep -q "draft_model_path_type" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared smoke parser omits draft model path type."
     FAIL=1
 fi
 
@@ -187,8 +197,18 @@ if ! grep -q 'draft_status != "active"' scripts/ios-simulator-local-model-smoke.
     FAIL=1
 fi
 
+if ! grep -q 'draft_model_path_type in (None, "nil", "missing")' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP guard does not require a present draft artifact path type."
+    FAIL=1
+fi
+
 if ! grep -q 'draft_status != "active"' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack MTP guard does not require active draft status."
+    FAIL=1
+fi
+
+if ! grep -q 'draft_model_path_type in (None, "nil", "missing")' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MTP guard does not require a present draft artifact path type."
     FAIL=1
 fi
 
