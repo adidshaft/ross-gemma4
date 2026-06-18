@@ -205,4 +205,21 @@ write_manifest '{
 }'
 run_expect_exit_1 "empty CoreAI adapter installed manifest" "empty artifact" "${base_command[@]}" --runtime coreml
 
+write_manifest '{
+  "packId": "quick-device-proof",
+  "tier": "quick_start",
+  "fileName": "main.gguf",
+  "relativePath": "model-packs/quick/main.gguf",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+run_expect_exit_1 \
+  "seeded device-proof pack excluded by default" \
+  "Only seeded device-proof manifests matched" \
+  "${base_command[@]}" --runtime gguf
+
 echo "iOS device installed-pack preflight tests: PASS"

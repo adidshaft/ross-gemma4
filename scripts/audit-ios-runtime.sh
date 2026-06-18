@@ -207,6 +207,11 @@ if [ ! -x scripts/test-ios-device-installed-pack-preflights.sh ]; then
     FAIL=1
 fi
 
+if ! grep -q "seeded device-proof pack excluded by default" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack preflight tests do not cover seeded device-proof exclusion."
+    FAIL=1
+fi
+
 if [ ! -x scripts/test-ross-smoke-summary.py ]; then
     echo "❌ FAIL: executable smoke benchmark summary parser test missing."
     FAIL=1
