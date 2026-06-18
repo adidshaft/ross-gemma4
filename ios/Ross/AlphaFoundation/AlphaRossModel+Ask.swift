@@ -280,6 +280,9 @@ extension AlphaRossModel {
            let resolved = resolve(for: preferredPack) {
             return resolved
         }
+        if preferredRuntimeMode != nil {
+            return nil
+        }
 
         if let resolved = resolve(for: currentPack) {
             return resolved
