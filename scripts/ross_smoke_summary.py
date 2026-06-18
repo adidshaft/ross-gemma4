@@ -34,6 +34,9 @@ def summary_value(fields, key):
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
+    for required_key in ("profile", "cases", "stages"):
+        if not matrix_fields.get(required_key):
+            raise MissingBenchmarkMatrixError(f"missing_benchmark_matrix_{required_key}")
 
     summary = {
         "runtime": summary_value(identity, "actual_runtime"),

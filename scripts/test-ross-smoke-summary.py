@@ -51,10 +51,28 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix"):
             benchmark_summary_line({}, {}, {})
 
+    def test_incomplete_benchmark_matrix_is_rejected(self):
+        incomplete_matrix = {
+            "profile": "quick",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix_cases"):
+            benchmark_summary_line({}, {}, incomplete_matrix)
+
     def test_empty_identity_and_pass_fields_are_reported_as_nil(self):
-        summary = benchmark_summary_line({}, {}, {"profile": "quick", "stages": "source:document_qa"})
+        summary = benchmark_summary_line(
+            {},
+            {},
+            {
+                "profile": "quick",
+                "cases": "english_source_bound_document_qa",
+                "stages": "source:document_qa",
+            },
+        )
 
         self.assertIn("runtime=nil", summary)
+        self.assertIn("matrix_cases=english_source_bound_document_qa", summary)
         self.assertIn("matrix_stages=source:document_qa", summary)
 
     def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
