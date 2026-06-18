@@ -137,6 +137,11 @@ Manual in-app flow:
    - fields verified
    - unsupported accepted `0`
 8. In `Support details`, keep the hidden recent sample-check history visible while switching runtimes so first-response and token-speed comparisons stay on-device.
+9. Also run `Check private assistant with a longer matter bundle` in `Support details` for each runtime you compare, then record:
+   - answer headline/preview quality on the synthetic longer bundle
+   - source refs returned
+   - first response
+   - token speed
 
 If the runtime is unavailable:
 

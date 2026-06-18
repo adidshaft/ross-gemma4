@@ -2877,12 +2877,33 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Sample file கொண்டு private assistant check செய்கிறது...",
             "te": "Sample file తో private assistant check చేస్తోంది..."
         ],
+        "check_private_assistant_with_longer_bundle": [
+            "en": "Check private assistant with a longer matter bundle",
+            "hi": "Longer matter bundle से private assistant check करें",
+            "bn": "Longer matter bundle দিয়ে private assistant check করুন",
+            "ta": "Longer matter bundle கொண்டு private assistant check செய்யவும்",
+            "te": "Longer matter bundle తో private assistant check చేయండి"
+        ],
+        "checking_private_assistant_longer_bundle": [
+            "en": "Checking private assistant with a longer matter bundle...",
+            "hi": "Longer matter bundle से private assistant check हो रहा है...",
+            "bn": "Longer matter bundle দিয়ে private assistant check হচ্ছে...",
+            "ta": "Longer matter bundle கொண்டு private assistant check செய்கிறது...",
+            "te": "Longer matter bundle తో private assistant check చేస్తోంది..."
+        ],
         "private_assistant_sample_file_check_report_title": [
             "en": "Private assistant sample file check",
             "hi": "Sample file check report देखें",
             "bn": "Sample file check report দেখুন",
             "ta": "Sample file check report பார்க்கவும்",
             "te": "Sample file check report చూడండి"
+        ],
+        "private_assistant_matter_bundle_check_report_title": [
+            "en": "Private assistant longer matter bundle check",
+            "hi": "Longer matter bundle check report देखें",
+            "bn": "Longer matter bundle check report দেখুন",
+            "ta": "Longer matter bundle check report பார்க்கவும்",
+            "te": "Longer matter bundle check report చూడండి"
         ],
         "private_assistant_sample_file_check_completed_on_iphone": [
             "en": "Sample file check completed on this iPhone",
@@ -2919,6 +2940,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Review தேவைப்படும் fields: %d",
             "te": "Review అవసరమైన fields: %d"
         ],
+        "selected_files_count": [
+            "en": "Selected files: %d",
+            "hi": "Selected files: %d",
+            "bn": "Selected files: %d",
+            "ta": "Selected files: %d",
+            "te": "Selected files: %d"
+        ],
+        "source_blocks_count": [
+            "en": "Source blocks: %d",
+            "hi": "Source blocks: %d",
+            "bn": "Source blocks: %d",
+            "ta": "Source blocks: %d",
+            "te": "Source blocks: %d"
+        ],
+        "source_refs_count": [
+            "en": "Source refs returned: %d",
+            "hi": "Source refs returned: %d",
+            "bn": "Source refs returned: %d",
+            "ta": "Source refs returned: %d",
+            "te": "Source refs returned: %d"
+        ],
         "unsupported_accepted_count": [
             "en": "Unsupported accepted: %d",
             "hi": "Unsupported accepted: %d",
@@ -2933,12 +2975,26 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant sample file check prompt அல்லது source text log செய்யாமல் முடிந்தது.",
             "te": "Private assistant sample file check prompt లేదా source text log చేయకుండా పూర్తయింది."
         ],
+        "private_assistant_matter_bundle_check_completed_private": [
+            "en": "Private assistant longer matter bundle check completed without logging prompt or source text.",
+            "hi": "Private assistant longer matter bundle check prompt या source text log किए बिना पूरा हुआ.",
+            "bn": "Private assistant longer matter bundle check prompt বা source text log না করেই শেষ হয়েছে.",
+            "ta": "Private assistant longer matter bundle check prompt அல்லது source text log செய்யாமல் முடிந்தது.",
+            "te": "Private assistant longer matter bundle check prompt లేదా source text log చేయకుండా పూర్తయింది."
+        ],
         "private_assistant_sample_file_check_recent_runs": [
             "en": "Recent sample checks",
             "hi": "Recent sample checks",
             "bn": "Recent sample checks",
             "ta": "Recent sample checks",
             "te": "Recent sample checks"
+        ],
+        "private_assistant_matter_bundle_check_recent_runs": [
+            "en": "Recent longer bundle checks",
+            "hi": "Recent longer bundle checks",
+            "bn": "Recent longer bundle checks",
+            "ta": "Recent longer bundle checks",
+            "te": "Recent longer bundle checks"
         ],
         "completed": [
             "en": "Completed",

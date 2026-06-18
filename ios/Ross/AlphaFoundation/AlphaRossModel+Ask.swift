@@ -1066,6 +1066,164 @@ extension AlphaRossModel {
         ) != nil
     }
 
+    func runMatterBundleComparison() {
+        guard !matterBundleComparisonRunning else { return }
+        matterBundleComparisonRunning = true
+        matterBundleComparisonReport = nil
+
+        Task {
+            let runtimeHealth = activeRuntimeHealth
+            guard let runtimeHealth, runtimeHealth.available else {
+                recordMatterBundleComparisonReport(
+                    AlphaMatterBundleComparisonReport(
+                        ran: false,
+                        runtimeUsed: runtimeHealth?.runtimeMode.rawValue ?? AlphaPackRuntimeMode.unavailable.rawValue,
+                        schemaValid: false,
+                        selectedDocumentCount: 0,
+                        sourceBlockCount: 0,
+                        sourceRefsReturned: 0,
+                        message: alphaPrivateAIVisibleRecoveryText(
+                            runtimeHealth?.userFacingStatus,
+                            fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
+                        )
+                    )
+                )
+                matterBundleComparisonRunning = false
+                return
+            }
+
+            let sample = alphaMatterBundleComparisonSample()
+            let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+            let askExecutor: @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput = { _ in
+                AlphaLocalModelOutput(
+                    rawText: "",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: ["Development local ask output is disabled."],
+                    sourceRefs: [],
+                    errorCategory: "development_artifact_blocked"
+                )
+            }
+            guard let resolvedProvider = resolvedLocalAskProvider(
+                requestedTier: requestedTier,
+                task: .matterQuestionAnswer,
+                executor: askExecutor
+            ) else {
+                recordMatterBundleComparisonReport(
+                    AlphaMatterBundleComparisonReport(
+                        ran: false,
+                        runtimeUsed: runtimeHealth.runtimeMode.rawValue,
+                        schemaValid: false,
+                        selectedDocumentCount: sample.selectedDocuments.count,
+                        sourceBlockCount: 0,
+                        sourceRefsReturned: 0,
+                        message: alphaPrivateAIVisibleRecoveryText(
+                            runtimeHealth.userFacingStatus,
+                            fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
+                        )
+                    )
+                )
+                matterBundleComparisonRunning = false
+                return
+            }
+
+            let sourcePack = alphaMatterBundleComparisonSourcePack(
+                sample: sample,
+                provider: resolvedProvider.provider
+            )
+            let budgetPlan = askMatterQuestionBudgetPlan(
+                for: resolvedProvider.provider,
+                sourcePack: sourcePack,
+                selectedDocumentCount: sample.selectedDocuments.count
+            )
+            var input = AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: askRuntimeInstruction(
+                    question: sample.question,
+                    scopeCaseID: nil,
+                    selectedDocuments: sample.selectedDocuments,
+                    hasLocalSources: !sourcePack.isEmpty
+                ),
+                sourcePack: sourcePack,
+                expectedSchema: #"{"headline":"short string","sections":["one to three concise strings"],"statusNote":"optional short string"}"#,
+                maxOutputTokens: 384,
+                languageProfile: nil,
+                documentClassification: nil,
+                extractionMode: AlphaExtractionMode.fromTier(requestedTier),
+                requireSourceRefs: !sourcePack.isEmpty,
+                samplerSettings: persisted.settings.llamaSamplerSettings
+            )
+            input.promptBudgetOverrideChars = budgetPlan.maxInputChars
+            input.sourceBlockLimitOverride = budgetPlan.sourceBlockLimit
+            input.sourceExcerptCharsOverride = budgetPlan.sourceExcerptChars
+
+            let invocation = beginMatterQuestionInvocation(
+                provider: resolvedProvider.provider,
+                activePack: resolvedProvider.activePack,
+                requestedTier: requestedTier,
+                input: input,
+                scopeCaseID: nil,
+                selectedDocumentID: sample.selectedDocuments.first?.id
+            )
+            let output = await resolvedProvider.provider.run(input)
+            let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
+            let baseResult = AlphaAskResult(
+                kind: .userAsk,
+                question: sample.question,
+                scopeCaseID: nil,
+                scopeLabel: sample.caseMatter.title,
+                selectedDocumentTitles: sample.selectedDocuments.map(\.title),
+                answerTitle: rossLocalized("private_assistant_matter_bundle_check_report_title"),
+                answerSections: [],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: rossLocalized("private_assistant"),
+                needsReviewWarning: nil
+            )
+            let payload = displayableMatterAskPayload(
+                output: output,
+                baseResult: baseResult,
+                question: sample.question,
+                scopeCaseID: nil,
+                sourcePack: sourcePack,
+                providerRuntimeMode: resolvedProvider.provider.runtimeMode,
+                requestedLanguage: alphaAnswerLanguage(for: sample.question)
+            )
+            let needsReviewWarning = alphaLocalAskNeedsReviewWarning(
+                runtimeWarnings: output.warnings,
+                sourcePackCount: input.sourcePack.count,
+                includedSourceCount: output.sourceRefs.count,
+                sourceBlockLimit: input.sourceBlockLimitOverride,
+                hasSelectedDocuments: true
+            )
+            let answerPreview = alphaMatterBundleComparisonPreview(
+                headline: payload?.headline,
+                sections: payload?.sections ?? [],
+                fallbackRawText: output.rawText
+            )
+
+            recordMatterBundleComparisonReport(
+                AlphaMatterBundleComparisonReport(
+                    ran: true,
+                    runtimeUsed: completedInvocation.runtimeMode,
+                    schemaValid: output.schemaValid,
+                    selectedDocumentCount: sample.selectedDocuments.count,
+                    sourceBlockCount: sourcePack.count,
+                    sourceRefsReturned: output.sourceRefs.count,
+                    answerHeadline: payload?.headline,
+                    answerPreview: answerPreview,
+                    needsReviewWarning: needsReviewWarning,
+                    durationMs: completedInvocation.durationMs,
+                    timeToFirstTokenMs: completedInvocation.timeToFirstTokenMs,
+                    estimatedOutputTokensPerSecond: completedInvocation.estimatedOutputTokensPerSecond,
+                    message: rossLocalized("private_assistant_matter_bundle_check_completed_private")
+                )
+            )
+            matterBundleComparisonRunning = false
+        }
+    }
+
     func activeLocalModelDisplayLabel() -> String {
         guard let activePack else { return rossLocalized("private_assistant") }
         return "\(activePack.tier.setupTitle) assistant"
@@ -2765,6 +2923,292 @@ extension AlphaRossModel {
             return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
+    }
+
+    private func alphaMatterBundleComparisonSample() -> (
+        caseMatter: AlphaCaseMatter,
+        selectedDocuments: [AlphaAskDocumentOption],
+        question: String
+    ) {
+        let calendar = Calendar.current
+        let caseID = UUID(uuidString: "51404589-65C6-4A1D-82D8-0B59D2B8C731") ?? UUID()
+        let orderID = UUID(uuidString: "39FF5545-562B-482F-9517-646C43A0E35E") ?? UUID()
+        let noteID = UUID(uuidString: "A53F0AD8-CAC9-4645-9896-84CC857A045D") ?? UUID()
+        let logID = UUID(uuidString: "BC4436CC-2E56-45D3-90A8-1CE4165A0CBB") ?? UUID()
+        let nextHearing = calendar.date(from: DateComponents(year: 2026, month: 4, day: 28)) ?? .now
+        let writtenStatementDue = calendar.date(from: DateComponents(year: 2026, month: 3, day: 28)) ?? .now
+        let affidavitDue = calendar.date(from: DateComponents(year: 2026, month: 4, day: 1)) ?? .now
+
+        let orderPageOne = """
+        Order dated 14 March 2026.
+        Delay condonation is kept open for detailed reply. The respondent shall file a written statement within two weeks and shall also file an affidavit of admission and denial of documents within three days thereafter.
+        The matter concerns a complaint under Section 138 of the Negotiable Instruments Act with a disputed camera-access trail from the commercial premises.
+        Counsel for the petitioner says the retention copy from camera CAM-D3 was overwritten after the first export queue failed.
+        """
+        let orderPageTwo = """
+        List on 28 April 2026 for pleadings completion and directions on electronic records.
+        Before that date, counsel should verify whether the 14-day retention window for CAM-D3 footage was preserved, whether the export queue timestamps match the access log, and whether the overwrite occurred before or after notice to preserve.
+        The respondent may not rely on an unsigned chronology note unless the underlying access log is produced.
+        """
+        let notePageOne = """
+        Internal chronology note prepared on 16 March 2026.
+        1. Notice of dishonour served on 05 January 2026.
+        2. Access log shows CAM-D3 export queue attempts on 07 January 2026 and 09 January 2026.
+        3. Retention policy rotates local footage after fourteen days unless a preservation ticket is confirmed by the facilities lead.
+        4. Petitioner says a preservation email was sent, but the attachment list does not include the CAM-D3 clip hash.
+        """
+        let notePageTwo = """
+        Counsel to verify whether the preservation request and the access log refer to the same device serial.
+        If the export queue failed before the overwrite, the evidentiary gap should be disclosed early instead of assuming the full video survives.
+        The chronology note also says the respondent is expected to deny authorship of the facilities ledger unless a signed custodian statement is filed.
+        """
+        let logPageOne = """
+        Native video access log summary.
+        Device CAM-D3 retention policy: fourteen-day rolling overwrite.
+        Export queue event 07 January 2026 18:42 marked failed due to checksum mismatch.
+        Export queue event 09 January 2026 09:15 marked queued but no completed artifact path was recorded.
+        System note on 20 January 2026 states overwrite cycle completed for unpinned clips.
+        """
+        let logPageTwo = """
+        Facilities follow-up entry says preservation ticket PR-22 was opened, but the attachment tab was blank when the access log was printed.
+        If counsel relies on CAM-D3, confirm whether any downstream archive exists outside the rolling store and whether the 09 January queued export produced a later access log marker.
+        """
+
+        func page(_ number: Int, text: String, anchor: String) -> AlphaDocumentPage {
+            AlphaDocumentPage(
+                pageNumber: number,
+                snippet: anchor,
+                extractedText: text,
+                anchorText: anchor,
+                ocrConfidence: 0.99,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed
+            )
+        }
+
+        let orderDocument = AlphaCaseDocument(
+            id: orderID,
+            title: "Interim order",
+            fileName: "interim-order.txt",
+            kind: .text,
+            storedRelativePath: "comparison/interim-order.txt",
+            importedAt: .now,
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "\(orderPageOne)\n\n\(orderPageTwo)",
+            dominantSourceSnippet: "Written statement due in two weeks; list on 28 April 2026.",
+            lastIndexedAt: .now,
+            pages: [
+                page(1, text: orderPageOne, anchor: "Written statement within two weeks."),
+                page(2, text: orderPageTwo, anchor: "List on 28 April 2026 for pleadings completion.")
+            ]
+        )
+        let chronologyDocument = AlphaCaseDocument(
+            id: noteID,
+            title: "Chronology note",
+            fileName: "chronology-note.txt",
+            kind: .text,
+            storedRelativePath: "comparison/chronology-note.txt",
+            importedAt: .now,
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "\(notePageOne)\n\n\(notePageTwo)",
+            dominantSourceSnippet: "Chronology note tracks CAM-D3 export attempts and preservation risk.",
+            lastIndexedAt: .now,
+            pages: [
+                page(1, text: notePageOne, anchor: "Notice of dishonour and CAM-D3 export attempts."),
+                page(2, text: notePageTwo, anchor: "Verify preservation request against the access log.")
+            ]
+        )
+        let accessLogDocument = AlphaCaseDocument(
+            id: logID,
+            title: "CAM-D3 access log",
+            fileName: "cam-d3-access-log.txt",
+            kind: .text,
+            storedRelativePath: "comparison/cam-d3-access-log.txt",
+            importedAt: .now,
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "\(logPageOne)\n\n\(logPageTwo)",
+            dominantSourceSnippet: "CAM-D3 retention is fourteen-day rolling overwrite with failed export queue events.",
+            lastIndexedAt: .now,
+            pages: [
+                page(1, text: logPageOne, anchor: "Fourteen-day rolling overwrite and failed exports."),
+                page(2, text: logPageTwo, anchor: "Preservation ticket PR-22 and blank attachment tab.")
+            ]
+        )
+
+        let caseMatter = AlphaCaseMatter(
+            id: caseID,
+            title: "Section 138 camera-retention bundle",
+            forum: "Delhi High Court",
+            caseNumber: "CS(COMM) 245/2026",
+            stage: .pleadings,
+            nextHearing: nextHearing,
+            dates: [
+                AlphaMatterDate(caseId: caseID, title: "Written statement due", kind: .filingDeadline, date: writtenStatementDue),
+                AlphaMatterDate(caseId: caseID, title: "Affidavit of admission and denial", kind: .complianceDate, date: affidavitDue),
+                AlphaMatterDate(caseId: caseID, title: "Next hearing", kind: .hearing, date: nextHearing)
+            ],
+            summary: "Section 138 matter with a disputed CAM-D3 retention trail and upcoming pleadings deadlines.",
+            issueHighlights: [
+                "Written statement and affidavit deadlines",
+                "Whether CAM-D3 footage was overwritten after failed export attempts",
+                "Whether preservation ticket PR-22 actually preserved the relevant clip"
+            ],
+            evidenceNotes: [
+                "Chronology note mentions two failed or incomplete export queue events.",
+                "Access log points to a fourteen-day overwrite cycle unless preservation is confirmed."
+            ],
+            draftTasks: [
+                "Verify the preservation ticket against the access log.",
+                "Check whether the respondent filed the affidavit of admission and denial."
+            ],
+            documents: [orderDocument, chronologyDocument, accessLogDocument],
+            sourceRefs: []
+        )
+        let selectedDocuments = caseMatter.documents.map {
+            AlphaAskDocumentOption(
+                id: $0.id,
+                caseId: caseMatter.id,
+                caseTitle: caseMatter.title,
+                title: $0.title,
+                fileName: $0.fileName,
+                kind: $0.kind,
+                isShared: false
+            )
+        }
+        let question = "From the selected files, what are the next dated obligations, what must the respondent file before the next hearing, and what should counsel verify about the CAM-D3 retention and overwrite issue?"
+        return (caseMatter, selectedDocuments, question)
+    }
+
+    private func alphaMatterBundleComparisonSourcePack(
+        sample: (caseMatter: AlphaCaseMatter, selectedDocuments: [AlphaAskDocumentOption], question: String),
+        provider: any AlphaLocalModelProvider
+    ) -> [AlphaSourceTextBlock] {
+        let sourcePackPolicy = askRuntimeSourcePackPolicy(
+            for: provider,
+            selectedDocumentCount: sample.selectedDocuments.count
+        )
+        let selectedDocumentIDs = Set(sample.selectedDocuments.map(\.id))
+        var documentBlocks: [AlphaSourceTextBlock] = []
+
+        for document in sample.caseMatter.documents {
+            if let confirmedDetailsBlock = alphaConfirmedDocumentDetailsSourceBlock(
+                caseMatter: sample.caseMatter,
+                document: document
+            ) {
+                documentBlocks.append(confirmedDetailsBlock)
+            }
+
+            let pages = document.pages.isEmpty
+                ? [AlphaDocumentPage(pageNumber: 1, snippet: document.dominantSourceSnippet ?? alphaAskCompactSnippet(from: document.extractedText))]
+                : document.pages
+
+            for page in pages {
+                let text = page.extractedText ?? page.anchorText ?? document.dominantSourceSnippet ?? document.extractedText ?? ""
+                let cleanedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !cleanedText.isEmpty else { continue }
+                let chunkedBlocks = alphaChunkedAskSourceBlocks(
+                    caseMatter: sample.caseMatter,
+                    document: document,
+                    page: page,
+                    cleanedText: cleanedText,
+                    allowsChunking: true,
+                    preferredChunkChars: sourcePackPolicy.preferredChunkChars,
+                    overlapChars: sourcePackPolicy.overlapChars
+                )
+                documentBlocks.append(contentsOf: chunkedBlocks)
+            }
+        }
+
+        let rankedDocumentBlocks = alphaRankedAskSourceBlocks(
+            documentBlocks,
+            question: sample.question,
+            selectedDocumentIDs: selectedDocumentIDs
+        )
+        let prioritizedSelectedDocumentBlocks = alphaPrioritizedSelectedDocumentSourceBlocks(
+            documentBlocks,
+            rankedBlocks: rankedDocumentBlocks,
+            selectedDocumentIDs: selectedDocumentIDs
+        )
+
+        var combinedBlocks: [AlphaSourceTextBlock] = []
+        if let matterBlock = alphaMatterBundleComparisonMatterSourceBlock(caseMatter: sample.caseMatter) {
+            combinedBlocks.append(matterBlock)
+        }
+        combinedBlocks.append(contentsOf: prioritizedSelectedDocumentBlocks)
+        return Array(combinedBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
+    }
+
+    private func alphaMatterBundleComparisonMatterSourceBlock(
+        caseMatter: AlphaCaseMatter
+    ) -> AlphaSourceTextBlock? {
+        var lines: [String] = [
+            "\(rossLocalized("ask_source_pack_matter")): \(caseMatter.title)",
+            "\(rossLocalized("ask_source_pack_forum")): \(caseMatter.forum)",
+            "\(rossLocalized("ask_source_pack_stage")): \(caseMatter.stage.title)",
+            "\(rossLocalized("ask_source_pack_summary")): \(caseMatter.summary)"
+        ]
+        if let nextHearing = caseMatter.nextHearing {
+            lines.append("\(rossLocalized("ask_source_pack_next_hearing")): \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
+        }
+        if !caseMatter.issueHighlights.isEmpty {
+            lines.append("\(rossLocalized("ask_source_pack_issues")): \(caseMatter.issueHighlights.prefix(3).joined(separator: "; "))")
+        }
+        let scheduledDates = caseMatter.dates
+            .filter { $0.status == .scheduled }
+            .sorted { $0.date < $1.date }
+            .prefix(3)
+            .map { String(format: rossLocalized("ask_source_pack_date_on"), $0.title, $0.date.formatted(date: .abbreviated, time: .omitted)) }
+        if !scheduledDates.isEmpty {
+            lines.append("\(rossLocalized("ask_source_pack_dates")): \(scheduledDates.joined(separator: "; "))")
+        }
+        let text = lines.joined(separator: "\n")
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let sourceRef = AlphaSourceRef(
+            caseId: caseMatter.id,
+            documentId: caseMatter.documents.first?.id ?? caseMatter.id,
+            documentTitle: "Matter details",
+            pageNumber: 1,
+            paragraphRange: "comparison details",
+            textSnippet: alphaAskCompactSnippet(from: text),
+            ocrConfidence: nil,
+            sourceCategory: .matterDetail
+        )
+        return AlphaSourceTextBlock(
+            sourceRef: sourceRef,
+            text: text,
+            pageNumber: 1,
+            languageHint: nil,
+            ocrConfidence: nil
+        )
+    }
+
+    private func alphaMatterBundleComparisonPreview(
+        headline: String?,
+        sections: [String],
+        fallbackRawText: String
+    ) -> String? {
+        let combinedSections = sections
+            .joined(separator: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedHeadline = headline?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let rawFallback = fallbackRawText
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let combined: String
+        if !combinedSections.isEmpty {
+            combined = cleanedHeadline.isEmpty ? combinedSections : "\(cleanedHeadline): \(combinedSections)"
+        } else {
+            combined = cleanedHeadline.isEmpty ? rawFallback : "\(cleanedHeadline): \(rawFallback)"
+        }
+        guard !combined.isEmpty else { return nil }
+        return String(combined.prefix(220))
     }
 
     func alphaExpandedAskCandidateDocumentLimit(

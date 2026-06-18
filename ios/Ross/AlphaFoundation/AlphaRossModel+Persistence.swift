@@ -2818,6 +2818,16 @@ extension AlphaRossModel {
         persisted.localInferenceSmokeReports = reports
     }
 
+    func recordMatterBundleComparisonReport(_ report: AlphaMatterBundleComparisonReport) {
+        matterBundleComparisonReport = report
+        var reports = persisted.matterBundleComparisonReports ?? []
+        reports.insert(report, at: 0)
+        if reports.count > Self.matterBundleComparisonHistoryLimit {
+            reports.removeLast(reports.count - Self.matterBundleComparisonHistoryLimit)
+        }
+        persisted.matterBundleComparisonReports = reports
+    }
+
     func advanceOnboarding() {
         selectedTier = preferredSelectedAssistantTier(fallbackSelectedTier: selectedTier)
         finishPackSetup()

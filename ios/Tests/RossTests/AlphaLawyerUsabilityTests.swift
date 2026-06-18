@@ -4462,6 +4462,82 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(model.persisted.localInferenceSmokeReports?.count, AlphaRossModel.localInferenceSmokeHistoryLimit)
     }
 
+    func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
+        rossSaveLanguageSelection(code: "hi")
+        let model = await MainActor.run {
+            AlphaRossModel()
+        }
+
+        await MainActor.run {
+            model.runMatterBundleComparison()
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+
+        let report = await MainActor.run { model.matterBundleComparisonReport }
+        XCTAssertEqual(report?.ran, false)
+        XCTAssertEqual(report?.message, "Private assistant अभी इस device पर unavailable है।")
+
+        await MainActor.run {
+            model.privateAISnapshot.activeRuntimeHealth = AlphaLocalRuntimeHealth(
+                runtimeMode: .llamaCppGguf,
+                available: false,
+                modelPathPresent: true,
+                modelPathLabel: "broken.gguf",
+                checksumVerified: false,
+                supportedTasks: [],
+                maxInputChars: 0,
+                estimatedContextTokens: 0,
+                lastErrorCategory: "runtime_validation_failed",
+                userFacingStatus: "Model provider byte-range check failed.",
+                explicitOptInEnabled: true
+            )
+            model.runMatterBundleComparison()
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+
+        let sanitizedReport = await MainActor.run { model.matterBundleComparisonReport }
+        XCTAssertEqual(sanitizedReport?.ran, false)
+        XCTAssertEqual(sanitizedReport?.message, "Private assistant अभी इस device पर unavailable है।")
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("model") == true)
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("provider") == true)
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("byte-range") == true)
+
+        let history = await MainActor.run { model.matterBundleComparisonReports }
+        XCTAssertEqual(history.first, sanitizedReport)
+        XCTAssertEqual(history.count, 2)
+    }
+
+    @MainActor
+    func testMatterBundleComparisonHistoryKeepsMostRecentRuns() {
+        let model = AlphaRossModel()
+
+        for index in 0..<(AlphaRossModel.matterBundleComparisonHistoryLimit + 2) {
+            model.recordMatterBundleComparisonReport(
+                AlphaMatterBundleComparisonReport(
+                    ran: index.isMultiple(of: 2),
+                    runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                    schemaValid: index.isMultiple(of: 2),
+                    selectedDocumentCount: 3,
+                    sourceBlockCount: 7 + index,
+                    sourceRefsReturned: 3,
+                    answerHeadline: "headline \(index)",
+                    answerPreview: "preview \(index)",
+                    needsReviewWarning: nil,
+                    durationMs: 1_200 + index,
+                    timeToFirstTokenMs: 220 + index,
+                    estimatedOutputTokensPerSecond: Double(index) + 2,
+                    message: "comparison \(index)",
+                    createdAt: Date(timeIntervalSince1970: Double(index))
+                )
+            )
+        }
+
+        XCTAssertEqual(model.matterBundleComparisonReports.count, AlphaRossModel.matterBundleComparisonHistoryLimit)
+        XCTAssertEqual(model.matterBundleComparisonReports.first?.message, "comparison 7")
+        XCTAssertEqual(model.matterBundleComparisonReports.last?.message, "comparison 2")
+        XCTAssertEqual(model.persisted.matterBundleComparisonReports?.count, AlphaRossModel.matterBundleComparisonHistoryLimit)
+    }
+
     func testPrivateAssistantSampleCheckReportUsesProductLanguage() async throws {
         rossSetBackendBaseURLOverride("http://127.0.0.1:9")
         defer { rossSetBackendBaseURLOverride(nil) }

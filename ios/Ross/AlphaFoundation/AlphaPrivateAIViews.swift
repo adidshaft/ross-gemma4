@@ -464,6 +464,10 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         model.localInferenceSmokeReport ?? model.localInferenceSmokeReports.first
     }
 
+    private var latestMatterBundleComparison: AlphaMatterBundleComparisonReport? {
+        model.matterBundleComparisonReport ?? model.matterBundleComparisonReports.first
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !model.privateAISnapshot.installedPacks.isEmpty {
@@ -544,6 +548,24 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 Divider()
                 AlphaPrivateAISmokeHistorySection(reports: Array(model.localInferenceSmokeReports.dropFirst()))
             }
+
+            Divider()
+
+            Button(model.matterBundleComparisonRunning ? rossLocalized("checking_private_assistant_longer_bundle") : rossLocalized("check_private_assistant_with_longer_bundle")) {
+                model.runMatterBundleComparison()
+            }
+            .rossGlassButtonStyle(tint: Color.rossInk)
+            .disabled(model.matterBundleComparisonRunning)
+
+            if let latestMatterBundleComparison {
+                Divider()
+                AlphaMatterBundleComparisonReportCard(report: latestMatterBundleComparison)
+            }
+
+            if model.matterBundleComparisonReports.count > 1 {
+                Divider()
+                AlphaMatterBundleComparisonHistorySection(reports: Array(model.matterBundleComparisonReports.dropFirst()))
+            }
         }
         .padding(.top, 12)
     }
@@ -623,6 +645,97 @@ private struct AlphaPrivateAISmokeHistorySection: View {
         }
     }
 }
+
+private struct AlphaMatterBundleComparisonReportCard: View {
+    let report: AlphaMatterBundleComparisonReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(rossLocalized("private_assistant_matter_bundle_check_report_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            AlphaSettingsValueRow(label: rossLocalized("status"), value: alphaMatterBundleComparisonStatusLabel(report))
+            AlphaSettingsValueRow(label: rossLocalized("runtime_used"), value: alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))
+            AlphaSettingsValueRow(
+                label: rossLocalized("schema_valid"),
+                value: report.schemaValid ? rossLocalized("yes") : rossLocalized("no")
+            )
+            if let durationMs = report.durationMs {
+                AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
+            }
+            if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+                AlphaSettingsValueRow(
+                    label: rossLocalized("runtime_first_response"),
+                    value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+                )
+            }
+            if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+                AlphaSettingsValueRow(
+                    label: rossLocalized("runtime_output_speed"),
+                    value: alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond)
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(format: rossLocalized("selected_files_count"), report.selectedDocumentCount))
+                Text(String(format: rossLocalized("source_blocks_count"), report.sourceBlockCount))
+                Text(String(format: rossLocalized("source_refs_count"), report.sourceRefsReturned))
+            }
+            .font(.caption)
+            .foregroundStyle(Color.rossInk.opacity(0.72))
+
+            if let answerHeadline = report.answerHeadline, !answerHeadline.isEmpty {
+                Text(answerHeadline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+            }
+            if let answerPreview = report.answerPreview, !answerPreview.isEmpty {
+                Text(answerPreview)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let needsReviewWarning = report.needsReviewWarning, !needsReviewWarning.isEmpty {
+                Text(needsReviewWarning)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(report.message)
+                .font(.caption)
+                .foregroundStyle(Color.rossInk.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaMatterBundleComparisonHistorySection: View {
+    let reports: [AlphaMatterBundleComparisonReport]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_matter_bundle_check_recent_runs"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            ForEach(Array(reports.prefix(AlphaRossModel.matterBundleComparisonHistoryLimit - 1).enumerated()), id: \.offset) { _, report in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        "\(report.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(alphaMatterBundleComparisonStatusLabel(report)) · \(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+
+                    Text(alphaMatterBundleComparisonMetricsSummary(report))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+}
 #endif
 
 func alphaAssistantDurationLabel(milliseconds: Int) -> String {
@@ -665,6 +778,25 @@ func alphaLocalInferenceSmokeMetricsSummary(_ report: AlphaLocalInferenceSmokeRe
     var parts = [
         String(format: rossLocalized("fields_found_count"), report.fieldsFound),
         String(format: rossLocalized("fields_verified_count"), report.fieldsVerified)
+    ]
+    if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+        parts.append("\(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")
+    }
+    if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+        parts.append("\(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
+    }
+    return parts.joined(separator: " · ")
+}
+
+func alphaMatterBundleComparisonStatusLabel(_ report: AlphaMatterBundleComparisonReport) -> String {
+    report.ran ? rossLocalized("completed") : rossLocalized("not_run")
+}
+
+func alphaMatterBundleComparisonMetricsSummary(_ report: AlphaMatterBundleComparisonReport) -> String {
+    var parts = [
+        String(format: rossLocalized("selected_files_count"), report.selectedDocumentCount),
+        String(format: rossLocalized("source_blocks_count"), report.sourceBlockCount),
+        String(format: rossLocalized("source_refs_count"), report.sourceRefsReturned)
     ]
     if let timeToFirstTokenMs = report.timeToFirstTokenMs {
         parts.append("\(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")

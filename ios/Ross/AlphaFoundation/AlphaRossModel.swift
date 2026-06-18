@@ -100,6 +100,23 @@ struct AlphaLocalInferenceSmokeReport: Codable, Hashable, Sendable {
     var createdAt: Date = .now
 }
 
+struct AlphaMatterBundleComparisonReport: Codable, Hashable, Sendable {
+    var ran: Bool
+    var runtimeUsed: String
+    var schemaValid: Bool
+    var selectedDocumentCount: Int
+    var sourceBlockCount: Int
+    var sourceRefsReturned: Int
+    var answerHeadline: String?
+    var answerPreview: String?
+    var needsReviewWarning: String?
+    var durationMs: Int? = nil
+    var timeToFirstTokenMs: Int? = nil
+    var estimatedOutputTokensPerSecond: Double? = nil
+    var message: String
+    var createdAt: Date = .now
+}
+
 struct AlphaPrivateAISnapshot: Hashable, Sendable {
     var installedPacks: [AlphaInstalledModelPack] = []
     var activePack: AlphaInstalledModelPack?
@@ -760,6 +777,7 @@ struct AlphaStorageSnapshot {
 @Observable
 final class AlphaRossModel {
     static let localInferenceSmokeHistoryLimit = 6
+    static let matterBundleComparisonHistoryLimit = 6
 
     enum DockCommandAction: Hashable {
         case addTask(title: String, dueDate: Date?)
@@ -821,6 +839,11 @@ final class AlphaRossModel {
         persisted.localInferenceSmokeReports ?? []
     }
     var localInferenceSmokeRunning = false
+    var matterBundleComparisonReport: AlphaMatterBundleComparisonReport?
+    var matterBundleComparisonReports: [AlphaMatterBundleComparisonReport] {
+        persisted.matterBundleComparisonReports ?? []
+    }
+    var matterBundleComparisonRunning = false
     var privateAISnapshot = AlphaPrivateAISnapshot()
     var refreshingCaseOverviewIDs: Set<UUID> = []
     var loaded = false
