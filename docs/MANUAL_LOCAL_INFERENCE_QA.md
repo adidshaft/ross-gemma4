@@ -138,15 +138,16 @@ Manual in-app flow:
    - unsupported accepted `0`
 8. In `Support details`, use the hidden runtime switcher whenever more than one lane is immediately available for the current tier.
 9. Keep the hidden recent sample-check history visible while switching runtimes so first-response and token-speed comparisons stay on-device.
-10. Also run `Check private assistant with a longer matter bundle` in `Support details` for each runtime you compare, then record:
+10. Use the hidden `Latest sample check by runtime` summary to confirm which lanes already have basic sample-file proof and which still need a sample-file pass before you move on.
+11. Also run `Check private assistant with a longer matter bundle` in `Support details` for each runtime you compare, then record:
    - answer headline/preview quality on the synthetic longer bundle
    - source refs returned
    - first response
    - token speed
    - runtime choice / execution path / acceleration detail shown for that run
-11. Use the hidden `Latest by runtime` summary to confirm whether GGUF, MLX, and CoreAI each have a recent longer-bundle result before making the final ladder decision.
-12. Read the hidden `Comparison readout` after the three runtime lanes have recent results so you can note the current leaders on first response, token speed, and visible source coverage before deciding whether the ladder should change.
-13. Tap `Save runtime comparison note` in hidden `Support details` once you have the comparison set you want to keep. This writes a local PDF into `Notes & Drafts` so the device run has a shareable artifact without adding front-stage UI.
+12. Use the hidden `Latest by runtime` summary to confirm whether GGUF, MLX, and CoreAI each have a recent longer-bundle result before making the final ladder decision.
+13. Read the hidden `Comparison readout` after the three runtime lanes have recent results so you can note the current leaders on first response, token speed, and visible source coverage before deciding whether the ladder should change.
+14. Tap `Save runtime comparison note` in hidden `Support details` once you have the comparison set you want to keep. This writes a local PDF into `Notes & Drafts` so the device run has a shareable artifact without adding front-stage UI, and now includes the latest per-runtime sample-file readiness snapshot as well.
 
 If the runtime is unavailable:
 

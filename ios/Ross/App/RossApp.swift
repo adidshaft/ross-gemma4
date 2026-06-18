@@ -2919,6 +2919,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Latest by runtime",
             "te": "Latest by runtime"
         ],
+        "private_assistant_sample_runtime_summary_title": [
+            "en": "Latest sample check by runtime",
+            "hi": "Latest sample check by runtime",
+            "bn": "Latest sample check by runtime",
+            "ta": "Latest sample check by runtime",
+            "te": "Latest sample check by runtime"
+        ],
+        "private_assistant_sample_runtime_summary_missing": [
+            "en": "Still needed for sample-file proof: %@",
+            "hi": "Sample-file proof के लिए अभी भी चाहिए: %@",
+            "bn": "Sample-file proof-এর জন্য এখনও দরকার: %@",
+            "ta": "Sample-file proof-க்கு இன்னும் தேவை: %@",
+            "te": "Sample-file proof కోసం ఇంకా కావాలి: %@"
+        ],
+        "private_assistant_sample_runtime_summary_ready": [
+            "en": "All three runtime lanes now have recent sample-file evidence.",
+            "hi": "तीनों runtime lanes के लिए recent sample-file evidence अब मौजूद है.",
+            "bn": "তিনটি runtime lane-এর জন্য recent sample-file evidence এখন আছে.",
+            "ta": "மூன்று runtime lane-களுக்கும் recent sample-file evidence இப்போது உள்ளது.",
+            "te": "మూడు runtime lane‌లకూ recent sample-file evidence ఇప్పుడు ఉంది."
+        ],
         "private_assistant_runtime_summary_missing": [
             "en": "Still needed for this comparison: %@",
             "hi": "इस comparison के लिए अभी भी चाहिए: %@",

@@ -4462,6 +4462,76 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(model.persisted.localInferenceSmokeReports?.count, AlphaRossModel.localInferenceSmokeHistoryLimit)
     }
 
+    func testLocalInferenceSmokeLatestReportsByRuntimeKeepsMostRecentPerLaneInDisplayOrder() {
+        let reports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 7,
+                fieldsVerified: 6,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "gguf latest"
+            ),
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+                schemaValid: true,
+                fieldsFound: 7,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 0,
+                unsupportedAccepted: 0,
+                message: "mlx latest"
+            ),
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                fieldsFound: 6,
+                fieldsVerified: 6,
+                fieldsNeedingReview: 0,
+                unsupportedAccepted: 0,
+                message: "coreai latest"
+            ),
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: false,
+                fieldsFound: 5,
+                fieldsVerified: 4,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "gguf older"
+            )
+        ]
+
+        let latest = alphaLocalInferenceSmokeLatestReportsByRuntime(reports)
+        XCTAssertEqual(latest.map(\.runtimeUsed), [
+            AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            AlphaPackRuntimeMode.llamaCppGguf.rawValue
+        ])
+        XCTAssertEqual(latest.last?.message, "gguf latest")
+    }
+
+    func testLocalInferenceSmokeMissingRuntimeLabelsReportsUncoveredLanes() {
+        let reports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 7,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 0,
+                unsupportedAccepted: 0,
+                message: "gguf latest"
+            )
+        ]
+
+        XCTAssertEqual(alphaLocalInferenceSmokeMissingRuntimeLabels(reports), ["CoreAI", "MLX"])
+    }
+
     func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
         rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
@@ -4778,14 +4848,34 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 message: "mlx latest"
             )
         ]
+        let smokeReports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 8,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                durationMs: 1100,
+                timeToFirstTokenMs: 280,
+                estimatedOutputTokensPerSecond: 16.2,
+                exportRelativePath: "exports/gguf-smoke.pdf",
+                message: "GGUF sample check passed"
+            )
+        ]
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
             reports: reports,
+            smokeReports: smokeReports,
             generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
         )
         let joined = lines.joined(separator: "\n")
 
         XCTAssertTrue(joined.contains("Private assistant runtime comparison note"))
+        XCTAssertTrue(joined.contains("Latest sample check by runtime"))
+        XCTAssertTrue(joined.contains("Still needed for sample-file proof: CoreAI, MLX"))
+        XCTAssertTrue(joined.contains("Saved file: gguf-smoke.pdf"))
         XCTAssertTrue(joined.contains("Still needed for this comparison: CoreAI"))
         XCTAssertTrue(joined.contains("Comparison readout"))
         XCTAssertTrue(joined.contains("Fastest token speed: MLX"))
@@ -4803,6 +4893,22 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             await model.loadIfNeeded()
 
             await MainActor.run {
+                model.recordLocalInferenceSmokeReport(
+                    AlphaLocalInferenceSmokeReport(
+                        ran: true,
+                        runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                        schemaValid: true,
+                        fieldsFound: 8,
+                        fieldsVerified: 7,
+                        fieldsNeedingReview: 1,
+                        unsupportedAccepted: 0,
+                        durationMs: 1200,
+                        timeToFirstTokenMs: 310,
+                        estimatedOutputTokensPerSecond: 15.4,
+                        exportRelativePath: "exports/sample-gguf.pdf",
+                        message: "GGUF sample ready"
+                    )
+                )
                 model.recordMatterBundleComparisonReport(
                     AlphaMatterBundleComparisonReport(
                         ran: true,
@@ -4861,13 +4967,17 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 )
             }
             let exportURL = await MainActor.run { model.exportURL(for: export) }
+            let caseID = try await MainActor.run { try XCTUnwrap(model.persisted.cases.first?.id) }
             let ledgerTitle = await MainActor.run { model.persisted.ledgerEntries.first?.title }
             let exportError = await MainActor.run { model.matterBundleComparisonExportErrorMessage }
+            let imported = try await store.importDocument(from: exportURL, into: caseID)
 
             XCTAssertEqual(export.title, rossLocalized("private_assistant_runtime_comparison_export_title"))
             XCTAssertEqual(ledgerTitle, "Local export generated")
             XCTAssertNil(exportError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
+            XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("GGUF sample ready") == true)
         }
     }
 

@@ -2843,7 +2843,10 @@ extension AlphaRossModel {
                     title: rossLocalized("private_assistant_runtime_comparison_export_title"),
                     kind: Self.matterBundleComparisonExportKind,
                     caseId: nil,
-                    bodyLines: alphaMatterBundleComparisonExportBodyLines(reports: reports)
+                    bodyLines: alphaMatterBundleComparisonExportBodyLines(
+                        reports: reports,
+                        smokeReports: localInferenceSmokeReports
+                    )
                 )
                 persisted.exports.insert(report, at: 0)
                 persisted.ledgerEntries.insert(
@@ -3359,11 +3362,14 @@ extension AlphaRossModel {
 
 func alphaMatterBundleComparisonExportBodyLines(
     reports: [AlphaMatterBundleComparisonReport],
+    smokeReports: [AlphaLocalInferenceSmokeReport] = [],
     generatedAt: Date = .now
 ) -> [String] {
     let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
     let missingRuntimeLabels = alphaMatterBundleMissingRuntimeLabels(reports)
     let decisionHints = alphaMatterBundleDecisionHints(reports)
+    let latestSmokeReports = alphaLocalInferenceSmokeLatestReportsByRuntime(smokeReports)
+    let missingSmokeRuntimeLabels = alphaLocalInferenceSmokeMissingRuntimeLabels(smokeReports)
     let generatedLine = String(
         format: rossLocalized("export_generated"),
         generatedAt.formatted(date: .abbreviated, time: .shortened)
@@ -3391,6 +3397,48 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("")
         lines.append(rossLocalized("private_assistant_runtime_summary_readout"))
         lines.append(contentsOf: decisionHints.map { "- \($0)" })
+    }
+
+    if !latestSmokeReports.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_sample_runtime_summary_title"))
+        if missingSmokeRuntimeLabels.isEmpty {
+            lines.append(rossLocalized("private_assistant_sample_runtime_summary_ready"))
+        } else {
+            lines.append(
+                String(
+                    format: rossLocalized("private_assistant_sample_runtime_summary_missing"),
+                    missingSmokeRuntimeLabels.joined(separator: ", ")
+                )
+            )
+        }
+
+        for report in latestSmokeReports {
+            lines.append("- \(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))")
+            lines.append("  \(rossLocalized("status")): \(alphaLocalInferenceSmokeStatusLabel(report))")
+            lines.append("  \(rossLocalized("schema_valid")): \(report.schemaValid ? rossLocalized("yes") : rossLocalized("no"))")
+            lines.append("  \(String(format: rossLocalized("fields_found_count"), report.fieldsFound))")
+            lines.append("  \(String(format: rossLocalized("fields_verified_count"), report.fieldsVerified))")
+            lines.append("  \(String(format: rossLocalized("fields_needing_review_count"), report.fieldsNeedingReview))")
+            lines.append("  \(String(format: rossLocalized("unsupported_accepted_count"), report.unsupportedAccepted))")
+            if let durationMs = report.durationMs {
+                lines.append("  \(rossLocalized("approx_time")): \(alphaAssistantDurationLabel(milliseconds: durationMs))")
+            }
+            if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+                lines.append("  \(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")
+            }
+            if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+                lines.append("  \(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
+            }
+            if let exportRelativePath = report.exportRelativePath?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !exportRelativePath.isEmpty {
+                lines.append("  \(rossLocalized("notes_drafts_metadata_saved_file")): \(URL(fileURLWithPath: exportRelativePath).lastPathComponent)")
+            }
+            if !report.message.isEmpty {
+                lines.append("  \(report.message)")
+            }
+            lines.append("")
+        }
     }
 
     if !latestReports.isEmpty {

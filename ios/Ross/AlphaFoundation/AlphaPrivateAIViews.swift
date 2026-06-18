@@ -588,6 +588,11 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 AlphaPrivateAISmokeHistorySection(reports: Array(model.localInferenceSmokeReports.dropFirst()))
             }
 
+            if !model.localInferenceSmokeReports.isEmpty {
+                Divider()
+                AlphaPrivateAISmokeRuntimeSummarySection(reports: model.localInferenceSmokeReports)
+            }
+
             if let comparisonTier, comparisonRuntimeOptions.count > 1 {
                 Divider()
 
@@ -849,6 +854,58 @@ private struct AlphaMatterBundleComparisonReportCard: View {
     }
 }
 
+private struct AlphaPrivateAISmokeRuntimeSummarySection: View {
+    let reports: [AlphaLocalInferenceSmokeReport]
+
+    private var latestReports: [AlphaLocalInferenceSmokeReport] {
+        alphaLocalInferenceSmokeLatestReportsByRuntime(reports)
+    }
+
+    private var missingRuntimeLabels: String? {
+        let labels = alphaLocalInferenceSmokeMissingRuntimeLabels(reports)
+        guard !labels.isEmpty else { return nil }
+        return labels.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_sample_runtime_summary_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            if let missingRuntimeLabels {
+                Text(String(format: rossLocalized("private_assistant_sample_runtime_summary_missing"), missingRuntimeLabels))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(rossLocalized("private_assistant_sample_runtime_summary_ready"))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(Array(latestReports.enumerated()), id: \.offset) { _, report in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(alphaLocalInferenceSmokeMetricsSummary(report))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+
+                    Text(report.message)
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.60))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+}
+
 private struct AlphaMatterBundleComparisonRuntimeSummarySection: View {
     let reports: [AlphaMatterBundleComparisonReport]
 
@@ -1001,6 +1058,26 @@ func alphaLocalInferenceSmokeMetricsSummary(_ report: AlphaLocalInferenceSmokeRe
         parts.append("\(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
     }
     return parts.joined(separator: " · ")
+}
+
+func alphaLocalInferenceSmokeLatestReportsByRuntime(_ reports: [AlphaLocalInferenceSmokeReport]) -> [AlphaLocalInferenceSmokeReport] {
+    var latestByRuntime: [AlphaPackRuntimeMode: AlphaLocalInferenceSmokeReport] = [:]
+    for report in reports {
+        guard let runtimeMode = AlphaPackRuntimeMode(rawValue: report.runtimeUsed) else { continue }
+        if latestByRuntime[runtimeMode] == nil {
+            latestByRuntime[runtimeMode] = report
+        }
+    }
+    let orderedModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+    return orderedModes.compactMap { latestByRuntime[$0] }
+}
+
+func alphaLocalInferenceSmokeMissingRuntimeLabels(_ reports: [AlphaLocalInferenceSmokeReport]) -> [String] {
+    let presentModes = Set(alphaLocalInferenceSmokeLatestReportsByRuntime(reports).compactMap { AlphaPackRuntimeMode(rawValue: $0.runtimeUsed) })
+    let requiredModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+    return requiredModes
+        .filter { !presentModes.contains($0) }
+        .map(\.displayLabel)
 }
 
 func alphaMatterBundleComparisonStatusLabel(_ report: AlphaMatterBundleComparisonReport) -> String {

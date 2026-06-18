@@ -13,6 +13,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - long-file ask handling on iOS now scales source chunk sizing with runtime budget instead of using only the old fixed chunk size
 - answer diagnostics stay hidden behind secondary actions instead of adding more up-front UI clutter
 - hidden iOS Technical details now retain a short on-device history of sample-file checks so GGUF, MLX, and CoreAI runs can be compared without extra logging setup
+- hidden iOS Support details now also summarize the latest sample-file check per runtime, so basic readiness proof is easier to confirm before running the longer-bundle comparison
 - hidden iOS Technical details now also include a longer matter-bundle check for the current runtime, with persisted history for answer preview, source refs, first response, and token speed
 - hidden iOS Support details now include a direct runtime switcher for immediately-available lanes on the current tier, so the longer-bundle comparison loop no longer has to go back through setup
 - hidden iOS longer-bundle comparison history now also retains runtime-choice, execution-path, and acceleration detail for each run
@@ -52,12 +53,13 @@ Most recent commits that define this pause point:
 - MLX and CoreAI decision paths are implemented in code and covered by unit tests
 - hidden answer details already include `Tokens processed` and `Token speed`
 - hidden iOS Technical details now keep recent sample-file smoke results with runtime, first-response, and token-speed evidence
+- hidden iOS Support details now summarize the latest sample-file readiness result per runtime and call out which lanes still need a sample-file pass
 - hidden iOS Technical details now keep recent longer-bundle comparison runs for the current runtime without adding more front-stage UI
 - hidden iOS Support details now expose a direct GGUF / MLX / CoreAI switcher whenever more than one runtime is immediately available for the current tier
 - hidden iOS longer-bundle comparison runs now capture why that runtime was selected and whether draft acceleration was active
 - hidden iOS Support details now make it obvious whether the current comparison set already covers all three runtime lanes
 - hidden iOS Support details now reduce manual comparison work by surfacing current leaders from the latest three-lane evidence set
-- hidden iOS Support details can now export the current comparison evidence set straight into `Notes & Drafts` for later device-proof handoff
+- hidden iOS Support details can now export the current comparison evidence set straight into `Notes & Drafts` for later device-proof handoff, including the latest per-runtime sample-file readiness snapshot
 
 Most recent verification commands:
 
