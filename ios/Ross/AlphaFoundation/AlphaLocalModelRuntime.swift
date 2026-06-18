@@ -2456,6 +2456,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
+            accelerationMode: runtimeMode == .appleFoundationModels ? .standard : nil,
+            draftAccelerationStatus: runtimeMode == .appleFoundationModels ? "not_supported" : nil,
             lastErrorCategory: errorCategory,
             userFacingStatus: statusMessage,
             explicitOptInEnabled: explicitOptInEnabled
@@ -2662,6 +2664,8 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
+            accelerationMode: .standard,
+            draftAccelerationStatus: "not_supported",
             lastErrorCategory: status.lastErrorCategory,
             userFacingStatus: status.userFacingStatus,
             explicitOptInEnabled: true

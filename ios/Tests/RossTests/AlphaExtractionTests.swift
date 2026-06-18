@@ -16158,6 +16158,60 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=invalid_mlx_artifact"))
     }
 
+    func testRuntimeIdentityLineIncludesCoreAISystemFields() throws {
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .appleFoundationModels,
+            packId: "system-coreai",
+            installPath: "system-model",
+            checksum: String(repeating: "f", count: 64),
+            artifactKind: "system_model",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .appleFoundationModels,
+            available: false,
+            modelPathPresent: true,
+            modelPathLabel: "system-model",
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 14_000,
+            estimatedContextTokens: 14_336,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "not_supported",
+            lastErrorCategory: "unsupported_runtime_on_platform",
+            userFacingStatus: "Unavailable",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: RossLocalModelSmokeView.preflightProviderName(for: .appleFoundationModels),
+            actualRuntime: .appleFoundationModels,
+            providerHealth: health,
+            requestedRuntime: .appleFoundationModels
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaFoundationModelsLocalProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("actual_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("pack_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("model_format=system_model"))
+        XCTAssertTrue(line.contains("artifact_path_type=system"))
+        XCTAssertTrue(line.contains("artifact_path=system-model"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_tokens=nil"))
+        XCTAssertTrue(line.contains("draft_model=nil"))
+        XCTAssertTrue(line.contains("draft_status=not_supported"))
+        XCTAssertTrue(line.contains("context_tokens=14336"))
+        XCTAssertTrue(line.contains("gpu_offload=system_managed"))
+        XCTAssertTrue(line.contains("fallback=none"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
+    }
+
     func testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed() {
         let measuredOutput = AlphaLocalModelOutput(
             rawText: "Answer",
@@ -18893,6 +18947,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
         XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "not_supported")
         XCTAssertTrue(
             health?.lastErrorCategory == "missing_coreai_artifact" ||
                 health?.lastErrorCategory == "unsupported_runtime_on_platform"
@@ -18922,6 +18980,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.modelPathLabel, "system-model")
         XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "not_supported")
         XCTAssertNotEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 

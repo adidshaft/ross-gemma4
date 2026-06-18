@@ -48,6 +48,8 @@ Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENT
 
 The Apple built-in/CoreAI/CoreML debug-smoke path now treats `artifactKind=system_model` and `modelPath=system-model` as the system Foundation Models runtime, not as a missing adapter file. A June 19, 2026 simulator check produced a real identity marker with `provider=AlphaFoundationModelsLocalProvider`, `actual_runtime=apple_foundation_models`, and `artifact_path_type=system`; generation still failed in simulator, now categorized as `coreai_generation_failed`, so this is routing evidence only, not a CoreAI/CoreML generation benchmark.
 
+CoreAI/Foundation identity markers report `acceleration=standard`, `draft_tokens=nil`, `draft_model=nil`, and `draft_status=not_supported`. That lane is system-managed; do not treat the absence of draft acceleration as an MTP-style failure, and do not count it as a benchmark unless generation succeeds under `actual_runtime=apple_foundation_models`.
+
 Clear unavailable categories for benchmark triage:
 
 - `missing_mlx_artifact`: the requested MLX lane did not receive a usable MLX directory path, including the case where a GGUF file was supplied to `--runtime mlx`.
