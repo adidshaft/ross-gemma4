@@ -3080,6 +3080,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Only saved physical iPhone comparison notes count toward these targets.",
             "te": "Only saved physical iPhone comparison notes count toward these targets."
         ],
+        "private_assistant_device_comparison_coverage_ready": [
+            "en": "Saved physical comparison notes now cover both device targets.",
+            "hi": "Saved physical comparison notes now cover both device targets.",
+            "bn": "Saved physical comparison notes now cover both device targets.",
+            "ta": "Saved physical comparison notes now cover both device targets.",
+            "te": "Saved physical comparison notes now cover both device targets."
+        ],
+        "private_assistant_device_comparison_coverage_missing": [
+            "en": "Still needed before the final device comparison is complete: %@.",
+            "hi": "Still needed before the final device comparison is complete: %@.",
+            "bn": "Still needed before the final device comparison is complete: %@.",
+            "ta": "Still needed before the final device comparison is complete: %@.",
+            "te": "Still needed before the final device comparison is complete: %@."
+        ],
         "private_assistant_device_comparison_not_saved": [
             "en": "No saved note yet.",
             "hi": "No saved note yet.",
@@ -3107,6 +3121,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Saved note exists on %@, but it still misses %@.",
             "ta": "Saved note exists on %@, but it still misses %@.",
             "te": "Saved note exists on %@, but it still misses %@."
+        ],
+        "private_assistant_device_comparison_next_steps_title": [
+            "en": "Physical note next steps",
+            "hi": "Physical note next steps",
+            "bn": "Physical note next steps",
+            "ta": "Physical note next steps",
+            "te": "Physical note next steps"
+        ],
+        "private_assistant_device_comparison_next_steps_ready": [
+            "en": "Saved physical notes are ready for the ladder decision review.",
+            "hi": "Saved physical notes are ready for the ladder decision review.",
+            "bn": "Saved physical notes are ready for the ladder decision review.",
+            "ta": "Saved physical notes are ready for the ladder decision review.",
+            "te": "Saved physical notes are ready for the ladder decision review."
+        ],
+        "private_assistant_device_comparison_next_step_save_8gb": [
+            "en": "Save a full physical iPhone comparison note on an 8 GB-class device.",
+            "hi": "Save a full physical iPhone comparison note on an 8 GB-class device.",
+            "bn": "Save a full physical iPhone comparison note on an 8 GB-class device.",
+            "ta": "Save a full physical iPhone comparison note on an 8 GB-class device.",
+            "te": "Save a full physical iPhone comparison note on an 8 GB-class device."
+        ],
+        "private_assistant_device_comparison_next_step_save_12gb": [
+            "en": "Save a full physical iPhone comparison note on a 12 GB+-class device.",
+            "hi": "Save a full physical iPhone comparison note on a 12 GB+-class device.",
+            "bn": "Save a full physical iPhone comparison note on a 12 GB+-class device.",
+            "ta": "Save a full physical iPhone comparison note on a 12 GB+-class device.",
+            "te": "Save a full physical iPhone comparison note on a 12 GB+-class device."
+        ],
+        "private_assistant_device_comparison_next_step_rerun": [
+            "en": "Re-run and save the full %@ comparison note on %@.",
+            "hi": "Re-run and save the full %@ comparison note on %@.",
+            "bn": "Re-run and save the full %@ comparison note on %@.",
+            "ta": "Re-run and save the full %@ comparison note on %@.",
+            "te": "Re-run and save the full %@ comparison note on %@."
         ],
         "private_assistant_device_capture_source_label": [
             "en": "Capture source",

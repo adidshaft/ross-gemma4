@@ -3627,9 +3627,29 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("")
         lines.append(rossLocalized("private_assistant_device_comparison_coverage_title"))
         lines.append(rossLocalized("private_assistant_device_comparison_coverage_note"))
+        let missingTargetLabels = alphaPrivateAIDeviceComparisonMissingTargetLabels(deviceComparisonProofRecords)
+        if missingTargetLabels.isEmpty {
+            lines.append(rossLocalized("private_assistant_device_comparison_coverage_ready"))
+        } else {
+            lines.append(
+                String(
+                    format: rossLocalized("private_assistant_device_comparison_coverage_missing"),
+                    missingTargetLabels.joined(separator: ", ")
+                )
+            )
+        }
         for status in alphaPrivateAIDeviceComparisonProofStatuses(deviceComparisonProofRecords) {
             lines.append("- \(status.target.localizedLabel)")
             lines.append("  \(alphaPrivateAIDeviceComparisonProofSummary(status))")
+        }
+
+        let nextSteps = alphaPrivateAIDeviceComparisonNextSteps(deviceComparisonProofRecords)
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_device_comparison_next_steps_title"))
+        if nextSteps.isEmpty {
+            lines.append(rossLocalized("private_assistant_device_comparison_next_steps_ready"))
+        } else {
+            lines.append(contentsOf: nextSteps.map { "- \($0)" })
         }
     }
 

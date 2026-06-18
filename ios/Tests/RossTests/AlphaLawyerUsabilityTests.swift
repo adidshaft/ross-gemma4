@@ -4772,6 +4772,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(statuses[1].target, .class12GBOrHigher)
         XCTAssertNil(statuses[1].latestSavedRecord)
         XCTAssertEqual(alphaPrivateAIDeviceComparisonProofSummary(statuses[1]), "No saved note yet.")
+        XCTAssertEqual(alphaPrivateAIDeviceComparisonMissingTargetLabels([saved8GBRecord, simulatorRecord]), ["12 GB+ class"])
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord, simulatorRecord]),
+            ["Save a full physical iPhone comparison note on a 12 GB+-class device."]
+        )
     }
 
     func testPrivateAIRuntimeLaneReadinessStatusesDescribeActiveReadySetupAndRepair() {
@@ -5186,9 +5191,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Representative class: 8 GB class"))
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
+        XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison on iPhone17,2."))
         XCTAssertTrue(joined.contains("12 GB+ class"))
         XCTAssertTrue(joined.contains("No saved note yet."))
+        XCTAssertTrue(joined.contains("Physical note next steps"))
+        XCTAssertTrue(joined.contains("Save a full physical iPhone comparison note on a 12 GB+-class device."))
         XCTAssertTrue(joined.contains("Runtime lane readiness"))
         XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Needs setup"))
