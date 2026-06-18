@@ -80,6 +80,11 @@ if ! grep -q "mlx_directory_looks_usable" scripts/ios-simulator-local-model-smok
     FAIL=1
 fi
 
+if [ ! -x scripts/test-ios-runtime-smoke-preflights.sh ]; then
+    echo "❌ FAIL: executable iOS runtime smoke preflight test script missing."
+    FAIL=1
+fi
+
 if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
     echo "❌ FAIL: CoreAI missing-artifact error category missing."
     FAIL=1
