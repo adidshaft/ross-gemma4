@@ -91,6 +91,11 @@ if ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvid
     FAIL=1
 fi
 
+if grep -q 'return (false, "invalid_mlx_draft_artifact"' ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: invalid MLX draft companion still poisons primary MLX availability."
+    FAIL=1
+fi
+
 if ! grep -q "alphaMLXDirectoryArtifactLooksUsable" ios/Ross/AlphaFoundation/AlphaStore.swift 2>/dev/null; then
     echo "❌ FAIL: MLX install-time artifact content guard missing."
     FAIL=1

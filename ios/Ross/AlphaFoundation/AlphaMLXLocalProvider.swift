@@ -1307,11 +1307,6 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return (false, "unsupported_model_archive", alphaRuntimeHealthStatus(.mlxArchiveUnsupported))
         }
 
-        if let configuredDraftDirectoryURL = configuredDraftDirectoryURL() {
-            guard Self.localModelDirectoryLooksUsable(configuredDraftDirectoryURL) else {
-                return (false, "invalid_mlx_draft_artifact", alphaRuntimeHealthStatus(.llamaNeedsRepair))
-            }
-        }
         return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
     }
 

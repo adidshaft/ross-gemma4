@@ -19358,7 +19358,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "missing_mlx_artifact")
     }
 
-    func testRuntimeHealthMarksInvalidMLXDraftArtifactWithoutClaimingAcceleration() throws {
+    func testRuntimeHealthKeepsMLXAvailableWithInvalidDraftArtifactWithoutClaimingAcceleration() throws {
         let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-\(UUID().uuidString)")
         let draftDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-invalid-draft-\(UUID().uuidString)", isDirectory: true)
@@ -19385,12 +19385,42 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_draft_artifact")
+        XCTAssertEqual(health?.available, true)
+        XCTAssertNil(health?.lastErrorCategory)
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
+    }
+
+    func testRuntimeHealthKeepsMLXAvailableWithMissingDraftArtifactWithoutClaimingAcceleration() throws {
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-missing-draft-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let missingDraftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-missing-draft-\(UUID().uuidString)", isDirectory: true)
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: missingDraftDirectory.path,
+                draftModelTokens: 4
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertNil(health?.lastErrorCategory)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "draft_file_unavailable")
     }
 
     func testRuntimeHealthMarksUnsupportedGemma4AssistantMLXArchiveUnavailable() throws {
