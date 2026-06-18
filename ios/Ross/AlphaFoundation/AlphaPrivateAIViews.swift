@@ -1072,6 +1072,17 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if let latestSavedRecord = status.latestSavedRecord {
+                        Text(
+                            rossLocalized("private_assistant_device_comparison_saved_captured_at_label") +
+                                ": " +
+                                alphaPrivateAIDeviceComparisonSavedCapturedAt(latestSavedRecord)
+                        )
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     if let latestSavedRecord = status.latestSavedRecord,
                        let deliveryContract = alphaPrivateAIDeviceComparisonSavedDeliveryContract(latestSavedRecord) {
                         Text(rossLocalized("private_assistant_device_comparison_delivery_contract_label") + ": " + deliveryContract)
@@ -1597,6 +1608,12 @@ func alphaPrivateAIDeviceComparisonSavedDeliveryStatus(
 ) -> String? {
     let trimmed = record.downloadDeliveryStatusLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonSavedCapturedAt(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String {
+    record.createdAt.formatted(date: .abbreviated, time: .shortened)
 }
 
 func alphaPrivateAIDeviceComparisonSavedDeliveryContract(

@@ -35,6 +35,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Support details and the saved runtime comparison note now also summarize the current assistant download delivery contract and latest on-device verification status, so physical-device proof exports can carry delivery-check evidence alongside runtime comparisons
 - saved physical iPhone comparison-note records now also persist whether the note included a verified assistant download delivery check, and device-target readiness now treats missing delivery verification as incomplete physical proof even when runtime coverage is otherwise present
 - hidden iOS saved device-proof coverage now also shows the persisted delivery-check status and delivery contract per saved target, so later reviews can tell which physical note actually carried verified download evidence without reopening the PDF
+- hidden iOS saved device-proof coverage and the exported runtime comparison note now also show when the latest saved physical note was captured for each target, so evidence recency is easier to audit before the next ladder decision review
 
 ## Visible Pack Mapping
 
@@ -47,6 +48,8 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 
 Most recent commits that define this pause point:
 
+- `6a6ae7c` `feat: clarify ios proof rerun guidance`
+- `bb1c586` `feat: show saved ios delivery proof details`
 - `7030227` `chore: bump ios llama runtime to 2.9672`
 - `2f4eff7` `feat: scale ios ask chunking with runtime budget`
 - `d925a35` `feat: declutter hidden answer details actions`
@@ -90,6 +93,7 @@ Most recent commits that define this pause point:
 - focused iOS tests now also prove the device-proof export path includes download delivery verification details, and that the summary helper reports signed-session GGUF delivery as verified when the on-device ledger already recorded a verified assistant download check
 - focused iOS usability tests now also prove that saved device-proof targets remain incomplete until the exported note includes a verified download delivery check, and that the rerun guidance and ladder-decision readiness text follow that stricter proof rule
 - focused iOS usability tests now also prove the saved proof export includes persisted delivery-check details for each saved physical target, so proof history stays auditable after multiple exports
+- focused iOS usability tests now also prove the saved proof export includes the saved-note capture timestamp for each physical target, so later reviewers can tell when the current 8 GB or 12 GB+ evidence was actually recorded
 
 Most recent verification commands:
 

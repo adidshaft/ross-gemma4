@@ -5252,7 +5252,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 downloadDeliveryVerified: true,
                 downloadDeliveryStatusLabel: "Verified on this device",
                 downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
-                exportRelativePath: "exports/device-note-8gb.pdf"
+                exportRelativePath: "exports/device-note-8gb.pdf",
+                createdAt: Date(timeIntervalSince1970: 1_718_000_120)
             )
         ]
         let downloadDeliverySummary = AlphaAssistantDownloadDeliveryVerificationSummary(
@@ -5292,6 +5293,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."))
+        XCTAssertTrue(joined.contains("Saved note captured:"))
         XCTAssertTrue(joined.contains("Saved delivery check: Verified on this device"))
         XCTAssertTrue(joined.contains("Saved delivery contract: bytes · 1 segment · range_request_segments"))
         XCTAssertTrue(joined.contains("12 GB+ class"))

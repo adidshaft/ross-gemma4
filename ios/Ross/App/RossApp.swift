@@ -3150,6 +3150,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved delivery check",
             "te": "Saved delivery check"
         ],
+        "private_assistant_device_comparison_saved_captured_at_label": [
+            "en": "Saved note captured",
+            "hi": "Saved note captured",
+            "bn": "Saved note captured",
+            "ta": "Saved note captured",
+            "te": "Saved note captured"
+        ],
         "private_assistant_device_comparison_delivery_contract_label": [
             "en": "Saved delivery contract",
             "hi": "Saved delivery contract",

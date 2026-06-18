@@ -3671,6 +3671,11 @@ func alphaMatterBundleComparisonExportBodyLines(
         for status in alphaPrivateAIDeviceComparisonProofStatuses(deviceComparisonProofRecords) {
             lines.append("- \(status.target.localizedLabel)")
             lines.append("  \(alphaPrivateAIDeviceComparisonProofSummary(status))")
+            if let latestSavedRecord = status.latestSavedRecord {
+                lines.append(
+                    "  \(rossLocalized("private_assistant_device_comparison_saved_captured_at_label")): \(alphaPrivateAIDeviceComparisonSavedCapturedAt(latestSavedRecord))"
+                )
+            }
             if let latestSavedRecord = status.latestSavedRecord,
                let deliveryStatus = alphaPrivateAIDeviceComparisonSavedDeliveryStatus(latestSavedRecord) {
                 lines.append("  \(rossLocalized("private_assistant_device_comparison_delivery_status_label")): \(deliveryStatus)")
