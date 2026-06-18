@@ -171,8 +171,17 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         ctxParams.n_ubatch = AlphaLlamaRuntimeProfile.physicalBatchTokens(forModelPath: path, physicalMemory: memory)
         ctxParams.n_threads = Int32(nThreads)
         ctxParams.n_threads_batch = Int32(nThreads)
-        ctxParams.offload_kqv = modelParams.n_gpu_layers > 0
-        ctxParams.op_offload = modelParams.n_gpu_layers > 0
+        let shouldOffloadKQV = modelParams.n_gpu_layers > 0 && AlphaLlamaRuntimeProfile.shouldOffloadKQV(
+            forModelPath: path,
+            physicalMemory: memory
+        )
+        let shouldOffloadHostOperations = modelParams.n_gpu_layers > 0 && AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(
+            forModelPath: path,
+            physicalMemory: memory
+        )
+        ctxParams.offload_kqv = shouldOffloadKQV
+        ctxParams.op_offload = shouldOffloadHostOperations
+        print("Using offload_kqv = \(ctxParams.offload_kqv) op_offload = \(ctxParams.op_offload)")
         ctxParams.defrag_thold = 0.1
 
         guard let context = llama_init_from_model(model, ctxParams) else {
@@ -288,8 +297,16 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         draftContextParams.n_ubatch = draftBatchCapacity
         draftContextParams.n_threads = nThreads
         draftContextParams.n_threads_batch = nThreads
-        draftContextParams.offload_kqv = draftModelParams.n_gpu_layers > 0
-        draftContextParams.op_offload = draftModelParams.n_gpu_layers > 0
+        let shouldOffloadDraftKQV = draftModelParams.n_gpu_layers > 0 && AlphaLlamaRuntimeProfile.shouldOffloadKQV(
+            forModelPath: configuration.path,
+            physicalMemory: physicalMemory
+        )
+        let shouldOffloadDraftHostOperations = draftModelParams.n_gpu_layers > 0 && AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(
+            forModelPath: configuration.path,
+            physicalMemory: physicalMemory
+        )
+        draftContextParams.offload_kqv = shouldOffloadDraftKQV
+        draftContextParams.op_offload = shouldOffloadDraftHostOperations
         draftContextParams.defrag_thold = 0.1
         draftContextParams.ctx_type = LLAMA_CONTEXT_TYPE_MTP
         draftContextParams.ctx_other = targetContext

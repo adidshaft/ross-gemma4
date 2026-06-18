@@ -134,6 +134,32 @@ enum AlphaLlamaRuntimeProfile {
         }
     }
 
+    static func shouldOffloadKQV(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Bool {
+        // Keep the constrained 7 GB-class E4B lane off GPU-backed KQV/KV
+        // scheduling as well, because the current upstream runtime still
+        // converges on the same split-input assertion on device.
+        if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+            return false
+        }
+        return gpuLayerCount(forModelPath: path, physicalMemory: physicalMemory) > 0
+    }
+
+    static func shouldOffloadHostOperations(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Bool {
+        // Keep the constrained 7 GB-class E4B lane off the extra host-op
+        // offload path because the current upstream scheduler still hits the
+        // split-input assertion there during physical-device setup.
+        if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+            return false
+        }
+        return gpuLayerCount(forModelPath: path, physicalMemory: physicalMemory) > 0
+    }
+
     static func maxInputChars(for tier: AlphaCapabilityTier, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Int {
         switch tier {
         case .flash:
@@ -202,7 +228,7 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 1_024 : 768
         case .e4b:
             if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
-                return 768
+                return 512
             }
             if physicalMemory >= 12_000_000_000 {
                 return 2_048
@@ -232,7 +258,7 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 768 : 512
         case .e4b:
             if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
-                return 512
+                return 128
             }
             if physicalMemory >= 12_000_000_000 {
                 return 1_536

@@ -43,9 +43,18 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30 --disable-draft`
   - the real pack still selects `n_gpu_layers = 20` and completes model/KV setup with `n_ctx = 8192`
   - the terminal failure has now moved to a concrete llama.cpp scheduler assertion, `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)`, followed by `signal 6`
+- a follow-up constrained-lane runtime pass on June 18, 2026 tightened that proof further:
+  - the same 7 GB-class E4B lane now also disables both `op_offload` and `offload_kqv`, and lowers the constrained batch pair to `n_batch = 512` and `n_ubatch = 128`
+  - focused iOS tests still pass after that narrower runtime policy change
+  - after rebuilding and reinstalling on Aman’s cabled iPhone, the no-draft production Quick Start GGUF smoke still hits the same upstream `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)` path, but now with the cleaner on-device log:
+    - `Using offload_kqv = false op_offload = false`
+    - `n_batch = 512`
+    - `n_ubatch = 128`
+    - `sched_reserve: worst-case: n_tokens = 128`
+  - the draft-enabled production Quick Start GGUF smoke on the same build now also converges on that same upstream scheduler assertion instead of the older `signal 9` jetsam path
 - this is the current preferred pause point for the below-target Quick Start GGUF lane:
   - download/session/checksum/catalog work is now behaving as intended on the physical phone
-  - the next meaningful pass is a llama.cpp offload/scheduler compatibility fix for this constrained E4B lane, not another catalog or installer change
+  - the next meaningful pass is now clearly an upstream llama.cpp scheduler/runtime compatibility fix for this constrained E4B lane, not another catalog, installer, or simple local knob change
 
 ## Latest MLX Runtime Checkpoint
 
@@ -202,10 +211,13 @@ Most recent commits that define this pause point:
 - with explicit `--allow-device-proof-pack`, the installed-pack helper now also reaches the live GGUF load path for the already-installed Quick Start artifact on Aman's phone, including provider resolution, model load, KV/cache allocation, and a real local completion attempt against the app-container model path
 - the updated installed-pack helper and `quick` smoke profile now also produce a structured on-device failure for that seeded Quick Start artifact instead of an ambiguous hang: on Aman's phone the source-grounded stage completed successfully in `6357 ms`, then the general no-source stage timed out after `15 s`, yielding `ROSS_LOCAL_MODEL_SMOKE_FAIL ... profile=quick ... general_error=smoke_stage_timeout_general`
 - the current iPhone now also proves that a real client-downloaded manifest-backed production Quick Start GGUF pack exists in app-private storage and is selectable through the installed-pack helper: `tier=quick_start pack=gemma-4-e4b-q4 runtime=gemma_local_runtime file=gemma-4-E4B-it-UD-Q4_K_XL.gguf size=5.13 GB draft=mtp-gemma-4-E4B-it.gguf`
-- the constrained Quick Start GGUF E4B runtime profile is now in code and covered by focused iOS tests, keeping 7 GB-class phones on the smaller `n_gpu_layers = 20`, `n_ctx = 8192`, `n_batch = 768`, `n_ubatch = 512`, and `draftTokens = 2` lane instead of the old aggressive decimal-byte branch
+- the constrained Quick Start GGUF E4B runtime profile is now in code and covered by focused iOS tests, keeping 7 GB-class phones on the smaller `n_gpu_layers = 20`, `n_ctx = 8192`, `n_batch = 512`, `n_ubatch = 128`, and `draftTokens = 2` lane instead of the old aggressive decimal-byte branch
 - with that constrained lane installed on Aman's phone, the real production Quick Start GGUF pack now gets beyond the earlier `n_gpu_layers = 99` Metal-allocation cliff:
   - with draft enabled, it still ends in `signal 9`, but only after loading the real production pack and allocating roughly `5314 MiB` of the `5461 MiB` recommended GPU working set
   - with `--disable-draft`, it now reaches full model/context/KV setup and exposes a concrete llama.cpp scheduler assertion, `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)`, followed by `signal 6`
+- the latest constrained Quick Start GGUF runtime pass now reduces that blocker even further:
+  - the constrained E4B lane now disables both `op_offload` and `offload_kqv` and uses the smaller `n_batch = 512` / `n_ubatch = 128` pair
+  - on Aman’s phone, both the no-draft and draft-enabled production Quick Start GGUF smokes now converge on the same upstream `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)` failure instead of splitting between `signal 6` and `signal 9`
 - the current below-target Quick Start GGUF blocker has therefore moved from checksum/download failure to llama.cpp runtime compatibility on the constrained E4B lane
 - Ross production metadata now also pins the downloaded 12B GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, reconciling the earlier mismatch with the CDN/Xet `etag` value observed during the physical-device proof pass
 - below-target iPhones now also treat the `Case Associate` 12B GGUF lane as unavailable up front instead of merely broken: the shipped minimum memory floor is now 12 GB for that pack, the hidden runtime-lane readiness copy reports it as unavailable on this iPhone, and the phone-side runtime chooser now prefers MLX for `Case Associate` when GGUF would not fit
@@ -274,6 +286,11 @@ Most recent verification commands:
 - `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
 - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30`
 - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30 --disable-draft`
+- the same focused iOS test, device rebuild/install, and physical Quick Start GGUF smoke loop above was rerun after each constrained-lane knob change:
+  - once after disabling `op_offload`
+  - once after lowering the constrained E4B batch pair to `n_batch = 512` and `n_ubatch = 128`
+  - once after also disabling `offload_kqv`
+  - the final draft-enabled rerun used `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test --test-name-pattern 'ios production sessions preserve multi-gb GGUF delivery descriptors end to end' backend/tests/model-registry.test.ts`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/testReleaseReadyAssistantArtifactsPinDownloadMetadata'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testRecommendedOnDeviceTierMatchesCurrentThreeTierProductLineup|testPreferredAssistantRuntimeModeUsesMLXForCaseAssociateBelow12GBPhoneFloor|testLlamaRuntimeHealthMarks12BPackUnavailableOnBelowTargetPhoneMemory)'`

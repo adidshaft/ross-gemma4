@@ -17875,18 +17875,32 @@ final class AlphaExtractionTests: XCTestCase {
             20
         )
         XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.shouldOffloadKQV(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            false
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            false
+        )
+        XCTAssertEqual(
             AlphaLlamaRuntimeProfile.promptBatchTokens(
                 forModelPath: modelPath,
                 physicalMemory: physicalMemory
             ),
-            768
+            512
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.physicalBatchTokens(
                 forModelPath: modelPath,
                 physicalMemory: physicalMemory
             ),
-            512
+            128
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.defaultDraftTokens(
@@ -17922,6 +17936,13 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 16_000_000_000
             ),
             6
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(
+                forModelPath: "/tmp/google_gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+                physicalMemory: 12_000_000_000
+            ),
+            true
         )
     }
 
