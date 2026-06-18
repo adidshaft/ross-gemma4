@@ -241,6 +241,7 @@ Most recent commits that define this pause point:
   - `offload_kqv = false`
   - `op_offload = false`
   - draft acceleration suppressed, yielding `acceleration=standard draft_tokens=nil draft_model=nil` in the latest physical-device smoke
+- newer smoke guardrails also require `draft_status` in `ROSS_RUNTIME_IDENTITY`; this verified GGUF lane remains standard generation, not MTP proof
 - the current passing physical proof command is:
   - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 60`
 - the repo-owned helper and patch path are now fully verified on this machine:

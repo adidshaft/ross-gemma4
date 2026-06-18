@@ -10,6 +10,7 @@
 - Whether the simulator app was rebuilt before smoke: Yes
 - Runtime identity marker:
   - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil context_tokens=14336 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+  - This recorded line predates the June 19, 2026 `draft_status` field. New GGUF/MTP smoke logs must include `draft_status`, and MTP benchmark claims require `draft_status=active`.
 - Quick profile result: passed.
 - Quick profile pass marker:
   - `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start profile=quick elapsed=67.73s source_raw_chars=467 source_parsed_chars=202 general_output_chars=442 source_refs=1 source_native_model=true general_native_model=true source_input_tokens=207 source_output_tokens=118 source_token_speed=7.25 source_first_token_ms=15538 source_measured_tokens=false general_input_tokens=190 general_output_tokens=192 general_token_speed=8.67 general_first_token_ms=13965 general_measured_tokens=false`

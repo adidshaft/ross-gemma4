@@ -61,13 +61,13 @@ Existing compatibility:
 
 ## Runtime Proof Guardrails
 
-Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, artifact kind/path type, acceleration mode, draft model metadata, context size, GPU/offload summary, fallback status, and availability.
+Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, artifact kind/path type, acceleration mode, draft model metadata, `draft_status`, context size, GPU/offload summary, fallback status, and availability.
 
 Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity marker proves that exact lane:
 
 - MLX requires `actual_runtime=mlx_swift_lm`.
 - CoreAI/Foundation Models requires `actual_runtime=apple_foundation_models`.
-- MTP requires `acceleration=draftModelSpeculative` with non-empty draft tokens and draft model metadata.
+- MTP requires `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and draft model metadata.
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
 
 ## Backend Catalog Modes
