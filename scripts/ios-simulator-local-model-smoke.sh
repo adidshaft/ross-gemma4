@@ -276,7 +276,12 @@ import sys
 import time
 
 sys.path.insert(0, sys.argv[-1])
-from ross_smoke_summary import MissingBenchmarkMatrixError, benchmark_summary_line, parse_fields
+from ross_smoke_summary import (
+    MissingBenchmarkMatrixError,
+    benchmark_summary_line,
+    failure_summary_line,
+    parse_fields,
+)
 
 (
     simulator,
@@ -381,6 +386,7 @@ def validate_identity_guard(identity, *, require_identity):
 identity = None
 matrix_fields = None
 pass_fields = None
+fail_fields = None
 outcome = None
 deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
@@ -411,6 +417,7 @@ try:
             break
         if fail_re.search(line):
             outcome = "fail"
+            fail_fields = parse_fields(line)
             try:
                 process.send_signal(signal.SIGINT)
             except ProcessLookupError:
@@ -439,6 +446,7 @@ if outcome == "pass" and pass_fields is not None:
 
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
+    print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 
 print(f"ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome={outcome}", file=sys.stderr)

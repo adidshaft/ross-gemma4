@@ -62,3 +62,46 @@ def benchmark_summary_line(identity, pass_fields, matrix_fields):
     return "ROSS_SMOKE_BENCHMARK_SUMMARY " + " ".join(
         f"{key}={value}" for key, value in summary.items()
     )
+
+
+def failure_summary_fields(identity, fail_fields, matrix_fields=None):
+    summary = {
+        "runtime": summary_value(identity, "actual_runtime"),
+        "requested_runtime": summary_value(identity, "requested_runtime"),
+        "model_format": summary_value(identity, "model_format"),
+        "artifact_path_type": summary_value(identity, "artifact_path_type"),
+        "acceleration": summary_value(identity, "acceleration"),
+        "draft_tokens": summary_value(identity, "draft_tokens"),
+        "draft_model": summary_value(identity, "draft_model"),
+        "draft_status": summary_value(identity, "draft_status"),
+        "profile": summary_value(fail_fields, "profile"),
+        "matrix_profile": summary_value(matrix_fields or {}, "profile"),
+        "matrix_stages": summary_value(matrix_fields or {}, "stages"),
+        "stage": summary_value(fail_fields, "stage"),
+        "error": summary_value(fail_fields, "error"),
+        "elapsed": summary_value(fail_fields, "elapsed"),
+    }
+
+    for key, value in fail_fields.items():
+        if (
+            key.endswith("_error")
+            or key.endswith("_grounded")
+            or key.endswith("_refs_kept")
+            or key.endswith("_native_model")
+            or key.endswith("_warning_count")
+        ):
+            summary[key] = value
+
+    for stage in STAGES:
+        for metric in METRICS:
+            key = f"{stage}_{metric}"
+            if key in fail_fields:
+                summary[key] = fail_fields[key]
+    return summary
+
+
+def failure_summary_line(identity, fail_fields, matrix_fields=None):
+    summary = failure_summary_fields(identity or {}, fail_fields or {}, matrix_fields)
+    return "ROSS_SMOKE_FAILURE_SUMMARY " + " ".join(
+        f"{key}={value}" for key, value in summary.items()
+    )

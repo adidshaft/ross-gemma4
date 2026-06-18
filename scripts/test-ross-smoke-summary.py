@@ -4,6 +4,7 @@ import unittest
 from ross_smoke_summary import (
     MissingBenchmarkMatrixError,
     benchmark_summary_line,
+    failure_summary_line,
     parse_fields,
 )
 
@@ -50,6 +51,35 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertIn("runtime=nil", summary)
         self.assertIn("matrix_stages=source:document_qa", summary)
+
+    def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "model_format=local_model_artifact artifact_path_type=file acceleration=standard "
+            "draft_tokens=nil draft_model=nil draft_status=no_draft_configured"
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192,"
+            "tamil:document_qa:ta:source_refs_required:max_tokens=192"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime profile=full elapsed=66.49s "
+            "source_error=nil tamil_error=nil source_grounded=true tamil_grounded=false "
+            "source_refs_kept=true tamil_refs_kept=true source_native_model=true tamil_native_model=true "
+            "source_input_tokens=207 source_output_tokens=118 source_token_speed=7.78 "
+            "tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=7.53"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, matrix)
+
+        self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
+        self.assertIn("runtime=gemma_local_runtime", summary)
+        self.assertIn("draft_status=no_draft_configured", summary)
+        self.assertIn("matrix_profile=full", summary)
+        self.assertIn("tamil_grounded=false", summary)
+        self.assertIn("tamil_token_speed=7.53", summary)
 
 
 if __name__ == "__main__":

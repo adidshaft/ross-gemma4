@@ -439,7 +439,12 @@ import subprocess
 import sys
 
 sys.path.insert(0, sys.argv[-1])
-from ross_smoke_summary import MissingBenchmarkMatrixError, benchmark_summary_line, parse_fields
+from ross_smoke_summary import (
+    MissingBenchmarkMatrixError,
+    benchmark_summary_line,
+    failure_summary_line,
+    parse_fields,
+)
 
 (
     device_id,
@@ -540,6 +545,7 @@ outcome = None
 identity = None
 matrix_fields = None
 pass_fields = None
+fail_fields = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -565,6 +571,7 @@ try:
             break
         if fail_re.search(line):
             outcome = "fail"
+            fail_fields = parse_fields(line)
             process.send_signal(signal.SIGINT)
             break
 finally:
@@ -585,6 +592,7 @@ if outcome == "pass":
     sys.exit(0)
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
+    print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 sys.exit(process.returncode or 1)
 PY
