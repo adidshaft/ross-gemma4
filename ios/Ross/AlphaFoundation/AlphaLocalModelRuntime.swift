@@ -3152,10 +3152,11 @@ enum AlphaLocalModelRuntime {
         case .appleFoundationModels:
             #if canImport(FoundationModels)
             if #available(iOS 26.0, macOS 26.0, *) {
+                let usesSystemModel = activePack?.artifactKind == "system_model" || modelPath == "system-model"
                 return AlphaFoundationModelsLocalProvider(
                     capabilityTier: tier,
-                    modelPathLabel: modelPathLabel ?? "system-model",
-                    modelPath: modelPath,
+                    modelPathLabel: usesSystemModel ? "system-model" : (modelPathLabel ?? "system-model"),
+                    modelPath: usesSystemModel ? nil : modelPath,
                     checksumVerified: checksumVerified
                 )
             }

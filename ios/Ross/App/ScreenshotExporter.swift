@@ -200,12 +200,15 @@ func alphaDebugLocalModelSmokePack(
     }
 
     guard environment.enableRealInference,
-          let modelPath = environment.modelPath,
-          fileManager.fileExists(atPath: modelPath) else {
+          let modelPath = environment.modelPath else {
         return nil
     }
     let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
     guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
+        return nil
+    }
+    let usesSystemFoundationModel = runtimeMode == .appleFoundationModels && modelPath == "system-model"
+    guard usesSystemFoundationModel || fileManager.fileExists(atPath: modelPath) else {
         return nil
     }
     let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"

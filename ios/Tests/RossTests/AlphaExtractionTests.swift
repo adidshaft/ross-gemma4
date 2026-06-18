@@ -15871,6 +15871,26 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.checksumVerified)
     }
 
+    func testDebugLocalModelSmokePackAllowsFoundationSystemModelSentinel() throws {
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            tierOverride: .quickStart,
+            packIDOverride: "system-foundation-smoke",
+            modelPath: "system-model",
+            modelChecksum: nil,
+            modelKind: "system_model"
+        )
+
+        let pack = try XCTUnwrap(alphaDebugLocalModelSmokePack(environment: environment))
+
+        XCTAssertEqual(pack.packId, "system-foundation-smoke")
+        XCTAssertEqual(pack.installPath, "system-model")
+        XCTAssertEqual(pack.artifactKind, "system_model")
+        XCTAssertEqual(pack.runtimeMode, .appleFoundationModels)
+        XCTAssertFalse(pack.checksumVerified)
+    }
+
     func testLocalModelSmokeProfileParsesQuickAliases() {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([
@@ -18723,6 +18743,32 @@ final class AlphaExtractionTests: XCTestCase {
             health?.lastErrorCategory == "missing_coreai_artifact" ||
                 health?.lastErrorCategory == "unsupported_runtime_on_platform"
         )
+    }
+
+    func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() {
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: AlphaPackRuntimeMode(runtimeAlias: "coreml"),
+            modelPath: "system-model",
+            modelChecksum: nil,
+            modelKind: "system_model"
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let health = provider?.runtimeHealth()
+
+        XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
+        XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.modelPathLabel, "system-model")
+        XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertNotEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
     func testRuntimeHealthMarksIncompleteConfiguredMLXDirectoryUnavailable() throws {
