@@ -40,8 +40,10 @@ private final class AlphaAssistantPreflightRedirectDelegate: NSObject, URLSessio
 }
 
 @discardableResult
-private func alphaPurgeTemporaryAssistantDownloadFiles() -> Int64 {
-    alphaSweepTemporaryAssistantDownloads()
+private func alphaPurgeTemporaryAssistantDownloadFiles(
+    excluding preservedTemporaryURLs: [URL] = []
+) -> Int64 {
+    alphaSweepTemporaryAssistantDownloads(excluding: preservedTemporaryURLs)
 }
 
 struct AlphaAssistantCatalogDescriptor: Codable, Hashable, Sendable {
@@ -216,7 +218,7 @@ private let alphaBundledMLXQuickStartAssistantDownloadDescriptor = AlphaAssistan
     tier: .quickStart,
     fileName: "gemma-4-E4B-it-qat-4bit",
     sizeBytes: 6_830_817_013,
-    checksumSha256: "d5136c22cf188651815a37112af019d87b80ae9a778c818eb9ea1f1546fd5258",
+    checksumSha256: "45a390a93c9e6d6aac01018da2befe453b3b121477495c7a1967581c680a4063",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
@@ -234,7 +236,7 @@ private let alphaBundledMLXQuickStartAssistantDraftDownloadDescriptor = AlphaAss
     tier: .quickStart,
     fileName: "gemma-4-E4B-it-qat-assistant-6bit",
     sizeBytes: 97_060_772,
-    checksumSha256: "4e68124531565049b030e6ed916298092959ef60902b1b378d2ba7217fa4248b",
+    checksumSha256: "fb3a855e676a1bec230969aff8048d1e4ffa1a99d5bdcb5307ce2a88683ab1e7",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
@@ -249,7 +251,7 @@ private let alphaBundledMLXCaseAssociateAssistantDraftDownloadDescriptor = Alpha
     tier: .caseAssociate,
     fileName: "gemma-4-12B-it-qat-assistant-4bit",
     sizeBytes: 270_093_545,
-    checksumSha256: "a23f17aac65a4eb32672daaab7954aff6dd49e35a3a821804bf4e7aef68f0276",
+    checksumSha256: "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
@@ -264,7 +266,7 @@ private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssis
     tier: .caseAssociate,
     fileName: "gemma-4-12B-it-qat-4bit",
     sizeBytes: 11_020_138_609,
-    checksumSha256: "19535ea037791e35f81f17a27c1f9c53bc3e9b61512676d6f4074270793f67e5",
+    checksumSha256: "66730766ab582aaf9cea04dd8c0cbca931686a6b7395396b0c686678557c3dc2",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
@@ -2848,9 +2850,10 @@ extension AlphaRossModel {
         jobID: UUID,
         progressOffsetBytes: Int64 = 0,
         progressTotalBytes: Int64? = nil,
-        allowsResumePersistence: Bool = true
+        allowsResumePersistence: Bool = true,
+        preservedTemporaryURLs: [URL] = []
     ) async throws -> URL {
-        alphaPurgeTemporaryAssistantDownloadFiles()
+        alphaPurgeTemporaryAssistantDownloadFiles(excluding: preservedTemporaryURLs)
         let isRealMode = true
         if isRealMode && (artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED") || !artifact.verified || !artifact.releaseReady) {
             throw AlphaAssistantDownloadError.invalidURL
@@ -2962,7 +2965,8 @@ extension AlphaRossModel {
                             request: request,
                             jobID: jobID,
                             destinationURL: destinationURL,
-                            progress: progress
+                            progress: progress,
+                            preservedTemporaryURLs: preservedTemporaryURLs
                         )
                     } else {
                         throw error
@@ -2980,10 +2984,12 @@ extension AlphaRossModel {
                     }
                     $0.updatedAt = .now
                 }
-                _ = alphaSweepTemporaryAssistantDownloads()
+                _ = alphaSweepTemporaryAssistantDownloads(
+                    excluding: [fileURL] + preservedTemporaryURLs
+                )
                 return fileURL
             } catch {
-                _ = alphaSweepTemporaryAssistantDownloads()
+                _ = alphaSweepTemporaryAssistantDownloads(excluding: preservedTemporaryURLs)
                 let nsError = error as NSError
                 if nsError.domain == NSURLErrorDomain,
                    nsError.code == NSURLErrorCancelled,
@@ -2996,7 +3002,7 @@ extension AlphaRossModel {
             taskBox.progressTask?.cancel()
             taskBox.task?.cancel()
             AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: jobID) { _ in }
-            _ = alphaSweepTemporaryAssistantDownloads()
+            _ = alphaSweepTemporaryAssistantDownloads(excluding: preservedTemporaryURLs)
         }
     }
 
@@ -3213,7 +3219,8 @@ extension AlphaRossModel {
         request: URLRequest,
         jobID: UUID,
         destinationURL: URL,
-        progress: @escaping AlphaBackgroundModelDownloadCenter.ProgressHandler
+        progress: @escaping AlphaBackgroundModelDownloadCenter.ProgressHandler,
+        preservedTemporaryURLs: [URL] = []
     ) async throws -> URL {
         updateJob(jobID) {
             $0.failureReason = nil
@@ -3222,14 +3229,16 @@ extension AlphaRossModel {
         let (temporaryURL, response) = try await URLSession.shared.download(for: request)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             try? FileManager.default.removeItem(at: temporaryURL)
-            _ = alphaSweepTemporaryAssistantDownloads()
+            _ = alphaSweepTemporaryAssistantDownloads(excluding: preservedTemporaryURLs)
             throw AlphaAssistantDownloadError.httpStatus(http.statusCode)
         }
         let bytes = downloadedFileSize(at: temporaryURL)
         await progress(bytes, bytes)
         try? FileManager.default.removeItem(at: destinationURL)
         try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
-        _ = alphaSweepTemporaryAssistantDownloads()
+        _ = alphaSweepTemporaryAssistantDownloads(
+            excluding: [destinationURL] + preservedTemporaryURLs
+        )
         return destinationURL
     }
 
@@ -3335,6 +3344,13 @@ extension AlphaRossModel {
         default:
             return rossLocalized("assistant_download_error_verification_failed")
         }
+    }
+
+    func assistantDownloadTechnicalFailureSummary(_ error: any Error) -> String {
+        let nsError = error as NSError
+        let localized = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detail = localized.isEmpty ? "Unknown error." : localized
+        return "domain=\(nsError.domain) code=\(nsError.code) detail=\(detail)"
     }
 
     func startPackDownload(
@@ -3797,7 +3813,8 @@ extension AlphaRossModel {
                     jobID: job.id,
                     progressOffsetBytes: downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes,
                     progressTotalBytes: combinedExpectedBytes,
-                    allowsResumePersistence: false
+                    allowsResumePersistence: false,
+                    preservedTemporaryURLs: [downloadedFileURL]
                 )
                 downloadedDraftBytes = draftDownloadedFileURL.map { downloadedFileSize(at: $0) } ?? 0
             } else {
@@ -3892,6 +3909,11 @@ extension AlphaRossModel {
             persist()
         } catch {
             alphaPurgeTemporaryAssistantDownloadFiles()
+            if ProcessInfo.processInfo.environment["ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER"] != nil {
+                print(
+                    "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TECHNICAL_FAILURE tier=\(tier.rawValue) runtime=\(resolvedDownload.runtimeMode.rawValue) pack=\(resolvedDownload.packId) \(assistantDownloadTechnicalFailureSummary(error))"
+                )
+            }
             updateJob(job.id) {
                 $0.state = .failed
                 $0.failureReason = assistantDownloadFailureMessage(error)

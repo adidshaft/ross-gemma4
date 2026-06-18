@@ -7013,14 +7013,14 @@ final class AlphaExtractionTests: XCTestCase {
                     displayName: "Gemma 4 12B MLX",
                     tier: .caseAssociate,
                     sizeBytes: 11_020_138_609,
-                    checksumSha256: "19535ea037791e35f81f17a27c1f9c53bc3e9b61512676d6f4074270793f67e5",
+                    checksumSha256: "66730766ab582aaf9cea04dd8c0cbca931686a6b7395396b0c686678557c3dc2",
                     artifactKind: "mlx_directory",
                     runtimeMode: .mlxSwiftLm,
                     developmentOnly: false,
                     draftArtifact: AlphaBackendCatalogDraftArtifact(
                         fileName: "gemma-4-12B-it-qat-assistant-4bit",
                         sizeBytes: 270_093_545,
-                        checksumSha256: "a23f17aac65a4eb32672daaab7954aff6dd49e35a3a821804bf4e7aef68f0276",
+                        checksumSha256: "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311",
                         artifactKind: "mlx_directory",
                         draftTokens: 6
                     )
@@ -7038,7 +7038,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(descriptors.first?.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit")
         XCTAssertEqual(descriptors.first?.draftArtifact?.sizeBytes, 270_093_545)
-        XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "a23f17aac65a4eb32672daaab7954aff6dd49e35a3a821804bf4e7aef68f0276")
+        XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311")
         XCTAssertEqual(descriptors.first?.draftArtifact?.draftTokens, 6)
     }
 
@@ -12681,7 +12681,7 @@ final class AlphaExtractionTests: XCTestCase {
             artifact: AlphaBackendArtifact(
                 fileName: "gemma-4-12B-it-qat-4bit",
                 sizeBytes: 11_020_138_609,
-                finalSha256: "19535ea037791e35f81f17a27c1f9c53bc3e9b61512676d6f4074270793f67e5",
+                finalSha256: "66730766ab582aaf9cea04dd8c0cbca931686a6b7395396b0c686678557c3dc2",
                 artifactKind: "mlx_directory",
                 runtimeMode: .mlxSwiftLm,
                 developmentOnly: false,
@@ -12691,7 +12691,7 @@ final class AlphaExtractionTests: XCTestCase {
                 draftArtifact: AlphaBackendArtifactDraft(
                     fileName: "gemma-4-12B-it-qat-assistant-4bit",
                     sizeBytes: 270_093_545,
-                    finalSha256: "a23f17aac65a4eb32672daaab7954aff6dd49e35a3a821804bf4e7aef68f0276",
+                    finalSha256: "c62444dfa612aa475f5bb87f817cbfc11692ef946fc607e1575f18f1ebd11311",
                     artifactKind: "mlx_directory",
                     downloadPath: nil,
                     downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
@@ -15272,6 +15272,73 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(selected?.sessionId, "new-session")
         XCTAssertEqual(selected?.bytesDownloaded, 6_830_837_519)
+    }
+
+    @MainActor
+    func testAssistantDownloadTechnicalFailureSummaryIncludesNSErrorDetails() {
+        let model = AlphaRossModel(previewState: .empty())
+        let summary = model.assistantDownloadTechnicalFailureSummary(
+            NSError(
+                domain: "RossAlphaPack",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+            )
+        )
+
+        XCTAssertEqual(
+            summary,
+            "domain=RossAlphaPack code=2 detail=Checksum verification failed."
+        )
+    }
+
+    func testAssistantSmokeVerificationSummaryIncludesDirectoryDigestDetails() throws {
+        setenv("ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER", "quickStart", 1)
+        defer { unsetenv("ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER") }
+
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-smoke-summary-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let expected = alphaModelArtifactVerification(at: directory)
+        let summary = alphaAssistantSmokeVerificationSummary(
+            stage: "direct",
+            fileName: "gemma-4-e4b-it",
+            url: directory,
+            expectedChecksum: String(repeating: "a", count: 64),
+            expectedBytes: expected?.bytes,
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let unwrappedSummary = try XCTUnwrap(summary)
+        XCTAssertTrue(unwrappedSummary.contains("stage=direct"))
+        XCTAssertTrue(unwrappedSummary.contains("actual_checksum=\(expected?.checksum ?? "")"))
+        XCTAssertTrue(unwrappedSummary.contains("actual_bytes=\(expected?.bytes ?? 0)"))
+        XCTAssertTrue(unwrappedSummary.contains("manifest_rows="))
+        XCTAssertTrue(unwrappedSummary.contains(".json"))
+    }
+
+    func testSweepTemporaryAssistantDownloadsPreservesExcludedArtifacts() throws {
+        let fileManager = FileManager.default
+        let preservedDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("ross-pending-preserve-\(UUID().uuidString)", isDirectory: true)
+        let removableDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("ross-pending-remove-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: preservedDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: removableDirectory, withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: preservedDirectory.appendingPathComponent("config.json"))
+        try Data("drop".utf8).write(to: removableDirectory.appendingPathComponent("config.json"))
+        defer {
+            try? fileManager.removeItem(at: preservedDirectory)
+            try? fileManager.removeItem(at: removableDirectory)
+        }
+
+        _ = alphaSweepTemporaryAssistantDownloads(
+            fileManager: fileManager,
+            excluding: [preservedDirectory]
+        )
+
+        XCTAssertTrue(fileManager.fileExists(atPath: preservedDirectory.path))
+        XCTAssertFalse(fileManager.fileExists(atPath: removableDirectory.path))
     }
 
     func testModelInvocationStoreRecordsFirstTokenLatencyAndThroughput() {

@@ -156,9 +156,13 @@ func alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: FileManager = .d
 }
 
 @discardableResult
-func alphaSweepTemporaryAssistantDownloads(fileManager: FileManager = .default) -> Int64 {
+func alphaSweepTemporaryAssistantDownloads(
+    fileManager: FileManager = .default,
+    excluding preservedTemporaryURLs: [URL] = []
+) -> Int64 {
     let temporaryURL = fileManager.temporaryDirectory
     var reclaimedBytes: Int64 = 0
+    let preservedPaths = preservedTemporaryURLs.map { $0.standardizedFileURL.path }
     guard let contents = try? fileManager.contentsOfDirectory(
         at: temporaryURL,
         includingPropertiesForKeys: [.fileSizeKey],
@@ -172,6 +176,15 @@ func alphaSweepTemporaryAssistantDownloads(fileManager: FileManager = .default) 
             ext == "tmp" ||
             ext == "part" ||
             ext == "download" else { continue }
+        let standardizedPath = url.standardizedFileURL.path
+        let shouldPreserve = preservedPaths.contains { preservedPath in
+            standardizedPath == preservedPath ||
+                standardizedPath.hasPrefix(preservedPath + "/") ||
+                preservedPath.hasPrefix(standardizedPath + "/")
+        }
+        if shouldPreserve {
+            continue
+        }
         let values = try? url.resourceValues(forKeys: [.fileSizeKey])
         reclaimedBytes += Int64(values?.fileSize ?? 0)
         try? fileManager.removeItem(at: url)
@@ -208,15 +221,25 @@ func alphaModelArtifactByteCount(at url: URL, fileManager: FileManager = .defaul
     return totalBytes
 }
 
-func alphaModelArtifactVerification(
+private struct AlphaModelArtifactVerificationDetails {
+    let checksum: String
+    let bytes: Int64
+    let manifestRows: [String]?
+}
+
+private func alphaModelArtifactVerificationDetails(
     at url: URL,
     fileManager: FileManager = .default
-) -> (checksum: String, bytes: Int64)? {
+) -> AlphaModelArtifactVerificationDetails? {
     var isDirectory: ObjCBool = false
     guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return nil }
     guard isDirectory.boolValue else {
         guard let checksum = alphaModelSHA256Hex(forFileAt: url) else { return nil }
-        return (checksum, alphaModelArtifactByteCount(at: url, fileManager: fileManager))
+        return AlphaModelArtifactVerificationDetails(
+            checksum: checksum,
+            bytes: alphaModelArtifactByteCount(at: url, fileManager: fileManager),
+            manifestRows: nil
+        )
     }
 
     guard let enumerator = fileManager.enumerator(
@@ -240,13 +263,59 @@ func alphaModelArtifactVerification(
     }
 
     guard !entries.isEmpty else { return nil }
-    let manifestPayload = entries
+    let manifestRows = entries
         .sorted(by: { $0.relativePath < $1.relativePath })
         .map { "\($0.relativePath)\t\($0.bytes)\t\($0.checksum)" }
-        .joined(separator: "\n")
+    let manifestPayload = manifestRows.joined(separator: "\n")
     let digest = SHA256.hash(data: Data(manifestPayload.utf8)).map { String(format: "%02x", $0) }.joined()
     let totalBytes = entries.reduce(into: Int64(0)) { $0 += $1.bytes }
-    return (digest, totalBytes)
+    return AlphaModelArtifactVerificationDetails(
+        checksum: digest,
+        bytes: totalBytes,
+        manifestRows: manifestRows
+    )
+}
+
+func alphaModelArtifactVerification(
+    at url: URL,
+    fileManager: FileManager = .default
+) -> (checksum: String, bytes: Int64)? {
+    guard let details = alphaModelArtifactVerificationDetails(at: url, fileManager: fileManager) else {
+        return nil
+    }
+    return (details.checksum, details.bytes)
+}
+
+func alphaAssistantSmokeVerificationSummary(
+    stage: String,
+    fileName: String,
+    url: URL,
+    expectedChecksum: String,
+    expectedBytes: Int64?,
+    artifactKind: String,
+    runtimeMode: AlphaPackRuntimeMode,
+    fileManager: FileManager = .default
+) -> String? {
+    guard ProcessInfo.processInfo.environment["ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER"] != nil else {
+        return nil
+    }
+    guard let details = alphaModelArtifactVerificationDetails(at: url, fileManager: fileManager) else {
+        return "stage=\(stage) file=\(fileName) kind=\(artifactKind) runtime=\(runtimeMode.rawValue) verification=unavailable"
+    }
+
+    let manifestRows = details.manifestRows?.joined(separator: " || ") ?? "single-file"
+    let expectedBytesSummary = expectedBytes.map(String.init) ?? "nil"
+    return [
+        "stage=\(stage)",
+        "file=\(fileName)",
+        "kind=\(artifactKind)",
+        "runtime=\(runtimeMode.rawValue)",
+        "expected_checksum=\(expectedChecksum.lowercased())",
+        "actual_checksum=\(details.checksum)",
+        "expected_bytes=\(expectedBytesSummary)",
+        "actual_bytes=\(details.bytes)",
+        "manifest_rows=\(manifestRows)"
+    ].joined(separator: " ")
 }
 
 func alphaModelArtifactManifestURL(
@@ -887,6 +956,18 @@ actor AlphaRossStore {
                 at: downloadedFileURL,
                 fileManager: fileManager
             ) else {
+                if let summary = alphaAssistantSmokeVerificationSummary(
+                    stage: "archive",
+                    fileName: fileName,
+                    url: downloadedFileURL,
+                    expectedChecksum: expectedChecksum,
+                    expectedBytes: expectedBytes,
+                    artifactKind: artifactKind,
+                    runtimeMode: runtimeMode,
+                    fileManager: fileManager
+                ) {
+                    print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+                }
                 throw NSError(
                     domain: "RossAlphaPack",
                     code: 2,
@@ -894,6 +975,18 @@ actor AlphaRossStore {
                 )
             }
             if let expectedBytes, archiveVerification.bytes != expectedBytes {
+                if let summary = alphaAssistantSmokeVerificationSummary(
+                    stage: "archive",
+                    fileName: fileName,
+                    url: downloadedFileURL,
+                    expectedChecksum: expectedChecksum,
+                    expectedBytes: expectedBytes,
+                    artifactKind: artifactKind,
+                    runtimeMode: runtimeMode,
+                    fileManager: fileManager
+                ) {
+                    print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+                }
                 throw NSError(
                     domain: "RossAlphaPack",
                     code: 3,
@@ -904,6 +997,18 @@ actor AlphaRossStore {
             }
             guard expectedChecksum.isEmpty ||
                 archiveVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+                if let summary = alphaAssistantSmokeVerificationSummary(
+                    stage: "archive",
+                    fileName: fileName,
+                    url: downloadedFileURL,
+                    expectedChecksum: expectedChecksum,
+                    expectedBytes: expectedBytes,
+                    artifactKind: artifactKind,
+                    runtimeMode: runtimeMode,
+                    fileManager: fileManager
+                ) {
+                    print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+                }
                 throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
             }
             let installSourceURL = try extractedArchiveInstallSource(
@@ -914,6 +1019,18 @@ actor AlphaRossStore {
                 at: installSourceURL,
                 fileManager: fileManager
             ) else {
+                if let summary = alphaAssistantSmokeVerificationSummary(
+                    stage: "archive_extracted",
+                    fileName: fileName,
+                    url: installSourceURL,
+                    expectedChecksum: expectedChecksum,
+                    expectedBytes: expectedBytes,
+                    artifactKind: artifactKind,
+                    runtimeMode: runtimeMode,
+                    fileManager: fileManager
+                ) {
+                    print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+                }
                 throw NSError(
                     domain: "RossAlphaPack",
                     code: 2,
@@ -927,6 +1044,18 @@ actor AlphaRossStore {
             at: downloadedFileURL,
             fileManager: fileManager
         ) else {
+            if let summary = alphaAssistantSmokeVerificationSummary(
+                stage: "direct",
+                fileName: fileName,
+                url: downloadedFileURL,
+                expectedChecksum: expectedChecksum,
+                expectedBytes: expectedBytes,
+                artifactKind: artifactKind,
+                runtimeMode: runtimeMode,
+                fileManager: fileManager
+            ) {
+                print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+            }
             throw NSError(
                 domain: "RossAlphaPack",
                 code: 2,
@@ -934,6 +1063,18 @@ actor AlphaRossStore {
             )
         }
         if let expectedBytes, directVerification.bytes != expectedBytes {
+            if let summary = alphaAssistantSmokeVerificationSummary(
+                stage: "direct",
+                fileName: fileName,
+                url: downloadedFileURL,
+                expectedChecksum: expectedChecksum,
+                expectedBytes: expectedBytes,
+                artifactKind: artifactKind,
+                runtimeMode: runtimeMode,
+                fileManager: fileManager
+            ) {
+                print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+            }
             throw NSError(
                 domain: "RossAlphaPack",
                 code: 3,
@@ -944,6 +1085,18 @@ actor AlphaRossStore {
         }
         guard expectedChecksum.isEmpty ||
             directVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+            if let summary = alphaAssistantSmokeVerificationSummary(
+                stage: "direct",
+                fileName: fileName,
+                url: downloadedFileURL,
+                expectedChecksum: expectedChecksum,
+                expectedBytes: expectedBytes,
+                artifactKind: artifactKind,
+                runtimeMode: runtimeMode,
+                fileManager: fileManager
+            ) {
+                print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
+            }
             throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
         }
         return (downloadedFileURL, directVerification)
