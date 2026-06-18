@@ -64,8 +64,7 @@ for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-devic
         echo "❌ FAIL: $smoke_script does not use the shared benchmark summary parser."
         FAIL=1
     fi
-    if [[ "$smoke_script" != "scripts/ios-device-gguf-smoke.sh" ]] &&
-       ! grep -q "failure_summary_line" "$smoke_script" 2>/dev/null; then
+    if ! grep -q "failure_summary_line" "$smoke_script" 2>/dev/null; then
         echo "❌ FAIL: $smoke_script does not emit normalized failure summaries."
         FAIL=1
     fi
