@@ -1001,8 +1001,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
-        let draftDirectoryURL = resolvedDraftDirectoryURL()
-        let draftTokens = draftTokensForGeneration()
+        let draftStatus = draftAccelerationStatus(
+            runtimeAvailable: availability.available,
+            unavailableReason: availability.errorCategory
+        )
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -1012,9 +1014,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            accelerationMode: draftAccelerationMode(draftDirectoryURL: draftDirectoryURL),
-            accelerationDraftTokens: draftTokens,
-            draftModelPathLabel: draftDirectoryURL?.lastPathComponent,
+            accelerationMode: draftStatus.mode,
+            accelerationDraftTokens: draftStatus.tokens,
+            draftModelPathLabel: draftStatus.label,
+            draftAccelerationStatus: draftStatus.status,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -1386,6 +1389,38 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         (draftDirectoryURL ?? resolvedDraftDirectoryURL()) == nil ? .standard : .draftModelSpeculative
     }
 
+    private func draftAccelerationStatus(
+        runtimeAvailable: Bool,
+        unavailableReason: String?
+    ) -> (
+        mode: AlphaLocalRuntimeAccelerationMode,
+        tokens: Int?,
+        label: String?,
+        status: String
+    ) {
+        guard runtimeAvailable else {
+            return (.standard, nil, nil, unavailableReason ?? "runtime_unavailable")
+        }
+        guard let draftDirectoryURL = configuredDraftDirectoryURL() else {
+            return (.standard, nil, nil, "no_draft_configured")
+        }
+        guard FileManager.default.fileExists(atPath: draftDirectoryURL.path) else {
+            return (.standard, nil, nil, "draft_file_unavailable")
+        }
+        guard Self.localModelDirectoryLooksUsable(draftDirectoryURL) else {
+            return (.standard, nil, nil, "invalid_mlx_draft_artifact")
+        }
+        guard Self.archiveCanServeAsDraft(Self.archiveCompatibility(for: draftDirectoryURL)) else {
+            return (.standard, nil, nil, "unsupported_mlx_draft_artifact")
+        }
+        return (
+            .draftModelSpeculative,
+            draftTokensForGeneration(),
+            draftDirectoryURL.lastPathComponent,
+            "active"
+        )
+    }
+
     private func extractJSON(from text: String) -> String? {
         guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}") else { return nil }
         return String(text[start...end])
@@ -1695,9 +1730,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            accelerationMode: draftModelPath == nil ? nil : .draftModelSpeculative,
-            accelerationDraftTokens: draftModelTokens,
-            draftModelPathLabel: draftModelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty },
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "runtime_dependency_unavailable",
             lastErrorCategory: "runtime_dependency_unavailable",
             userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
             explicitOptInEnabled: true

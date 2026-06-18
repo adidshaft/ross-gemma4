@@ -18948,6 +18948,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_artifact")
     }
 
     func testRuntimeHealthMarksConfiguredGGUFFileAsMissingMLXArtifact() throws {
@@ -18973,6 +18977,45 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "missing_mlx_artifact")
+    }
+
+    func testRuntimeHealthMarksInvalidMLXDraftArtifactWithoutClaimingAcceleration() throws {
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-\(UUID().uuidString)")
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-invalid-draft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        try Data("{}".utf8).write(to: draftDirectory.appendingPathComponent("config.json"))
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_draft_artifact")
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
     }
 
     func testRuntimeHealthMarksUnsupportedGemma4AssistantMLXArchiveUnavailable() throws {
@@ -19187,6 +19230,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtimeHealth?.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(runtimeHealth?.draftModelPathLabel, draftDirectory.lastPathComponent)
         XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, 4)
+        XCTAssertEqual(runtimeHealth?.draftAccelerationStatus, "active")
         XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(output?.accelerationDraftTokens, 4)
         XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
@@ -19281,9 +19325,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(recordedMainPath, directory.path)
         XCTAssertEqual(recordedDraftPath, draftDirectory.path)
         XCTAssertEqual(recordedDraftTokens, 4)
-        XCTAssertEqual(provider?.runtimeHealth().accelerationMode, .draftModelSpeculative)
-        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
-        XCTAssertEqual(provider?.runtimeHealth().draftModelPathLabel, draftDirectory.lastPathComponent)
+        let runtimeHealth = provider?.runtimeHealth()
+        XCTAssertEqual(runtimeHealth?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, 4)
+        XCTAssertEqual(runtimeHealth?.draftModelPathLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(runtimeHealth?.draftAccelerationStatus, "active")
         XCTAssertEqual(output?.rawText, "Draft accelerated answer")
         XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(output?.accelerationDraftTokens, 4)
