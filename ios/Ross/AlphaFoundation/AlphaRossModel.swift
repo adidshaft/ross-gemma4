@@ -125,6 +125,7 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
     var profile: AlphaPrivateAIDeviceProofProfile
     var runtimeCoverageComplete: Bool
     var missingRuntimeCoverageLabels: [String]
+    var runtimeBlockerLabel: String?
     var downloadDeliveryVerified: Bool
     var downloadDeliveryStatusLabel: String?
     var downloadDeliveryContractLabel: String?
@@ -135,6 +136,7 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         profile: AlphaPrivateAIDeviceProofProfile,
         runtimeCoverageComplete: Bool,
         missingRuntimeCoverageLabels: [String],
+        runtimeBlockerLabel: String? = nil,
         downloadDeliveryVerified: Bool = false,
         downloadDeliveryStatusLabel: String? = nil,
         downloadDeliveryContractLabel: String? = nil,
@@ -144,6 +146,7 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         self.profile = profile
         self.runtimeCoverageComplete = runtimeCoverageComplete
         self.missingRuntimeCoverageLabels = missingRuntimeCoverageLabels
+        self.runtimeBlockerLabel = runtimeBlockerLabel
         self.downloadDeliveryVerified = downloadDeliveryVerified
         self.downloadDeliveryStatusLabel = downloadDeliveryStatusLabel
         self.downloadDeliveryContractLabel = downloadDeliveryContractLabel
@@ -155,6 +158,7 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         case profile
         case runtimeCoverageComplete
         case missingRuntimeCoverageLabels
+        case runtimeBlockerLabel
         case downloadDeliveryVerified
         case downloadDeliveryStatusLabel
         case downloadDeliveryContractLabel
@@ -167,6 +171,7 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         profile = try container.decode(AlphaPrivateAIDeviceProofProfile.self, forKey: .profile)
         runtimeCoverageComplete = try container.decodeIfPresent(Bool.self, forKey: .runtimeCoverageComplete) ?? false
         missingRuntimeCoverageLabels = try container.decodeIfPresent([String].self, forKey: .missingRuntimeCoverageLabels) ?? []
+        runtimeBlockerLabel = try container.decodeIfPresent(String.self, forKey: .runtimeBlockerLabel)
         downloadDeliveryVerified = try container.decodeIfPresent(Bool.self, forKey: .downloadDeliveryVerified) ?? false
         downloadDeliveryStatusLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryStatusLabel)
         downloadDeliveryContractLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryContractLabel)

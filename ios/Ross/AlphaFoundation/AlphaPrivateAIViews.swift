@@ -1114,6 +1114,14 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                     }
 
                     if let latestSavedRecord = status.latestSavedRecord,
+                       let runtimeBlocker = alphaPrivateAIDeviceComparisonSavedRuntimeBlocker(latestSavedRecord) {
+                        Text(rossLocalized("private_assistant_device_comparison_runtime_blocker_label") + ": " + runtimeBlocker)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let latestSavedRecord = status.latestSavedRecord,
                        let deliveryContract = alphaPrivateAIDeviceComparisonSavedDeliveryContract(latestSavedRecord) {
                         Text(rossLocalized("private_assistant_device_comparison_delivery_contract_label") + ": " + deliveryContract)
                             .font(.caption2)
@@ -1725,6 +1733,48 @@ func alphaPrivateAIDeviceComparisonSavedDeliveryContract(
 ) -> String? {
     let trimmed = record.downloadDeliveryContractLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonSavedRuntimeBlocker(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String? {
+    let trimmed = record.runtimeBlockerLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonRuntimeBlocker(
+    tier: AlphaCapabilityTier,
+    profile: AlphaPrivateAIDeviceProofProfile,
+    laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus],
+    modelJobs: [AlphaModelDownloadJob]
+) -> String? {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let latestJobFailure = modelJobs
+        .filter { job in
+            AlphaCapabilityTier.assistantSelectionsMatch(job.tier, normalizedTier) &&
+                (job.state == .failed || job.state == .pausedError || job.state == .pausedNoStorage)
+        }
+        .sorted(by: { $0.updatedAt > $1.updatedAt })
+        .compactMap(\.failureReason)
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first
+    if let latestJobFailure, !latestJobFailure.isEmpty {
+        return latestJobFailure
+    }
+
+    guard profile.representativeClass == .belowTarget,
+          let ggufLane = laneReadinessStatuses.first(where: { $0.runtimeMode == .llamaCppGguf }),
+          ggufLane.state == .unavailableOnThisIPhone else {
+        return nil
+    }
+
+    let artifact = alphaAssistantModelArtifact(for: normalizedTier)
+    return String(
+        format: rossLocalized("private_assistant_device_comparison_below_target_blocker"),
+        ggufLane.runtimeMode.displayLabel,
+        artifact.minimumMemoryGB,
+        profile.memoryGB
+    )
 }
 
 func alphaPrivateAIDeviceComparisonMissingTargetLabels(

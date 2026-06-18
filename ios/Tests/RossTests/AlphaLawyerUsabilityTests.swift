@@ -4749,6 +4749,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ),
             runtimeCoverageComplete: true,
             missingRuntimeCoverageLabels: [],
+            runtimeBlockerLabel: "Gemma GGUF needs at least 12 GB memory on this iPhone class; the saved proof device reported 7 GB.",
             downloadDeliveryVerified: true,
             downloadDeliveryStatusLabel: "Verified on this device",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
@@ -4793,6 +4794,79 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             alphaPrivateAIDeviceComparisonDecisionReadinessSummary([savedBelowTargetRecord, saved8GBRecord]),
             "Hold the final pack decision until these physical notes are complete: 12 GB+ class."
         )
+    }
+
+    func testPrivateAIDeviceComparisonProofRecordBuildsBelowTargetRuntimeBlockerSummary() {
+        let profile = AlphaPrivateAIDeviceProofProfile(
+            captureSource: .physicalIPhone,
+            deviceModelLabel: "iPhone16,1",
+            systemVersionLabel: "iOS 27.0",
+            memoryGB: 7,
+            representativeClass: .belowTarget,
+            freeStorageGB: 24,
+            lowPowerModeEnabled: false,
+            thermalCondition: "Nominal"
+        )
+        let laneReadinessStatuses = [
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .appleFoundationModels, state: .builtInUnavailable),
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .mlxSwiftLm, state: .needsSetup),
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .unavailableOnThisIPhone)
+        ]
+
+        let record = alphaPrivateAIDeviceComparisonProofRecord(
+            smokeReports: [],
+            comparisonReports: [],
+            profile: profile,
+            tier: .caseAssociate,
+            laneReadinessStatuses: laneReadinessStatuses,
+            modelJobs: []
+        )
+
+        XCTAssertEqual(
+            record.runtimeBlockerLabel,
+            "Gemma GGUF needs at least 12 GB memory on this iPhone class; the saved proof device reported 7 GB."
+        )
+    }
+
+    func testPrivateAIDeviceComparisonProofRecordPrefersLatestFailedJobReasonAsRuntimeBlocker() {
+        let profile = AlphaPrivateAIDeviceProofProfile(
+            captureSource: .physicalIPhone,
+            deviceModelLabel: "iPhone16,1",
+            systemVersionLabel: "iOS 27.0",
+            memoryGB: 7,
+            representativeClass: .belowTarget,
+            freeStorageGB: 24,
+            lowPowerModeEnabled: false,
+            thermalCondition: "Nominal"
+        )
+        let laneReadinessStatuses = [
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .unavailableOnThisIPhone)
+        ]
+        let failedJob = AlphaModelDownloadJob(
+            sessionId: "case-job",
+            packId: "case-pack",
+            tier: .caseAssociate,
+            state: .failed,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 0,
+            totalBytes: 7_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            failureReason: "mmap failed: Cannot allocate memory"
+        )
+
+        let record = alphaPrivateAIDeviceComparisonProofRecord(
+            smokeReports: [],
+            comparisonReports: [],
+            profile: profile,
+            tier: .caseAssociate,
+            laneReadinessStatuses: laneReadinessStatuses,
+            modelJobs: [failedJob]
+        )
+
+        XCTAssertEqual(record.runtimeBlockerLabel, "mmap failed: Cannot allocate memory")
     }
 
     func testPrivateAIDeviceComparisonProofStatusesTrackSavedCoverageByTarget() {
@@ -5325,6 +5399,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 ),
                 runtimeCoverageComplete: true,
                 missingRuntimeCoverageLabels: [],
+                runtimeBlockerLabel: "Gemma GGUF needs at least 12 GB memory on this iPhone class; the saved proof device reported 7 GB.",
                 downloadDeliveryVerified: true,
                 downloadDeliveryStatusLabel: "Verified on this device",
                 downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
@@ -5380,6 +5455,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Below 8 GB target"))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."))
+        XCTAssertTrue(joined.contains("Saved runtime blocker: Gemma GGUF needs at least 12 GB memory on this iPhone class; the saved proof device reported 7 GB."))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."))
         XCTAssertTrue(joined.contains("Saved note captured:"))
         XCTAssertTrue(joined.contains("Saved system version: iOS 26.4.1"))

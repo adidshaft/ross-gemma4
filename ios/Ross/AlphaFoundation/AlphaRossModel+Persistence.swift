@@ -1820,6 +1820,9 @@ func alphaPrivateAIDeviceComparisonProofRecord(
     smokeReports: [AlphaLocalInferenceSmokeReport],
     comparisonReports: [AlphaMatterBundleComparisonReport],
     profile: AlphaPrivateAIDeviceProofProfile,
+    tier: AlphaCapabilityTier = .caseAssociate,
+    laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus] = [],
+    modelJobs: [AlphaModelDownloadJob] = [],
     downloadDeliverySummary: AlphaAssistantDownloadDeliveryVerificationSummary? = nil,
     exportRelativePath: String? = nil,
     createdAt: Date = .now
@@ -1832,6 +1835,12 @@ func alphaPrivateAIDeviceComparisonProofRecord(
         profile: profile,
         runtimeCoverageComplete: missingRuntimeCoverageLabels.isEmpty,
         missingRuntimeCoverageLabels: missingRuntimeCoverageLabels,
+        runtimeBlockerLabel: alphaPrivateAIDeviceComparisonRuntimeBlocker(
+            tier: tier,
+            profile: profile,
+            laneReadinessStatuses: laneReadinessStatuses,
+            modelJobs: modelJobs
+        ),
         downloadDeliveryVerified: downloadDeliverySummary?.isVerifiedOnDevice ?? false,
         downloadDeliveryStatusLabel: downloadDeliverySummary?.statusLabel,
         downloadDeliveryContractLabel: downloadDeliverySummary?.contractLabel,
@@ -3056,6 +3065,9 @@ extension AlphaRossModel {
             smokeReports: localInferenceSmokeReports,
             comparisonReports: reports,
             profile: deviceProofProfile,
+            tier: tier,
+            laneReadinessStatuses: laneReadinessStatuses,
+            modelJobs: persisted.modelJobs,
             downloadDeliverySummary: downloadDeliverySummary
         )
 
@@ -3704,6 +3716,10 @@ func alphaMatterBundleComparisonExportBodyLines(
             if let latestSavedRecord = status.latestSavedRecord,
                let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {
                 lines.append("  \(rossLocalized("notes_drafts_metadata_saved_file")): \(savedFileName)")
+            }
+            if let latestSavedRecord = status.latestSavedRecord,
+               let runtimeBlocker = alphaPrivateAIDeviceComparisonSavedRuntimeBlocker(latestSavedRecord) {
+                lines.append("  \(rossLocalized("private_assistant_device_comparison_runtime_blocker_label")): \(runtimeBlocker)")
             }
             if let latestSavedRecord = status.latestSavedRecord,
                let deliveryStatus = alphaPrivateAIDeviceComparisonSavedDeliveryStatus(latestSavedRecord) {

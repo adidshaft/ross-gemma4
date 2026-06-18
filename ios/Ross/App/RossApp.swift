@@ -3178,12 +3178,26 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved device state",
             "te": "Saved device state"
         ],
+        "private_assistant_device_comparison_runtime_blocker_label": [
+            "en": "Saved runtime blocker",
+            "hi": "Saved runtime blocker",
+            "bn": "Saved runtime blocker",
+            "ta": "Saved runtime blocker",
+            "te": "Saved runtime blocker"
+        ],
         "private_assistant_device_comparison_delivery_contract_label": [
             "en": "Saved delivery contract",
             "hi": "Saved delivery contract",
             "bn": "Saved delivery contract",
             "ta": "Saved delivery contract",
             "te": "Saved delivery contract"
+        ],
+        "private_assistant_device_comparison_below_target_blocker": [
+            "en": "%@ needs at least %d GB memory on this iPhone class; the saved proof device reported %d GB.",
+            "hi": "%@ needs at least %d GB memory on this iPhone class; the saved proof device reported %d GB.",
+            "bn": "%@ needs at least %d GB memory on this iPhone class; the saved proof device reported %d GB.",
+            "ta": "%@ needs at least %d GB memory on this iPhone class; the saved proof device reported %d GB.",
+            "te": "%@ needs at least %d GB memory on this iPhone class; the saved proof device reported %d GB."
         ],
         "private_assistant_device_comparison_next_steps_title": [
             "en": "Physical note next steps",
