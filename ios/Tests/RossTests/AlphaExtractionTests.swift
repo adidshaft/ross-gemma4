@@ -1594,6 +1594,14 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemoryBytes: 8 * 1_073_741_824,
                 lowPowerMode: false
             ),
+            .quickStart
+        )
+        XCTAssertEqual(
+            alphaRecommendedOnDeviceTier(
+                freeStorageGB: 10,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                lowPowerMode: false
+            ),
             .caseAssociate
         )
         XCTAssertEqual(
@@ -7349,6 +7357,58 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(constrained, .llamaCppGguf)
         XCTAssertEqual(constrainedQuickStart, .llamaCppGguf)
+    }
+
+    func testPreferredAssistantRuntimeModeUsesMLXForCaseAssociateBelow12GBPhoneFloor() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824,
+            freeStorageGB: 12,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testLlamaRuntimeHealthMarks12BPackUnavailableOnBelowTargetPhoneMemory() {
+        let originalValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let originalPhysicalMemoryProvider = AlphaLlamaCppProvider.physicalMemoryBytesProvider
+        defer { AlphaLlamaCppProvider.modelLoadValidator = originalValidator }
+        defer { AlphaLlamaCppProvider.physicalMemoryBytesProvider = originalPhysicalMemoryProvider }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in
+            XCTFail("12B load preflight should stop before trying to open the model on below-target phones")
+        }
+        AlphaLlamaCppProvider.physicalMemoryBytesProvider = {
+            8 * 1_073_741_824
+        }
+
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: "/tmp/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "gguf"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "insufficient_device_memory")
+        XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_llama_needs_more_memory"))
     }
 
     func testPreferredAssistantRuntimeModePreservesInstalledMLXRuntime() {

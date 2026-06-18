@@ -5242,7 +5242,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let laneReadinessStatuses = [
             AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .appleFoundationModels, state: .builtInUnavailable),
             AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .mlxSwiftLm, state: .needsSetup),
-            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .readyNow)
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .unavailableOnThisIPhone)
         ]
         let deviceComparisonProofRecords = [
             AlphaPrivateAIDeviceComparisonProofRecord(
@@ -5310,8 +5310,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Hold the final pack decision until these physical notes are complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Runtime lane readiness"))
         XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
+        XCTAssertTrue(joined.contains("Unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Needs setup"))
-        XCTAssertTrue(joined.contains("Ready now"))
         XCTAssertTrue(joined.contains("Device-proof coverage"))
         XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
         XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))

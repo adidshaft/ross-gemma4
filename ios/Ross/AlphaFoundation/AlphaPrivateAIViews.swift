@@ -1514,11 +1514,35 @@ enum AlphaPrivateAIRuntimeLaneReadinessState: Hashable {
     case needsSetup
     case needsRepair
     case builtInUnavailable
+    case unavailableOnThisIPhone
 }
 
 struct AlphaPrivateAIRuntimeLaneReadinessStatus: Hashable {
     let runtimeMode: AlphaPackRuntimeMode
     let state: AlphaPrivateAIRuntimeLaneReadinessState
+}
+
+func alphaAssistantRuntimeSupportedOnCurrentDevice(
+    runtimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    systemAssistantAvailable: Bool
+) -> Bool {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    switch runtimeMode {
+    case .appleFoundationModels:
+        return systemAssistantAvailable
+    case .mlxSwiftLm:
+        return alphaAssistantTierSupportsMLXRuntime(normalizedTier)
+    case .llamaCppGguf:
+        guard isPhoneFormFactor else { return true }
+        let artifact = alphaAssistantModelArtifact(for: normalizedTier)
+        let minimumMemoryBytes = UInt64(artifact.minimumMemoryGB) * 1_073_741_824
+        return physicalMemoryBytes >= minimumMemoryBytes
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        return false
+    }
 }
 
 func alphaPrivateAIRuntimeLaneReadinessStatuses(
@@ -1539,6 +1563,11 @@ func alphaPrivateAIRuntimeLaneReadinessStatuses(
         let isActive = activePack?.runtimeMode == runtimeMode &&
             AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, normalizedTier)
         let canActivate = canActivateRuntime(runtimeMode)
+        let supportedOnCurrentDevice = alphaAssistantRuntimeSupportedOnCurrentDevice(
+            runtimeMode: runtimeMode,
+            tier: normalizedTier,
+            systemAssistantAvailable: systemAssistantAvailable
+        )
 
         let state: AlphaPrivateAIRuntimeLaneReadinessState
         if isActive && canActivate {
@@ -1547,6 +1576,8 @@ func alphaPrivateAIRuntimeLaneReadinessStatuses(
             state = .readyNow
         } else if runtimeMode == .appleFoundationModels {
             state = systemAssistantAvailable ? .readyNow : .builtInUnavailable
+        } else if !supportedOnCurrentDevice {
+            state = .unavailableOnThisIPhone
         } else if installedPack != nil {
             state = .needsRepair
         } else {
@@ -1569,6 +1600,8 @@ func alphaPrivateAIRuntimeLaneReadinessSummary(_ status: AlphaPrivateAIRuntimeLa
         return rossLocalized("private_assistant_runtime_lane_needs_repair")
     case .builtInUnavailable:
         return rossLocalized("private_assistant_runtime_lane_built_in_unavailable")
+    case .unavailableOnThisIPhone:
+        return rossLocalized("private_assistant_runtime_lane_unavailable_on_this_iphone")
     }
 }
 

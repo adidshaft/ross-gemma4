@@ -100,6 +100,7 @@ Most recent commits that define this pause point:
 - the current iPhone now also proves a real on-device GGUF smoke pass through the cabled-device helper and `--local-model-smoke`, using the local `gemma-2-2b-it-Q4_K_M.gguf` artifact as a Quick Start debug pack on the physical phone
 - the current iPhone now also proves that the intended `gemma-4-12b-it-UD-Q4_K_XL.gguf` artifact reaches the phone, opens in the real GGUF load path, and then fails specifically on memory mapping with `Cannot allocate memory`, with the device reporting `System physical memory: 7 GB`
 - Ross production metadata now also pins the downloaded 12B GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, reconciling the earlier mismatch with the CDN/Xet `etag` value observed during the physical-device proof pass
+- below-target iPhones now also treat the `Case Associate` 12B GGUF lane as unavailable up front instead of merely broken: the shipped minimum memory floor is now 12 GB for that pack, the hidden runtime-lane readiness copy reports it as unavailable on this iPhone, and the phone-side runtime chooser now prefers MLX for `Case Associate` when GGUF would not fit
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
@@ -133,6 +134,8 @@ Most recent verification commands:
 - `scripts/ios-device-gguf-smoke.sh --device 00008130-000C74820130001C --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --tier quickStart --stage-timeout 45`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test --test-name-pattern 'ios production sessions preserve multi-gb GGUF delivery descriptors end to end' backend/tests/model-registry.test.ts`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/testReleaseReadyAssistantArtifactsPinDownloadMetadata'`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testRecommendedOnDeviceTierMatchesCurrentThreeTierProductLineup|testPreferredAssistantRuntimeModeUsesMLXForCaseAssociateBelow12GBPhoneFloor|testLlamaRuntimeHealthMarks12BPackUnavailableOnBelowTargetPhoneMemory)'`
+- `swift test --package-path ios --filter 'AlphaLawyerUsabilityTests/testMatterBundleComparisonExportBodyLinesIncludeReadoutAndLatestRuntimeDetails'`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
   Run from `/Users/amanpandey/projects/ross-gemma4/backend`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
@@ -156,8 +159,9 @@ Most recent verification commands:
 Resume with a focused real-device validation pass instead of more code changes:
 
 1. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
-2. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder
-3. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
-4. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
-5. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-6. only then return to Android real-device runtime validation and deeper runtime work there
+2. use the new below-target behavior as the current shipping guardrail: on smaller iPhones, `Case Associate` should now steer toward MLX and no longer advertise the 12B GGUF lane as ready
+3. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder without the MLX fallback path
+4. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
+5. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
+6. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+7. only then return to Android real-device runtime validation and deeper runtime work there

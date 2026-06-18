@@ -2534,6 +2534,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த assistant setup-ஐ திறக்க முடியவில்லை. My assistant திறந்து Repair setup பயன்படுத்தவும்.",
             "te": "Ross ఈ assistant setup తెరవలేకపోయింది. My assistant తెరిచి Repair setup ఉపయోగించండి."
         ],
+        "runtime_health_llama_needs_more_memory": [
+            "en": "This assistant setup needs a higher-memory iPhone before Ross can open it.",
+            "hi": "Ross इस assistant setup को खोलने से पहले ज़्यादा memory वाला iPhone चाहिए।",
+            "bn": "Ross এই assistant setup খুলতে গেলে আরও বেশি memory-র iPhone দরকার।",
+            "ta": "Ross இந்த assistant setup-ஐ திறக்க அதிக memory உள்ள iPhone தேவை.",
+            "te": "Ross ఈ assistant setup తెరవడానికి ఎక్కువ memory ఉన్న iPhone అవసరం."
+        ],
         "runtime_health_mlx_archive_unsupported": [
             "en": "This MLX archive is not supported yet. Use the GGUF assistant pack or a compatible MLX Gemma 4 archive.",
             "hi": "यह MLX archive अभी supported नहीं है। GGUF assistant pack या compatible MLX Gemma 4 archive इस्तेमाल करें।",
@@ -3401,6 +3408,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Built-in unavailable on this iPhone",
             "ta": "Built-in unavailable on this iPhone",
             "te": "Built-in unavailable on this iPhone"
+        ],
+        "private_assistant_runtime_lane_unavailable_on_this_iphone": [
+            "en": "Unavailable on this iPhone",
+            "hi": "Unavailable on this iPhone",
+            "bn": "Unavailable on this iPhone",
+            "ta": "Unavailable on this iPhone",
+            "te": "Unavailable on this iPhone"
         ],
         "private_assistant_runtime_comparison_export_title": [
             "en": "Private assistant runtime comparison note",

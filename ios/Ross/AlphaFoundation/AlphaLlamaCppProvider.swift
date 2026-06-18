@@ -32,6 +32,21 @@ enum AlphaLlamaRuntimeProfile {
         return .unknown
     }
 
+    static func minimumSupportedMemoryBytes(forModelPath path: String?) -> UInt64 {
+        switch archiveProfile(forModelPath: path) {
+        case .flash:
+            return 4_000_000_000
+        case .e4b:
+            return 4_000_000_000
+        case .gemma12b:
+            return 12_000_000_000
+        case .gemma26bA4b:
+            return 12_000_000_000
+        case .unknown:
+            return 4_000_000_000
+        }
+    }
+
     static func contextWindowTokens(forModelPath path: String?, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> UInt32 {
         if physicalMemory < 6_000_000_000 {
             return 4_096
@@ -292,6 +307,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         guard let modelPath, !modelPath.isEmpty else {
             return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
+        let physicalMemoryBytes = Self.physicalMemoryBytesProvider()
+        let minimumSupportedMemoryBytes = AlphaLlamaRuntimeProfile.minimumSupportedMemoryBytes(forModelPath: modelPath)
+        guard physicalMemoryBytes >= minimumSupportedMemoryBytes else {
+            return (false, "insufficient_device_memory", alphaRuntimeHealthStatus(.llamaNeedsMoreMemory))
+        }
         let attributes = try? FileManager.default.attributesOfItem(atPath: modelPath)
         let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
         let hasMinimumBytes: Bool
@@ -315,6 +335,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     nonisolated(unsafe) static var modelLoadValidator: (String) throws -> Void = { path in
         _ = try LlamaContext.create_context(path: path)
+    }
+
+    nonisolated(unsafe) static var physicalMemoryBytesProvider: () -> UInt64 = {
+        ProcessInfo.processInfo.physicalMemory
     }
 
     nonisolated(unsafe) static var contextFactory: (String, String?, Int?) throws -> any AlphaLlamaCompletionContext = {
