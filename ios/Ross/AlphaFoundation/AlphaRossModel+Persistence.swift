@@ -1667,7 +1667,7 @@ func alphaCurrentDeviceModelIdentifier(
     return String(decoding: identifierBytes, as: UTF8.self)
 }
 
-struct AlphaPrivateAIDeviceProofProfile: Hashable, Sendable {
+struct AlphaPrivateAIDeviceProofProfile: Codable, Hashable, Sendable {
     let captureSource: AlphaPrivateAIDeviceProofCaptureSource
     let deviceModelLabel: String
     let systemVersionLabel: String
@@ -1678,7 +1678,7 @@ struct AlphaPrivateAIDeviceProofProfile: Hashable, Sendable {
     let thermalCondition: String
 }
 
-enum AlphaPrivateAIDeviceProofCaptureSource: Hashable, Sendable {
+enum AlphaPrivateAIDeviceProofCaptureSource: Codable, Hashable, Sendable {
     case simulator
     case physicalIPhone
     case physicalAppleDevice
@@ -1695,7 +1695,7 @@ enum AlphaPrivateAIDeviceProofCaptureSource: Hashable, Sendable {
     }
 }
 
-enum AlphaPrivateAIDeviceProofRepresentativeClass: Hashable, Sendable {
+enum AlphaPrivateAIDeviceProofRepresentativeClass: Codable, Hashable, Sendable {
     case simulatorOnly
     case belowTarget
     case class8GB
@@ -1794,6 +1794,26 @@ func alphaCurrentPrivateAIDeviceProofProfile(
         freeStorageGB: freeStorageGB,
         lowPowerModeEnabled: lowPowerMode,
         thermalCondition: thermalCondition
+    )
+}
+
+func alphaPrivateAIDeviceComparisonProofRecord(
+    smokeReports: [AlphaLocalInferenceSmokeReport],
+    comparisonReports: [AlphaMatterBundleComparisonReport],
+    profile: AlphaPrivateAIDeviceProofProfile,
+    exportRelativePath: String? = nil,
+    createdAt: Date = .now
+) -> AlphaPrivateAIDeviceComparisonProofRecord {
+    let missingRuntimeCoverageLabels = alphaPrivateAIRuntimeCoverageMissingLabels(
+        smokeReports: smokeReports,
+        comparisonReports: comparisonReports
+    )
+    return AlphaPrivateAIDeviceComparisonProofRecord(
+        profile: profile,
+        runtimeCoverageComplete: missingRuntimeCoverageLabels.isEmpty,
+        missingRuntimeCoverageLabels: missingRuntimeCoverageLabels,
+        exportRelativePath: exportRelativePath,
+        createdAt: createdAt
     )
 }
 
@@ -2973,12 +2993,26 @@ extension AlphaRossModel {
         persisted.matterBundleComparisonReports = reports
     }
 
+    func recordPrivateAIDeviceComparisonProofRecord(_ record: AlphaPrivateAIDeviceComparisonProofRecord) {
+        var records = persisted.privateAIDeviceComparisonProofRecords ?? []
+        records.insert(record, at: 0)
+        if records.count > Self.privateAIDeviceComparisonProofHistoryLimit {
+            records.removeLast(records.count - Self.privateAIDeviceComparisonProofHistoryLimit)
+        }
+        persisted.privateAIDeviceComparisonProofRecords = records
+    }
+
     func saveMatterBundleComparisonExport() {
         guard !matterBundleComparisonExportRunning else { return }
 
         let reports = matterBundleComparisonReports
         guard !reports.isEmpty else { return }
         let deviceProofProfile = alphaCurrentPrivateAIDeviceProofProfile()
+        let provisionalDeviceComparisonProofRecord = alphaPrivateAIDeviceComparisonProofRecord(
+            smokeReports: localInferenceSmokeReports,
+            comparisonReports: reports,
+            profile: deviceProofProfile
+        )
         let tier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
         let laneReadinessStatuses = alphaPrivateAIRuntimeLaneReadinessStatuses(
             for: tier,
@@ -3003,10 +3037,14 @@ extension AlphaRossModel {
                         reports: reports,
                         smokeReports: localInferenceSmokeReports,
                         deviceProofProfile: deviceProofProfile,
-                        laneReadinessStatuses: laneReadinessStatuses
+                        laneReadinessStatuses: laneReadinessStatuses,
+                        deviceComparisonProofRecords: [provisionalDeviceComparisonProofRecord] + privateAIDeviceComparisonProofRecords
                     )
                 )
                 persisted.exports.insert(report, at: 0)
+                var savedDeviceComparisonProofRecord = provisionalDeviceComparisonProofRecord
+                savedDeviceComparisonProofRecord.exportRelativePath = report.relativePath
+                recordPrivateAIDeviceComparisonProofRecord(savedDeviceComparisonProofRecord)
                 persisted.ledgerEntries.insert(
                     AlphaPrivacyLedgerEntry(
                         title: "Local export generated",
@@ -3523,6 +3561,7 @@ func alphaMatterBundleComparisonExportBodyLines(
     smokeReports: [AlphaLocalInferenceSmokeReport] = [],
     deviceProofProfile: AlphaPrivateAIDeviceProofProfile? = nil,
     laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus] = [],
+    deviceComparisonProofRecords: [AlphaPrivateAIDeviceComparisonProofRecord] = [],
     generatedAt: Date = .now
 ) -> [String] {
     let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
@@ -3582,6 +3621,16 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("  \(rossLocalized("private_assistant_device_storage_label")): \(deviceProofProfile.freeStorageGB) GB")
         lines.append("  \(rossLocalized("private_assistant_device_low_power_label")): \(deviceProofProfile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))")
         lines.append("  \(rossLocalized("private_assistant_device_thermal_label")): \(deviceProofProfile.thermalCondition)")
+    }
+
+    if !deviceComparisonProofRecords.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_device_comparison_coverage_title"))
+        lines.append(rossLocalized("private_assistant_device_comparison_coverage_note"))
+        for status in alphaPrivateAIDeviceComparisonProofStatuses(deviceComparisonProofRecords) {
+            lines.append("- \(status.target.localizedLabel)")
+            lines.append("  \(alphaPrivateAIDeviceComparisonProofSummary(status))")
+        }
     }
 
     if !laneReadinessStatuses.isEmpty {

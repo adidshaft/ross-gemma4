@@ -4728,6 +4728,52 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
     }
 
+    func testPrivateAIDeviceComparisonProofStatusesTrackSavedCoverageByTarget() {
+        let saved8GBRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .physicalIPhone,
+                deviceModelLabel: "iPhone17,2",
+                systemVersionLabel: "iOS 26.4.1",
+                memoryGB: 8,
+                representativeClass: .class8GB,
+                freeStorageGB: 28,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: true,
+            missingRuntimeCoverageLabels: [],
+            exportRelativePath: "exports/device-note-8gb.pdf"
+        )
+        let simulatorRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .simulator,
+                deviceModelLabel: "iPhone17,2",
+                systemVersionLabel: "iOS 26.4.1",
+                memoryGB: 8,
+                representativeClass: .simulatorOnly,
+                freeStorageGB: 28,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: true,
+            missingRuntimeCoverageLabels: [],
+            exportRelativePath: "exports/device-note-simulator.pdf"
+        )
+
+        let statuses = alphaPrivateAIDeviceComparisonProofStatuses([saved8GBRecord, simulatorRecord])
+
+        XCTAssertEqual(statuses.count, 2)
+        XCTAssertEqual(statuses[0].target, .class8GB)
+        XCTAssertEqual(statuses[0].latestSavedRecord?.profile.deviceModelLabel, "iPhone17,2")
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
+            "Saved note covers the full runtime comparison on iPhone17,2."
+        )
+        XCTAssertEqual(statuses[1].target, .class12GBOrHigher)
+        XCTAssertNil(statuses[1].latestSavedRecord)
+        XCTAssertEqual(alphaPrivateAIDeviceComparisonProofSummary(statuses[1]), "No saved note yet.")
+    }
+
     func testPrivateAIRuntimeLaneReadinessStatusesDescribeActiveReadySetupAndRepair() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
@@ -5112,12 +5158,21 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .mlxSwiftLm, state: .needsSetup),
             AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .readyNow)
         ]
+        let deviceComparisonProofRecords = [
+            AlphaPrivateAIDeviceComparisonProofRecord(
+                profile: deviceProofProfile,
+                runtimeCoverageComplete: true,
+                missingRuntimeCoverageLabels: [],
+                exportRelativePath: "exports/device-note-8gb.pdf"
+            )
+        ]
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
             reports: reports,
             smokeReports: smokeReports,
             deviceProofProfile: deviceProofProfile,
             laneReadinessStatuses: laneReadinessStatuses,
+            deviceComparisonProofRecords: deviceComparisonProofRecords,
             generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
         )
         let joined = lines.joined(separator: "\n")
@@ -5129,6 +5184,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("System version: iOS 26.4.1"))
         XCTAssertTrue(joined.contains("Memory: 8 GB"))
         XCTAssertTrue(joined.contains("Representative class: 8 GB class"))
+        XCTAssertTrue(joined.contains("Saved device comparison coverage"))
+        XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
+        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison on iPhone17,2."))
+        XCTAssertTrue(joined.contains("12 GB+ class"))
+        XCTAssertTrue(joined.contains("No saved note yet."))
         XCTAssertTrue(joined.contains("Runtime lane readiness"))
         XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Needs setup"))
@@ -5237,13 +5297,16 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let caseID = try await MainActor.run { try XCTUnwrap(model.persisted.cases.first?.id) }
             let ledgerTitle = await MainActor.run { model.persisted.ledgerEntries.first?.title }
             let exportError = await MainActor.run { model.matterBundleComparisonExportErrorMessage }
+            let deviceComparisonProofRecords = await MainActor.run { model.privateAIDeviceComparisonProofRecords }
             let imported = try await store.importDocument(from: exportURL, into: caseID)
 
             XCTAssertEqual(export.title, rossLocalized("private_assistant_runtime_comparison_export_title"))
             XCTAssertEqual(ledgerTitle, "Local export generated")
             XCTAssertNil(exportError)
+            XCTAssertEqual(deviceComparisonProofRecords.count, 1)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
             XCTAssertTrue(imported.document.extractedText?.contains("Device proof profile") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("Saved device comparison coverage") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Runtime lane readiness") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Device-proof coverage") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Next device steps") == true)

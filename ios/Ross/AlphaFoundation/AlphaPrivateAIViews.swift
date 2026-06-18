@@ -706,6 +706,13 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 }
             }
 
+            if !model.privateAIDeviceComparisonProofRecords.isEmpty || !model.matterBundleComparisonReports.isEmpty {
+                Divider()
+                AlphaPrivateAIDeviceComparisonProofCoverageSection(
+                    records: model.privateAIDeviceComparisonProofRecords
+                )
+            }
+
             if !model.localInferenceSmokeReports.isEmpty || !model.matterBundleComparisonReports.isEmpty {
                 Divider()
                 AlphaPrivateAIRuntimeCoverageSection(
@@ -940,6 +947,41 @@ private struct AlphaPrivateAIRuntimeLaneReadinessSection: View {
                     Text(alphaPrivateAIRuntimeLaneReadinessSummary(status))
                         .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+}
+
+private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
+    let records: [AlphaPrivateAIDeviceComparisonProofRecord]
+
+    private var statuses: [AlphaPrivateAIDeviceComparisonProofStatus] {
+        alphaPrivateAIDeviceComparisonProofStatuses(records)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_device_comparison_coverage_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            Text(rossLocalized("private_assistant_device_comparison_coverage_note"))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.60))
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(Array(statuses.enumerated()), id: \.offset) { _, status in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(status.target.localizedLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(alphaPrivateAIDeviceComparisonProofSummary(status))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, 2)
             }
@@ -1265,6 +1307,34 @@ struct AlphaPrivateAIRuntimeCoverageStatus: Hashable {
     var hasLongerBundleProof: Bool { latestComparisonReport != nil }
 }
 
+enum AlphaPrivateAIDeviceComparisonProofTarget: CaseIterable, Hashable {
+    case class8GB
+    case class12GBOrHigher
+
+    var localizedLabel: String {
+        switch self {
+        case .class8GB:
+            return rossLocalized("private_assistant_device_representative_class_8gb")
+        case .class12GBOrHigher:
+            return rossLocalized("private_assistant_device_representative_class_12gb")
+        }
+    }
+
+    var representativeClass: AlphaPrivateAIDeviceProofRepresentativeClass {
+        switch self {
+        case .class8GB:
+            return .class8GB
+        case .class12GBOrHigher:
+            return .class12GBOrHigher
+        }
+    }
+}
+
+struct AlphaPrivateAIDeviceComparisonProofStatus: Hashable {
+    let target: AlphaPrivateAIDeviceComparisonProofTarget
+    let latestSavedRecord: AlphaPrivateAIDeviceComparisonProofRecord?
+}
+
 enum AlphaPrivateAIRuntimeLaneReadinessState: Hashable {
     case activeNow
     case readyNow
@@ -1327,6 +1397,52 @@ func alphaPrivateAIRuntimeLaneReadinessSummary(_ status: AlphaPrivateAIRuntimeLa
     case .builtInUnavailable:
         return rossLocalized("private_assistant_runtime_lane_built_in_unavailable")
     }
+}
+
+func alphaPrivateAIDeviceComparisonProofStatuses(
+    _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
+) -> [AlphaPrivateAIDeviceComparisonProofStatus] {
+    AlphaPrivateAIDeviceComparisonProofTarget.allCases.map { target in
+        let latestSavedRecord = records
+            .filter { record in
+                record.profile.captureSource == .physicalIPhone &&
+                    record.profile.representativeClass == target.representativeClass
+            }
+            .max(by: { lhs, rhs in
+                lhs.createdAt < rhs.createdAt
+            })
+        return AlphaPrivateAIDeviceComparisonProofStatus(
+            target: target,
+            latestSavedRecord: latestSavedRecord
+        )
+    }
+}
+
+func alphaPrivateAIDeviceComparisonProofSummary(_ status: AlphaPrivateAIDeviceComparisonProofStatus) -> String {
+    guard let latestSavedRecord = status.latestSavedRecord else {
+        return rossLocalized("private_assistant_device_comparison_not_saved")
+    }
+
+    if latestSavedRecord.runtimeCoverageComplete {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_complete"),
+            latestSavedRecord.profile.deviceModelLabel
+        )
+    }
+
+    let missingLabels = latestSavedRecord.missingRuntimeCoverageLabels.joined(separator: ", ")
+    if !missingLabels.isEmpty {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime"),
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
+    return String(
+        format: rossLocalized("private_assistant_device_comparison_saved_partial"),
+        latestSavedRecord.profile.deviceModelLabel
+    )
 }
 
 func alphaPrivateAIRuntimeCoverageStatuses(

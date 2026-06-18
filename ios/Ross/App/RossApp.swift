@@ -3066,6 +3066,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "saved note intended device type, memory class மற்றும் OS version-இலிருந்துதான் வந்தது என்பதை இதனால் confirm செய்யவும்.",
             "te": "saved note intended device type, memory class మరియు OS version నుంచే వచ్చిందో దీతో confirm చేయండి."
         ],
+        "private_assistant_device_comparison_coverage_title": [
+            "en": "Saved device comparison coverage",
+            "hi": "Saved device comparison coverage",
+            "bn": "Saved device comparison coverage",
+            "ta": "Saved device comparison coverage",
+            "te": "Saved device comparison coverage"
+        ],
+        "private_assistant_device_comparison_coverage_note": [
+            "en": "Only saved physical iPhone comparison notes count toward these targets.",
+            "hi": "Only saved physical iPhone comparison notes count toward these targets.",
+            "bn": "Only saved physical iPhone comparison notes count toward these targets.",
+            "ta": "Only saved physical iPhone comparison notes count toward these targets.",
+            "te": "Only saved physical iPhone comparison notes count toward these targets."
+        ],
+        "private_assistant_device_comparison_not_saved": [
+            "en": "No saved note yet.",
+            "hi": "No saved note yet.",
+            "bn": "No saved note yet.",
+            "ta": "No saved note yet.",
+            "te": "No saved note yet."
+        ],
+        "private_assistant_device_comparison_saved_complete": [
+            "en": "Saved note covers the full runtime comparison on %@.",
+            "hi": "Saved note covers the full runtime comparison on %@.",
+            "bn": "Saved note covers the full runtime comparison on %@.",
+            "ta": "Saved note covers the full runtime comparison on %@.",
+            "te": "Saved note covers the full runtime comparison on %@."
+        ],
+        "private_assistant_device_comparison_saved_partial": [
+            "en": "Saved note exists on %@, but the runtime comparison still needs another pass.",
+            "hi": "Saved note exists on %@, but the runtime comparison still needs another pass.",
+            "bn": "Saved note exists on %@, but the runtime comparison still needs another pass.",
+            "ta": "Saved note exists on %@, but the runtime comparison still needs another pass.",
+            "te": "Saved note exists on %@, but the runtime comparison still needs another pass."
+        ],
+        "private_assistant_device_comparison_saved_missing_runtime": [
+            "en": "Saved note exists on %@, but it still misses %@.",
+            "hi": "Saved note exists on %@, but it still misses %@.",
+            "bn": "Saved note exists on %@, but it still misses %@.",
+            "ta": "Saved note exists on %@, but it still misses %@.",
+            "te": "Saved note exists on %@, but it still misses %@."
+        ],
         "private_assistant_device_capture_source_label": [
             "en": "Capture source",
             "hi": "Capture source",

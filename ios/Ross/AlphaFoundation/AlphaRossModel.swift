@@ -121,6 +121,14 @@ struct AlphaMatterBundleComparisonReport: Codable, Hashable, Sendable {
     var createdAt: Date = .now
 }
 
+struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
+    var profile: AlphaPrivateAIDeviceProofProfile
+    var runtimeCoverageComplete: Bool
+    var missingRuntimeCoverageLabels: [String]
+    var exportRelativePath: String?
+    var createdAt: Date = .now
+}
+
 struct AlphaPrivateAISnapshot: Hashable, Sendable {
     var installedPacks: [AlphaInstalledModelPack] = []
     var activePack: AlphaInstalledModelPack?
@@ -782,6 +790,7 @@ struct AlphaStorageSnapshot {
 final class AlphaRossModel {
     static let localInferenceSmokeHistoryLimit = 6
     static let matterBundleComparisonHistoryLimit = 6
+    static let privateAIDeviceComparisonProofHistoryLimit = 12
     static let matterBundleComparisonExportKind = "private_assistant_runtime_comparison"
 
     enum DockCommandAction: Hashable {
@@ -847,6 +856,9 @@ final class AlphaRossModel {
     var matterBundleComparisonReport: AlphaMatterBundleComparisonReport?
     var matterBundleComparisonReports: [AlphaMatterBundleComparisonReport] {
         persisted.matterBundleComparisonReports ?? []
+    }
+    var privateAIDeviceComparisonProofRecords: [AlphaPrivateAIDeviceComparisonProofRecord] {
+        persisted.privateAIDeviceComparisonProofRecords ?? []
     }
     var matterBundleComparisonRunning = false
     var matterBundleComparisonExportRunning = false
