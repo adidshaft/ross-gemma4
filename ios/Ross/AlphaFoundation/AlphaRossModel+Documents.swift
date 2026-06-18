@@ -97,7 +97,9 @@ extension AlphaRossModel {
         guard let requestedTier else { return false }
         let retryableCategories: Set<String> = [
             "unsupported_runtime",
+            "unsupported_runtime_on_platform",
             "unknown_runtime_error",
+            "coreai_generation_failed",
             "runtime_dependency_unavailable",
             "model_path_missing",
             "inference_failed"

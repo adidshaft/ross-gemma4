@@ -20042,6 +20042,46 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(streamed.last?.usesMeasuredTokenCounts == true)
     }
 
+    @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderReportsSpecificGenerationFailure() async {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            throw NSError(
+                domain: "RossFoundationTest",
+                code: 42,
+                userInfo: [NSLocalizedDescriptionKey: "Synthetic generation failure"]
+            )
+        }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "system-model",
+            modelPath: nil,
+            checksumVerified: true
+        )
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "coreai_generation_failed")
+        XCTAssertEqual(output.warnings, [AlphaLocalModelWarningCopy.assistantCouldNotFinish])
+    }
+
     func testModelInvocationStorePreservesMeasuredTokenPrecisionFlag() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

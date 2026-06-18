@@ -43,7 +43,7 @@ The MLX lane remains unproven on physical iPhone hardware. It now supports both 
 
 Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI/CoreML benchmark must show `actual_runtime=apple_foundation_models`. In this codebase, `coreai` and `coreml` are smoke/runtime aliases for Apple's Foundation Models path, not separate benchmark lanes. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI/CoreML benchmark.
 
-The Apple built-in/CoreAI/CoreML debug-smoke path now treats `artifactKind=system_model` and `modelPath=system-model` as the system Foundation Models runtime, not as a missing adapter file. A June 19, 2026 simulator check produced a real identity marker with `provider=AlphaFoundationModelsLocalProvider`, `actual_runtime=apple_foundation_models`, and `artifact_path_type=system`; generation still failed in simulator with `unknown_runtime_error`, so this is routing evidence only, not a CoreAI/CoreML generation benchmark.
+The Apple built-in/CoreAI/CoreML debug-smoke path now treats `artifactKind=system_model` and `modelPath=system-model` as the system Foundation Models runtime, not as a missing adapter file. A June 19, 2026 simulator check produced a real identity marker with `provider=AlphaFoundationModelsLocalProvider`, `actual_runtime=apple_foundation_models`, and `artifact_path_type=system`; generation still failed in simulator, now categorized as `coreai_generation_failed`, so this is routing evidence only, not a CoreAI/CoreML generation benchmark.
 
 Clear unavailable categories for benchmark triage:
 
@@ -52,6 +52,7 @@ Clear unavailable categories for benchmark triage:
 - `invalid_mlx_draft_artifact`: the primary MLX directory is usable, but the configured draft companion is not.
 - `missing_coreai_artifact`: a configured CoreAI/Foundation adapter path was required but could not be opened.
 - `unsupported_runtime_on_platform`: the Apple built-in/CoreAI runtime is unavailable on the current OS, device, or build.
+- `coreai_generation_failed`: the Apple built-in/CoreAI provider was selected and available, but a generation call failed before returning a usable answer.
 
 Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
 - `gemma4_assistant` archives are still rejected as primary MLX targets, but they are now accepted as draft companions for speculative decoding on supported tiers.

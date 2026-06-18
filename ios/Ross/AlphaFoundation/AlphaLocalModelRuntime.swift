@@ -2712,7 +2712,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: promptPack.includedSourceRefs.count,
                 omittedSourceCount: promptPack.omittedSourceRefs.count,
                 omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
-                errorCategory: "unsupported_runtime"
+                errorCategory: "unsupported_runtime_on_platform"
             )
         }
 
@@ -2756,7 +2756,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: promptPack.includedSourceRefs.count,
                 omittedSourceCount: promptPack.omittedSourceRefs.count,
                 omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
-                errorCategory: "unknown_runtime_error"
+                errorCategory: "coreai_generation_failed"
             )
         }
     }
