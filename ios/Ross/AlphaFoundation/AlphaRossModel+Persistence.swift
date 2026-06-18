@@ -2025,6 +2025,10 @@ func alphaLocalRuntimeEnvironment(
     lowPowerMode: Bool = alphaCurrentLowPowerMode(),
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaLocalRuntimeEnvironment {
+    if baseEnvironment.disableDraftAcceleration {
+        return baseEnvironment.withoutDraftAcceleration()
+    }
+
     if baseEnvironment.draftModelPath != nil {
         return baseEnvironment
     }
@@ -2035,6 +2039,7 @@ func alphaLocalRuntimeEnvironment(
         return AlphaLocalRuntimeEnvironment(
             enableRealInference: baseEnvironment.enableRealInference,
             runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+            disableDraftAcceleration: baseEnvironment.disableDraftAcceleration,
             modelPath: baseEnvironment.modelPath,
             modelChecksum: baseEnvironment.modelChecksum,
             modelKind: baseEnvironment.modelKind,
@@ -2055,6 +2060,7 @@ func alphaLocalRuntimeEnvironment(
         return AlphaLocalRuntimeEnvironment(
             enableRealInference: baseEnvironment.enableRealInference,
             runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+            disableDraftAcceleration: baseEnvironment.disableDraftAcceleration,
             modelPath: baseEnvironment.modelPath,
             modelChecksum: baseEnvironment.modelChecksum,
             modelKind: baseEnvironment.modelKind,
@@ -2083,6 +2089,7 @@ func alphaLocalRuntimeEnvironment(
     return AlphaLocalRuntimeEnvironment(
         enableRealInference: baseEnvironment.enableRealInference,
         runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+        disableDraftAcceleration: baseEnvironment.disableDraftAcceleration,
         modelPath: baseEnvironment.modelPath,
         modelChecksum: baseEnvironment.modelChecksum,
         modelKind: baseEnvironment.modelKind,

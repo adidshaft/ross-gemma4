@@ -2668,16 +2668,13 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func contextWindowEstimate() -> Int? {
-        let heuristic = AlphaFoundationRuntimeProfile.contextWindowTokens(for: capabilityTier)
-        if let model = try? resolvedModel() {
-            return max(model.contextSize, heuristic)
-        }
-        return heuristic
+        // `runtimeHealth()` is rendered in launch-time UI paths; keep it on a
+        // lightweight heuristic instead of synchronously probing model context.
+        AlphaFoundationRuntimeProfile.contextWindowTokens(for: capabilityTier)
     }
 
     func maxInputChars() -> Int? {
-        let heuristic = AlphaFoundationRuntimeProfile.maxInputChars(for: capabilityTier)
-        return contextWindowEstimate().map { max($0 * 4 - 800, heuristic) }
+        AlphaFoundationRuntimeProfile.maxInputChars(for: capabilityTier)
     }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
@@ -2915,6 +2912,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
 struct AlphaLocalRuntimeEnvironment: Sendable {
     let enableRealInference: Bool
     let runtimeModeOverride: AlphaPackRuntimeMode?
+    let disableDraftAcceleration: Bool
     let tierOverride: AlphaCapabilityTier?
     let packIDOverride: String?
     let modelPath: String?
@@ -2926,6 +2924,7 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     init(
         enableRealInference: Bool,
         runtimeModeOverride: AlphaPackRuntimeMode?,
+        disableDraftAcceleration: Bool = false,
         tierOverride: AlphaCapabilityTier? = nil,
         packIDOverride: String? = nil,
         modelPath: String?,
@@ -2936,6 +2935,7 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     ) {
         self.enableRealInference = enableRealInference
         self.runtimeModeOverride = runtimeModeOverride
+        self.disableDraftAcceleration = disableDraftAcceleration
         self.tierOverride = tierOverride
         self.packIDOverride = packIDOverride
         self.modelPath = modelPath
@@ -2950,16 +2950,21 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
             environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         }
 
+        let disableDraftAcceleration = ["1", "true", "yes", "on"].contains(
+            trimmedValue("ROSS_LOCAL_DISABLE_DRAFT_ACCELERATION")?.lowercased()
+        )
+
         return AlphaLocalRuntimeEnvironment(
             enableRealInference: ["1", "true", "yes", "on"].contains(trimmedValue("ROSS_ENABLE_REAL_LOCAL_INFERENCE")?.lowercased()),
             runtimeModeOverride: parseRuntimeMode(trimmedValue("ROSS_LOCAL_RUNTIME")),
+            disableDraftAcceleration: disableDraftAcceleration,
             tierOverride: parseCapabilityTier(trimmedValue("ROSS_LOCAL_MODEL_TIER")),
             packIDOverride: trimmedValue("ROSS_LOCAL_MODEL_PACK_ID"),
             modelPath: trimmedValue("ROSS_LOCAL_MODEL_PATH"),
             modelChecksum: trimmedValue("ROSS_LOCAL_MODEL_CHECKSUM"),
             modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND"),
-            draftModelPath: trimmedValue("ROSS_LOCAL_DRAFT_MODEL_PATH"),
-            draftModelTokens: parsePositiveInt(trimmedValue("ROSS_LOCAL_DRAFT_MODEL_TOKENS"))
+            draftModelPath: disableDraftAcceleration ? nil : trimmedValue("ROSS_LOCAL_DRAFT_MODEL_PATH"),
+            draftModelTokens: disableDraftAcceleration ? nil : parsePositiveInt(trimmedValue("ROSS_LOCAL_DRAFT_MODEL_TOKENS"))
         )
     }
 
@@ -2990,9 +2995,27 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     }
 }
 
+extension AlphaLocalRuntimeEnvironment {
+    func withoutDraftAcceleration() -> AlphaLocalRuntimeEnvironment {
+        AlphaLocalRuntimeEnvironment(
+            enableRealInference: enableRealInference,
+            runtimeModeOverride: runtimeModeOverride,
+            disableDraftAcceleration: true,
+            tierOverride: tierOverride,
+            packIDOverride: packIDOverride,
+            modelPath: modelPath,
+            modelChecksum: modelChecksum,
+            modelKind: modelKind,
+            draftModelPath: nil,
+            draftModelTokens: nil
+        )
+    }
+}
+
 private struct AlphaRuntimeDebugConfig {
     let enableRealInference: Bool
     let runtimeModeOverride: AlphaPackRuntimeMode?
+    let disableDraftAcceleration: Bool
     let modelPath: String?
     let modelChecksum: String?
     let modelKind: String?
@@ -3007,11 +3030,12 @@ enum AlphaLocalModelRuntime {
         AlphaRuntimeDebugConfig(
             enableRealInference: runtimeEnvironment.enableRealInference,
             runtimeModeOverride: runtimeEnvironment.runtimeModeOverride,
+            disableDraftAcceleration: runtimeEnvironment.disableDraftAcceleration,
             modelPath: runtimeEnvironment.modelPath,
             modelChecksum: runtimeEnvironment.modelChecksum,
             modelKind: runtimeEnvironment.modelKind,
-            draftModelPath: runtimeEnvironment.draftModelPath,
-            draftModelTokens: runtimeEnvironment.draftModelTokens
+            draftModelPath: runtimeEnvironment.disableDraftAcceleration ? nil : runtimeEnvironment.draftModelPath,
+            draftModelTokens: runtimeEnvironment.disableDraftAcceleration ? nil : runtimeEnvironment.draftModelTokens
         )
     }
 

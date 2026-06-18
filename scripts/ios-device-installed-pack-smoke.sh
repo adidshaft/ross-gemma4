@@ -14,6 +14,8 @@ Options:
   --runtime <mode>        gguf | mlx | coreai | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
   --smoke-profile <mode>  full | quick. Default: full
+  --disable-draft         Force standard acceleration even if the installed pack
+                          has a usable draft companion.
   --list-only             Only list installed manifest-backed packs from the device.
   --allow-device-proof-pack
                           Allow packs whose id ends with -device-proof. By default
@@ -34,6 +36,7 @@ selected_pack_id=""
 selected_runtime=""
 stage_timeout="45"
 smoke_profile="full"
+disable_draft="0"
 list_only="0"
 allow_device_proof_pack="0"
 
@@ -66,6 +69,10 @@ while [[ $# -gt 0 ]]; do
     --smoke-profile)
       smoke_profile="${2:-}"
       shift 2
+      ;;
+    --disable-draft)
+      disable_draft="1"
+      shift 1
       ;;
     --list-only)
       list_only="1"
@@ -365,7 +372,7 @@ if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
 fi
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" <<'PY'
 import os
 import re
 import signal
@@ -385,6 +392,7 @@ import sys
     draft_model_tokens,
     stage_timeout,
     smoke_profile,
+    disable_draft,
 ) = sys.argv[1:]
 
 env = os.environ.copy()
@@ -405,6 +413,8 @@ if draft_model_path:
     env["DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_PATH"] = draft_model_path
 if draft_model_tokens:
     env["DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_TOKENS"] = draft_model_tokens
+if disable_draft == "1":
+    env["DEVICECTL_CHILD_ROSS_LOCAL_DISABLE_DRAFT_ACCELERATION"] = "1"
 
 command = [
     "xcrun",

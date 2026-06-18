@@ -219,7 +219,7 @@ struct RossLocalModelSmokeView: View {
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
         let debugModelPath = runtimeEnvironment.modelPath?.trimmingCharacters(in: .whitespacesAndNewlines)
         RossLocalModelSmokeView.log(
-            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false)"
+            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false)"
         )
         let activePack: AlphaInstalledModelPack?
         if let debugPack = debugLocalModelSmokePack(environment: runtimeEnvironment) {

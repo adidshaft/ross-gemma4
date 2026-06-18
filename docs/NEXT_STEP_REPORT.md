@@ -18,16 +18,26 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - `ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=mlx_swift_lm`
   - `ROSS_LOCAL_MODEL_SMOKE_STAGE source timeout=...`
   - `App terminated due to signal 9.`
+- a true no-draft comparison is now also in place:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 30 --disable-draft`
+  - the smoke reports `draft_disabled=true`, `acceleration=standard`, and still ends in `App terminated due to signal 9.`
+- the first copied crash and jetsam artifacts clarified that there were really two failure modes on device:
+  - `Ross-2026-06-18-184817.ips` showed a `FRONTBOARD` `0x8BADF00D` scene-create watchdog on launch with the main thread blocked in onboarding/runtime-health UI work
+  - `JetsamEvent-2026-06-18-185549.ips` showed `largestProcess : "Ross"` with `reason : "per-process-limit"` at `rpages : 216081`
+- Ross now avoids the specific launch-time FoundationModels context-size probe that appeared in that watchdog stack:
+  - `AlphaFoundationModelsLocalProvider.runtimeHealth()` now uses the existing Foundation heuristic budgets for `estimatedContextTokens` and `maxInputChars` instead of synchronously asking `SystemLanguageModel.contextSize`
+  - focused iOS tests still pass after that change, and the rebuilt app still installs successfully on Aman's cabled iPhone
+- after that heuristic-only runtime-health patch, the same no-draft installed-pack smoke now gets cleanly through launch, `provider_ready`, and into the source stage before the kill, which strongly suggests the earlier scene-create watchdog path has been mitigated even though the later MLX `signal 9` remains
 
 ## Immediate Resume Target
 
 Resume from the new physical-device checkpoint above, not from the older Gemma 4 loader mismatches.
 
 1. treat the shared-KV missing-key bug and the `per_layer_model_projection` shape bug as cleared checkpoints for the current repo state
-2. focus the next investigation on why the real app is being killed during source-stage MLX generation on Aman's iPhone after `provider_ready`
-3. collect the termination reason if possible, because `signal 9` now looks more like runtime pressure or an OS kill than a loader contract mismatch
-4. compare whether the kill still happens with draft acceleration disabled, since the current smoke still reports `acceleration=draftModelSpeculative`
-5. only after that should the next pass decide whether the remaining issue belongs in Ross runtime policy, MLX generation settings, or another upstream runtime bug
+2. treat the old launch-time watchdog as a mitigated checkpoint unless a newer crash log disproves it; the important remaining blocker is the later source-stage kill after `provider_ready`
+3. focus the next investigation on why the real app is being killed during source-stage MLX generation on Aman's iPhone after `provider_ready`, because draft acceleration is no longer the differentiator
+4. collect the next fresh crash or jetsam artifact after the runtime-health patch if possible, to confirm whether the remaining failure is now purely the per-process memory limit path
+5. only after that should the next pass decide whether the remaining issue belongs in Ross runtime policy, MLX generation settings, prompt/source budgeting, or another upstream runtime bug
 
 ## Current Stable State
 
