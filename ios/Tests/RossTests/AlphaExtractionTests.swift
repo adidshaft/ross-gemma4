@@ -6643,6 +6643,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftAccelerationStatus, "validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
             "Standard generation"
@@ -7023,6 +7024,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(health.accelerationDraftTokens, 2)
         XCTAssertEqual(health.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(health.draftAccelerationStatus, "active")
         XCTAssertEqual(output.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(output.accelerationDraftTokens, 2)
         XCTAssertEqual(output.accelerationDraftModelLabel, draftURL.lastPathComponent)
@@ -7117,9 +7119,11 @@ final class AlphaExtractionTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(provider.runtimeHealth().accelerationMode, .standard)
-        XCTAssertNil(provider.runtimeHealth().accelerationDraftTokens)
-        XCTAssertNil(provider.runtimeHealth().draftModelPathLabel)
+        let health = provider.runtimeHealth()
+        XCTAssertEqual(health.accelerationMode, .standard)
+        XCTAssertNil(health.accelerationDraftTokens)
+        XCTAssertNil(health.draftModelPathLabel)
+        XCTAssertEqual(health.draftAccelerationStatus, "draft_token_policy_blocked")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNil(output.accelerationDraftTokens)
         XCTAssertNil(output.accelerationDraftModelLabel)
@@ -16006,6 +16010,7 @@ final class AlphaExtractionTests: XCTestCase {
             accelerationMode: .draftModelSpeculative,
             accelerationDraftTokens: 2,
             draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
+            draftAccelerationStatus: "active",
             lastErrorCategory: nil,
             userFacingStatus: "Ready",
             explicitOptInEnabled: true
@@ -16028,6 +16033,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("acceleration=draftModelSpeculative"))
         XCTAssertTrue(line.contains("draft_tokens=2"))
         XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
+        XCTAssertTrue(line.contains("draft_status=active"))
         XCTAssertTrue(line.contains("context_tokens=4096"))
         XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:"))
         XCTAssertTrue(line.contains("fallback=none"))

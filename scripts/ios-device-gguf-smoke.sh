@@ -230,6 +230,7 @@ def print_benchmark_summary(identity, pass_fields):
         "acceleration": summary_value(identity, "acceleration"),
         "draft_tokens": summary_value(identity, "draft_tokens"),
         "draft_model": summary_value(identity, "draft_model"),
+        "draft_status": summary_value(identity, "draft_status"),
         "profile": summary_value(pass_fields, "profile"),
         "elapsed": summary_value(pass_fields, "elapsed"),
     }

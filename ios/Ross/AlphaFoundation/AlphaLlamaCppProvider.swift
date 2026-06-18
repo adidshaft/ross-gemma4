@@ -450,9 +450,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
-        let stagedDraft = validatedDraftMetadata(runtimeAvailable: availability.available)
+        let draftValidation = validatedDraftMetadata(runtimeAvailable: availability.available)
         let accelerationMode: AlphaLocalRuntimeAccelerationMode =
-            availability.available && stagedDraft != nil
+            availability.available && draftValidation.metadata != nil
             ? .draftModelSpeculative
             : .standard
         return AlphaLocalRuntimeHealth(
@@ -465,8 +465,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: accelerationMode,
-            accelerationDraftTokens: stagedDraft?.tokens,
-            draftModelPathLabel: stagedDraft?.label,
+            accelerationDraftTokens: draftValidation.metadata?.tokens,
+            draftModelPathLabel: draftValidation.metadata?.label,
+            draftAccelerationStatus: draftValidation.status,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -854,7 +855,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func stagedDraftMetadata() -> (tokens: Int?, label: String?)? {
-        guard let draftPath = effectiveDraftModelPath(),
+        guard let draftPath = stagedDraftModelPath(),
               draftPath.isEmpty == false else {
             return nil
         }
@@ -925,14 +926,39 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return draftPath
     }
 
-    private func validatedDraftMetadata(runtimeAvailable: Bool) -> (tokens: Int?, label: String?)? {
+    private func draftAccelerationStatus(
+        runtimeAvailable: Bool
+    ) -> (status: String, draftPath: String?, metadata: (tokens: Int?, label: String?)?) {
+        guard runtimeAvailable else {
+            return ("runtime_unavailable", nil, nil)
+        }
+        guard let draftPath = stagedDraftModelPath() else {
+            return ("no_draft_configured", nil, nil)
+        }
+        guard let metadata = stagedDraftMetadata() else {
+            return ("draft_file_unavailable", draftPath, nil)
+        }
+        guard AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
+            forModelPath: modelPath,
+            physicalMemory: Self.physicalMemoryBytesProvider(),
+            draftTokens: effectiveDraftTokenCount()
+        ) else {
+            return ("draft_token_policy_blocked", draftPath, metadata)
+        }
+        return ("candidate", draftPath, metadata)
+    }
+
+    private func validatedDraftMetadata(
+        runtimeAvailable: Bool
+    ) -> (metadata: (tokens: Int?, label: String?)?, status: String) {
+        let draftStatus = draftAccelerationStatus(runtimeAvailable: runtimeAvailable)
         guard
-            runtimeAvailable,
+            draftStatus.status == "candidate",
             let modelPath,
-            let draftPath = effectiveDraftModelPath(),
-            let stagedDraft = stagedDraftMetadata()
+            let draftPath = draftStatus.draftPath,
+            let stagedDraft = draftStatus.metadata
         else {
-            return nil
+            return (nil, draftStatus.status)
         }
 
         do {
@@ -942,9 +968,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 draftPath,
                 draftTokens
             )
-            return supportsDraftAcceleration ? stagedDraft : nil
+            return supportsDraftAcceleration
+                ? (stagedDraft, "active")
+                : (nil, "validator_rejected")
         } catch {
-            return nil
+            return (nil, "validator_failed")
         }
     }
 }
