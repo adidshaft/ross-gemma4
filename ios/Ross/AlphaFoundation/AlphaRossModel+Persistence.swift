@@ -3675,6 +3675,9 @@ func alphaMatterBundleComparisonExportBodyLines(
                 lines.append(
                     "  \(rossLocalized("private_assistant_device_comparison_saved_captured_at_label")): \(alphaPrivateAIDeviceComparisonSavedCapturedAt(latestSavedRecord))"
                 )
+                lines.append(
+                    "  \(rossLocalized("private_assistant_device_comparison_saved_system_label")): \(latestSavedRecord.profile.systemVersionLabel)"
+                )
             }
             if let latestSavedRecord = status.latestSavedRecord,
                let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {

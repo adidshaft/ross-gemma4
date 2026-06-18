@@ -37,6 +37,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS saved device-proof coverage now also shows the persisted delivery-check status and delivery contract per saved target, so later reviews can tell which physical note actually carried verified download evidence without reopening the PDF
 - hidden iOS saved device-proof coverage and the exported runtime comparison note now also show when the latest saved physical note was captured for each target, so evidence recency is easier to audit before the next ladder decision review
 - hidden iOS saved device-proof coverage and the exported runtime comparison note now also show the saved PDF filename for each target, so QA review can jump straight to the exact `Notes & Drafts` artifact that currently counts as proof
+- hidden iOS saved device-proof coverage and the exported runtime comparison note now also show the saved system version for each target, so later review can tell which iOS build produced the current proof artifact without reopening the PDF
 
 ## Visible Pack Mapping
 
@@ -49,6 +50,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 
 Most recent commits that define this pause point:
 
+- `1d8b67a` `feat: show ios proof note filenames`
 - `ef81cd1` `feat: stamp ios proof note capture times`
 - `6a6ae7c` `feat: clarify ios proof rerun guidance`
 - `bb1c586` `feat: show saved ios delivery proof details`
@@ -97,6 +99,7 @@ Most recent commits that define this pause point:
 - focused iOS usability tests now also prove the saved proof export includes persisted delivery-check details for each saved physical target, so proof history stays auditable after multiple exports
 - focused iOS usability tests now also prove the saved proof export includes the saved-note capture timestamp for each physical target, so later reviewers can tell when the current 8 GB or 12 GB+ evidence was actually recorded
 - focused iOS usability tests now also prove the saved proof export includes the saved PDF filename for each physical target, so later reviewers can open the exact proof artifact instead of inferring which `Notes & Drafts` entry was current
+- focused iOS usability tests now also prove the saved proof export includes the saved system version for each physical target, so later reviewers can tell which iOS build produced the latest counted proof artifact
 
 Most recent verification commands:
 

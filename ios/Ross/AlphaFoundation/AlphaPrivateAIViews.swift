@@ -1083,6 +1083,17 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if let latestSavedRecord = status.latestSavedRecord {
+                        Text(
+                            rossLocalized("private_assistant_device_comparison_saved_system_label") +
+                                ": " +
+                                latestSavedRecord.profile.systemVersionLabel
+                        )
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     if let latestSavedRecord = status.latestSavedRecord,
                        let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {
                         Text(rossLocalized("notes_drafts_metadata_saved_file") + ": " + savedFileName)
