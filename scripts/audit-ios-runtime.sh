@@ -257,6 +257,11 @@ if ! grep -q "GGUF/MTP simulator draft proof requires a GGUF draft file" scripts
     FAIL=1
 fi
 
+if ! grep -q "real GGUF draft file larger than 1 MB" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP proof does not reject tiny placeholder draft GGUF files before launch."
+    FAIL=1
+fi
+
 if ! grep -q "MLX simulator draft proof requires an MLX draft directory" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MLX draft proof does not preflight MLX draft artifact shape."
     FAIL=1

@@ -34,15 +34,30 @@ run_expect_exit_2 \
   "GGUF file passed as MLX" \
   "$SIM_SMOKE" --runtime mlx --model "$gguf_as_mlx"
 
+run_expect_exit_2 \
+  "tiny GGUF primary model placeholder" \
+  "$SIM_SMOKE" --runtime gguf --model "$gguf_as_mlx"
+
 usable_mlx="$tmpdir/usable-mlx"
 mkdir -p "$usable_mlx"
 printf '{}' >"$usable_mlx/config.json"
 printf '{}' >"$usable_mlx/tokenizer.json"
 printf 'weights' >"$usable_mlx/model.safetensors"
 
+main_gguf="$tmpdir/main.gguf"
+python3 - "$main_gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"G" * 1000001)
+PY
+
 run_expect_exit_2 \
   "MLX directory passed as GGUF draft proof" \
-  "$SIM_SMOKE" --runtime gguf --model "$gguf_as_mlx" --draft-model "$usable_mlx" --require-draft-acceleration
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$usable_mlx" --require-draft-acceleration
+
+run_expect_exit_2 \
+  "tiny GGUF draft model placeholder" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$gguf_as_mlx" --require-draft-acceleration
 
 run_expect_exit_2 \
   "GGUF file passed as MLX draft proof" \

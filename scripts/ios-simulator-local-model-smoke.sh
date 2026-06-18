@@ -179,6 +179,19 @@ mlx_directory_looks_usable() {
   find "$directory" -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -print -quit | grep -q .
 }
 
+file_size_bytes() {
+  stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0
+}
+
+gguf_file_looks_usable() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  local size
+  size="$(file_size_bytes "$file")"
+  [[ "$size" =~ ^[0-9]+$ ]] || return 1
+  [[ "$size" -gt 1000000 ]]
+}
+
 case "$normalized_runtime" in
   gemma_local_runtime)
     case "$artifact_kind" in
@@ -191,6 +204,10 @@ case "$normalized_runtime" in
     esac
     if [[ ! -f "$model_path" ]]; then
       echo "GGUF model file not found: $model_path" >&2
+      exit 2
+    fi
+    if ! gguf_file_looks_usable "$model_path"; then
+      echo "GGUF simulator smoke requires a real GGUF model file larger than 1 MB, got: $model_path" >&2
       exit 2
     fi
     ;;
@@ -264,6 +281,10 @@ if [[ -n "$draft_model_path" ]]; then
       lower_draft_model_path="$(printf '%s' "$draft_model_path" | tr '[:upper:]' '[:lower:]')"
       if [[ ! -f "$draft_model_path" || "$lower_draft_model_path" != *.gguf ]]; then
         echo "GGUF/MTP simulator draft proof requires a GGUF draft file, got: $draft_model_path" >&2
+        exit 2
+      fi
+      if ! gguf_file_looks_usable "$draft_model_path"; then
+        echo "GGUF/MTP simulator draft proof requires a real GGUF draft file larger than 1 MB, got: $draft_model_path" >&2
         exit 2
       fi
       ;;
