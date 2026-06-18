@@ -3203,7 +3203,10 @@ enum AlphaLocalModelRuntime {
 
     private static func usesBundledAdapterArtifact(_ pack: AlphaInstalledModelPack) -> Bool {
         let normalizedKind = pack.artifactKind.lowercased()
-        return normalizedKind.contains("adapter") || normalizedKind.contains("bundle")
+        return normalizedKind.contains("adapter")
+            || normalizedKind.contains("bundle")
+            || normalizedKind.contains("coreml")
+            || normalizedKind.contains("mlmodel")
     }
 
     static func runtimeHealth(
