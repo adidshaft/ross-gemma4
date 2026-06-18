@@ -27,6 +27,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Support details now also summarize saved device-comparison note coverage across the physical 8 GB and 12 GB+ proof targets, so repeated exports make it obvious which real-device comparison class is still missing
 - hidden iOS Support details now also turn that saved-note history into a final device-comparison readiness summary with concrete next physical-note steps, so the ladder decision is gated on saved 8 GB and 12 GB+ proof instead of memory
 - hidden iOS Support details and the saved note now also state the ladder-decision gate directly, so the product itself says whether pack-selection review is unlocked or still waiting on specific physical-device notes
+- Android debug compile and assemble now succeed in the current dirty worktree, so the remaining Android gap is narrowed to real runtime validation rather than baseline build breakage
 
 ## Visible Pack Mapping
 
@@ -74,11 +75,14 @@ Most recent commits that define this pause point:
 - hidden iOS saved comparison-note history now tracks whether a physical 8 GB or physical 12 GB+ device note has already been captured, and whether that saved note covered the full three-runtime comparison
 - hidden iOS saved comparison-note coverage now explicitly says whether the final device-comparison proof is ready for ladder review or which physical note still needs to be saved or rerun
 - hidden iOS ladder-decision readiness is now exported alongside the device note, so final pack judgment is explicitly held until the missing physical-note targets are complete
+- Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 
 Most recent verification commands:
 
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testAskRuntimeSourcePackChunksLongTaggedPageIntoMultipleBlocks|testAskRuntimeSourcePackHonorsChunkSizingFromOverridePolicy)'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones)'`
+- `./gradlew :app:compileDebugKotlin`
+- `./gradlew :app:assembleDebug`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
   Run from `/Users/amanpandey/projects/ross-gemma4/backend`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
@@ -88,7 +92,6 @@ Most recent verification commands:
 - physical iPhone proof for the full GGUF and MLX setup lifecycle on representative 8 GB and 12 GB devices
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
 - production delivery proof for real multi-GB artifacts end to end
-- Android compile cleanliness in the current dirty worktree
 - Android native runtime validation beyond the recent retrieval and budget improvements
 
 ## Why This Is A Good Pause Point
@@ -106,4 +109,4 @@ Resume with a focused real-device validation pass instead of more code changes:
 2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
 3. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
 4. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-5. only then return to Android cleanup and deeper runtime work there
+5. only then return to Android real-device runtime validation and deeper runtime work there

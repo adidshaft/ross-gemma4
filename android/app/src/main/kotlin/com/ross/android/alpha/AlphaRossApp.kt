@@ -153,7 +153,7 @@ private fun alphaStoredMatterListSortMode(rawValue: String?): AlphaCaseSortMode 
 private fun alphaStoredMatterListViewMode(rawValue: String?): AlphaMatterListViewMode =
     AlphaMatterListViewMode.values().firstOrNull { it.storageValue == rawValue } ?: AlphaMatterListViewMode.Expanded
 
-private enum class RossGlassAsset(@DrawableRes val resId: Int) {
+private enum class RossGlassAsset(@get:DrawableRes val resId: Int) {
     BadgeSparkleAccent(R.drawable.ng_accent_badge_sparkle),
     CircleInfoHighlight(R.drawable.ng_highlight_circle_info),
     DocFolderNeutral(R.drawable.ng_neutral_doc_folder),
