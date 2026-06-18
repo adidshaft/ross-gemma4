@@ -526,6 +526,33 @@ def print_benchmark_summary(identity, pass_fields):
     line = " ".join(f"{key}={value}" for key, value in summary.items())
     print(f"ROSS_SMOKE_BENCHMARK_SUMMARY {line}")
 
+def validate_identity_guard(identity, *, require_identity):
+    if identity is None:
+        if require_identity:
+            print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    actual_runtime = identity.get("actual_runtime")
+    if actual_runtime != runtime_mode:
+        print(
+            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested={runtime_mode} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if require_draft_acceleration == "1":
+        acceleration = identity.get("acceleration")
+        draft_tokens = identity.get("draft_tokens")
+        draft_model = identity.get("draft_model")
+        if acceleration != "draftModelSpeculative" or draft_tokens in (None, "nil") or draft_model in (None, "nil"):
+            print(
+                "ROSS_SMOKE_GUARD_FAIL reason=draft_acceleration_inactive "
+                f"acceleration={acceleration} draft_tokens={draft_tokens} draft_model={draft_model}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
 outcome = None
 identity = None
 pass_fields = None
@@ -562,31 +589,12 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
-    if identity is None:
-        print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
-        sys.exit(1)
-    actual_runtime = identity.get("actual_runtime")
-    if actual_runtime != runtime_mode:
-        print(
-            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested={runtime_mode} actual={actual_runtime}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    if require_draft_acceleration == "1":
-        acceleration = identity.get("acceleration")
-        draft_tokens = identity.get("draft_tokens")
-        draft_model = identity.get("draft_model")
-        if acceleration != "draftModelSpeculative" or draft_tokens in (None, "nil") or draft_model in (None, "nil"):
-            print(
-                "ROSS_SMOKE_GUARD_FAIL reason=draft_acceleration_inactive "
-                f"acceleration={acceleration} draft_tokens={draft_tokens} draft_model={draft_model}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+    validate_identity_guard(identity, require_identity=True)
     if pass_fields is not None:
         print_benchmark_summary(identity, pass_fields)
     sys.exit(0)
 if outcome == "fail":
+    validate_identity_guard(identity, require_identity=False)
     sys.exit(1)
 sys.exit(process.returncode or 1)
 PY

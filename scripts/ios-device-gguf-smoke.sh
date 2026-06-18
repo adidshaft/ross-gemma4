@@ -248,6 +248,21 @@ def print_benchmark_summary(identity, pass_fields):
     line = " ".join(f"{key}={value}" for key, value in summary.items())
     print(f"ROSS_SMOKE_BENCHMARK_SUMMARY {line}")
 
+def validate_identity_guard(identity, *, require_identity):
+    if identity is None:
+        if require_identity:
+            print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    actual_runtime = identity.get("actual_runtime")
+    if actual_runtime != "gemma_local_runtime":
+        print(
+            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested=gemma_local_runtime actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 outcome = None
 identity = None
 pass_fields = None
@@ -284,21 +299,13 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
-    if identity is None:
-        print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
-        sys.exit(1)
-    actual_runtime = identity.get("actual_runtime")
-    if actual_runtime != "gemma_local_runtime":
-        print(
-            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested=gemma_local_runtime actual={actual_runtime}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    validate_identity_guard(identity, require_identity=True)
     if pass_fields is not None:
         print_benchmark_summary(identity, pass_fields)
     sys.exit(0)
 
 if outcome == "fail":
+    validate_identity_guard(identity, require_identity=False)
     sys.exit(1)
 
 sys.exit(process.returncode or 1)
