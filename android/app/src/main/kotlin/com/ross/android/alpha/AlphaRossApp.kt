@@ -3672,6 +3672,13 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         AlphaSettingsValueRow("Fields verified", "${report.fieldsVerified}")
                         AlphaSettingsValueRow("Fields needing review", "${report.fieldsNeedingReview}")
                         AlphaSettingsValueRow("Unsupported accepted", "${report.unsupportedAccepted}")
+                        report.deviceProfile?.let { profile ->
+                            AlphaSettingsValueRow("Device model", profile.deviceModelLabel)
+                            AlphaSettingsValueRow("Android version", profile.systemVersionLabel)
+                            AlphaSettingsValueRow("Free storage", "${profile.freeStorageGb} GB")
+                            AlphaSettingsValueRow("Low Power Mode", if (profile.lowPowerModeEnabled) "yes" else "no")
+                            AlphaSettingsValueRow("Thermal state", profile.thermalStateLabel)
+                        }
                         report.exportRelativePath?.let { AlphaSettingsValueRow("Export", it) }
                     }
                 }

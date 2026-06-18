@@ -3,7 +3,9 @@ package com.ross.android.alpha
 import android.content.Context
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,6 +36,47 @@ private const val ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY = "backend_base_url_overri
 
 private fun normalizedBackendBaseUrlOverride(rawValue: String?): String? =
     rawValue?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun alphaCurrentAndroidSystemVersionLabel(): String {
+    val release = Build.VERSION.RELEASE?.trim().orEmpty()
+    return if (release.isNotEmpty()) {
+        "Android $release"
+    } else {
+        "Android SDK ${Build.VERSION.SDK_INT}"
+    }
+}
+
+private fun alphaCurrentAndroidThermalStateLabel(context: Context): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        return "Unknown"
+    }
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return "Unknown"
+    return when (powerManager.currentThermalStatus) {
+        PowerManager.THERMAL_STATUS_NONE -> "Nominal"
+        PowerManager.THERMAL_STATUS_LIGHT -> "Light"
+        PowerManager.THERMAL_STATUS_MODERATE -> "Moderate"
+        PowerManager.THERMAL_STATUS_SEVERE -> "Severe"
+        PowerManager.THERMAL_STATUS_CRITICAL -> "Critical"
+        PowerManager.THERMAL_STATUS_EMERGENCY -> "Emergency"
+        PowerManager.THERMAL_STATUS_SHUTDOWN -> "Shutdown"
+        else -> "Unknown"
+    }
+}
+
+private fun alphaCurrentAndroidDeviceProofProfile(
+    context: Context,
+    rootDir: File,
+): AlphaAndroidDeviceProofProfile {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+    val modelLabel = Build.MODEL?.trim().takeUnless { it.isNullOrEmpty() } ?: "Android device"
+    return AlphaAndroidDeviceProofProfile(
+        deviceModelLabel = modelLabel,
+        systemVersionLabel = alphaCurrentAndroidSystemVersionLabel(),
+        freeStorageGb = (rootDir.usableSpace / 1_073_741_824L).toInt().coerceAtLeast(1),
+        lowPowerModeEnabled = powerManager?.isPowerSaveMode ?: false,
+        thermalStateLabel = alphaCurrentAndroidThermalStateLabel(context),
+    )
+}
 
 internal class AlphaBackendBaseUrlOverrideSnapshot private constructor() {
     private val lock = Any()
@@ -459,7 +502,16 @@ data class AlphaLocalInferenceSmokeReport(
     val unsupportedAccepted: Int,
     val exportRelativePath: String?,
     val message: String,
+    val deviceProfile: AlphaAndroidDeviceProofProfile? = null,
     val createdAt: String = nowIso(),
+)
+
+data class AlphaAndroidDeviceProofProfile(
+    val deviceModelLabel: String,
+    val systemVersionLabel: String,
+    val freeStorageGb: Int,
+    val lowPowerModeEnabled: Boolean,
+    val thermalStateLabel: String,
 )
 
 data class AlphaSettings(
@@ -974,6 +1026,7 @@ internal class AlphaRossController(
         localInferenceSmokeReport = null
 
         scope.launch {
+            val deviceProfile = alphaCurrentAndroidDeviceProofProfile(context, rootDir)
             val runtimeHealth = activeRuntimeHealth()
             if (runtimeHealth == null || !runtimeHealth.explicitOptInEnabled || !runtimeHealth.available) {
                 localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
@@ -987,6 +1040,7 @@ internal class AlphaRossController(
                     exportRelativePath = null,
                     message = runtimeHealth?.userFacingStatus
                         ?: "Real local inference is unavailable. Enable it explicitly and configure a compatible Private AI Pack before running smoke QA.",
+                    deviceProfile = deviceProfile,
                 )
                 localInferenceSmokeRunning = false
                 return@launch
@@ -1052,6 +1106,7 @@ internal class AlphaRossController(
                     unsupportedAccepted = 0,
                     exportRelativePath = null,
                     message = "Ross could not complete the local inference smoke run on this device.",
+                    deviceProfile = deviceProfile,
                 )
                 localInferenceSmokeRunning = false
                 return@launch
@@ -1106,6 +1161,7 @@ internal class AlphaRossController(
                 message = newestMetric?.errorCategory?.let {
                     "Smoke completed with runtime warning: $it"
                 } ?: "Local inference smoke completed. Ross did not log prompt text or source text.",
+                deviceProfile = deviceProfile,
             )
             save()
             localInferenceSmokeRunning = false

@@ -73,6 +73,8 @@ What the script does:
    - runtime used `mediapipe_llm`
    - schema valid `yes`
    - unsupported accepted `0`
+   - device model and Android version for the phone that ran the smoke
+   - free storage, low-power mode, and thermal state for that run
 7. Import a short synthetic or non-sensitive legal fixture.
 8. Run `Case Associate` extraction.
 9. Return to Technical details and confirm the last invocation runtime still shows `mediapipe_llm`.

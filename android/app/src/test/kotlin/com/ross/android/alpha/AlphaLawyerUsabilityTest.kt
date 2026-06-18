@@ -654,6 +654,23 @@ class AlphaLawyerUsabilityTest {
         assertTrue(controller.persisted.installedPacks.first { it.id == basicPack.id }.isActive)
     }
 
+    @Test
+    fun `local inference smoke unavailable still captures android device proof profile`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        controller.runLocalInferenceSmoke()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val report = controller.localInferenceSmokeReport
+        assertNotNull(report)
+        assertFalse(report!!.ran)
+        assertEquals(AlphaPackRuntimeMode.Unavailable.wireValue, report.runtimeUsed)
+        val deviceProfile = requireNotNull(report.deviceProfile)
+        assertTrue(deviceProfile.deviceModelLabel.isNotBlank())
+        assertTrue(deviceProfile.systemVersionLabel.startsWith("Android"))
+        assertTrue(deviceProfile.freeStorageGb >= 1)
+    }
+
     private fun buildController(
         secretKeyProvider: AlphaSecretKeyProvider,
         publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,
