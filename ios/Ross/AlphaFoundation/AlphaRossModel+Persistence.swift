@@ -2901,10 +2901,20 @@ extension AlphaRossModel {
 
         Task {
             let runtimeHealth = activeRuntimeHealth
+            let smokeTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+            let unavailableModelDetails = runtimeHealth.flatMap {
+                alphaAssistantResolvedRunModelDetails(
+                    runtimeMode: $0.runtimeMode,
+                    tier: smokeTier,
+                    activePack: activePack
+                )
+            }
             guard let runtimeHealth, runtimeHealth.available else {
                 recordLocalInferenceSmokeReport(AlphaLocalInferenceSmokeReport(
                     ran: false,
                     runtimeUsed: runtimeHealth?.runtimeMode.rawValue ?? AlphaPackRuntimeMode.unavailable.rawValue,
+                    assistantDisplayName: unavailableModelDetails?.modelLabel,
+                    assistantSourceLabel: unavailableModelDetails?.sourceLabel,
                     schemaValid: false,
                     fieldsFound: 0,
                     fieldsVerified: 0,
@@ -2987,9 +2997,18 @@ extension AlphaRossModel {
                 persist()
             }
 
+            let completedRuntimeMode = AlphaPackRuntimeMode(rawValue: result.modelInvocations.last?.runtimeMode ?? runtimeHealth.runtimeMode.rawValue) ?? runtimeHealth.runtimeMode
+            let resolvedModelDetails = alphaAssistantResolvedRunModelDetails(
+                runtimeMode: completedRuntimeMode,
+                tier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+                activePack: activePack
+            )
+
             recordLocalInferenceSmokeReport(AlphaLocalInferenceSmokeReport(
                 ran: true,
                 runtimeUsed: result.modelInvocations.last?.runtimeMode ?? runtimeHealth.runtimeMode.rawValue,
+                assistantDisplayName: resolvedModelDetails?.modelLabel,
+                assistantSourceLabel: resolvedModelDetails?.sourceLabel,
                 schemaValid: !result.modelInvocations.contains { $0.errorCategory == "invalid_model_output" },
                 fieldsFound: result.extractedFields.count,
                 fieldsVerified: result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count,
@@ -3803,6 +3822,14 @@ func alphaMatterBundleComparisonExportBodyLines(
             lines.append("- \(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))")
             lines.append("  \(rossLocalized("status")): \(alphaLocalInferenceSmokeStatusLabel(report))")
             lines.append("  \(rossLocalized("schema_valid")): \(report.schemaValid ? rossLocalized("yes") : rossLocalized("no"))")
+            if let assistantDisplayName = report.assistantDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !assistantDisplayName.isEmpty {
+                lines.append("  \(rossLocalized("assistant_used")): \(assistantDisplayName)")
+            }
+            if let assistantSourceLabel = report.assistantSourceLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !assistantSourceLabel.isEmpty {
+                lines.append("  \(rossLocalized("assistant_model_source")): \(assistantSourceLabel)")
+            }
             lines.append("  \(String(format: rossLocalized("fields_found_count"), report.fieldsFound))")
             lines.append("  \(String(format: rossLocalized("fields_verified_count"), report.fieldsVerified))")
             lines.append("  \(String(format: rossLocalized("fields_needing_review_count"), report.fieldsNeedingReview))")
@@ -3841,6 +3868,10 @@ func alphaMatterBundleComparisonExportBodyLines(
             if let assistantDisplayName = report.assistantDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
                !assistantDisplayName.isEmpty {
                 lines.append("  \(rossLocalized("assistant_used")): \(assistantDisplayName)")
+            }
+            if let assistantSourceLabel = report.assistantSourceLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !assistantSourceLabel.isEmpty {
+                lines.append("  \(rossLocalized("assistant_model_source")): \(assistantSourceLabel)")
             }
             if let runtimeSelectionReason = report.runtimeSelectionReason?.trimmingCharacters(in: .whitespacesAndNewlines),
                !runtimeSelectionReason.isEmpty {

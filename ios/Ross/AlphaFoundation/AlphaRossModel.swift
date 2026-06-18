@@ -87,6 +87,8 @@ extension View {
 struct AlphaLocalInferenceSmokeReport: Codable, Hashable, Sendable {
     var ran: Bool
     var runtimeUsed: String
+    var assistantDisplayName: String? = nil
+    var assistantSourceLabel: String? = nil
     var schemaValid: Bool
     var fieldsFound: Int
     var fieldsVerified: Int
@@ -108,6 +110,7 @@ struct AlphaMatterBundleComparisonReport: Codable, Hashable, Sendable {
     var sourceBlockCount: Int
     var sourceRefsReturned: Int
     var assistantDisplayName: String?
+    var assistantSourceLabel: String? = nil
     var runtimeSelectionReason: String?
     var executionPathLabel: String?
     var accelerationSummary: String?

@@ -5327,6 +5327,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 sourceBlockCount: 10,
                 sourceRefsReturned: 3,
                 assistantDisplayName: "Gemma GGUF",
+                assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
                 runtimeSelectionReason: "GGUF preferred for stable bundled setup",
                 executionPathLabel: "llama.cpp direct",
                 accelerationSummary: nil,
@@ -5346,6 +5347,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 sourceBlockCount: 8,
                 sourceRefsReturned: 2,
                 assistantDisplayName: "MLX Gemma",
+                assistantSourceLabel: "Hugging Face · mlx-community/gemma-4-12B-it-qat-4bit",
                 runtimeSelectionReason: "MLX available for the same tier",
                 executionPathLabel: "MLX with draft acceleration",
                 accelerationSummary: "Draft model x4",
@@ -5362,6 +5364,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             AlphaLocalInferenceSmokeReport(
                 ran: true,
                 runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                assistantDisplayName: "Gemma GGUF",
+                assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
                 schemaValid: true,
                 fieldsFound: 8,
                 fieldsVerified: 7,
@@ -5481,6 +5485,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Unavailable on this iPhone"))
         XCTAssertTrue(joined.contains("Needs setup"))
+        XCTAssertTrue(joined.contains("Assistant: Gemma GGUF"))
+        XCTAssertTrue(joined.contains("Model source: Hugging Face · unsloth/gemma-4-12b-it-GGUF"))
+        XCTAssertTrue(joined.contains("Assistant: MLX Gemma"))
+        XCTAssertTrue(joined.contains("Model source: Hugging Face · mlx-community/gemma-4-12B-it-qat-4bit"))
         XCTAssertTrue(joined.contains("Device-proof coverage"))
         XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
         XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))
@@ -5512,6 +5520,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     AlphaLocalInferenceSmokeReport(
                         ran: true,
                         runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                        assistantDisplayName: "Gemma GGUF",
+                        assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
                         schemaValid: true,
                         fieldsFound: 8,
                         fieldsVerified: 7,
@@ -5533,6 +5543,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                         sourceBlockCount: 7,
                         sourceRefsReturned: 2,
                         assistantDisplayName: "CoreAI",
+                        assistantSourceLabel: rossLocalized("assistant_meta_built_in"),
                         runtimeSelectionReason: "Built-in Apple model was ready",
                         executionPathLabel: "Foundation Models built-in",
                         accelerationSummary: nil,
@@ -5554,6 +5565,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                         sourceBlockCount: 9,
                         sourceRefsReturned: 3,
                         assistantDisplayName: "Gemma GGUF",
+                        assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
                         runtimeSelectionReason: "GGUF selected for the current tier",
                         executionPathLabel: "llama.cpp direct",
                         accelerationSummary: nil,
@@ -5600,6 +5612,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(imported.document.extractedText?.contains("Next device steps") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("GGUF sample ready") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("Model source: Hugging Face · unsloth/gemma-4-12b-it-GGUF") == true)
         }
     }
 

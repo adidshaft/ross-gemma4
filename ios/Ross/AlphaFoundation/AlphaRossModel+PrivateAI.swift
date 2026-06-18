@@ -1000,6 +1000,59 @@ func alphaAssistantResolvedModelDetails(
     return nil
 }
 
+func alphaAssistantResolvedRunModelDetails(
+    runtimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    activePack: AlphaInstalledModelPack?
+) -> AlphaAssistantResolvedModelDetails? {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+
+    if let activePack,
+       AlphaCapabilityTier.assistantSelectionsMatch(activePack.tier, normalizedTier),
+       activePack.runtimeMode == runtimeMode,
+       let resolved = alphaAssistantResolvedModelDetails(for: activePack) {
+        return resolved
+    }
+
+    switch runtimeMode {
+    case .appleFoundationModels:
+        return alphaAssistantResolvedModelDetails(for: alphaSystemAssistantPack(for: normalizedTier))
+    case .llamaCppGguf:
+        let artifact = alphaAssistantModelArtifact(for: normalizedTier)
+        return AlphaAssistantResolvedModelDetails(
+            modelLabel: artifact.displayName,
+            sourceLabel: artifact.sourceLabel,
+            draftCompanionLabel: artifact.draftArtifact?.fileName
+        )
+    case .mlxSwiftLm:
+        let packId = activePack?.packId
+        guard let descriptor = alphaBundledAssistantDownloadDescriptor(
+            for: normalizedTier,
+            preferredRuntimeMode: .mlxSwiftLm,
+            targetPackId: packId
+        ) else {
+            return nil
+        }
+        let modelLabel: String = switch normalizedTier {
+        case .quickStart:
+            "Gemma 4 E4B QAT 4-bit (MLX)"
+        case .caseAssociate:
+            "Gemma 4 12B QAT 4-bit (MLX)"
+        case .seniorDraftingSupport:
+            "Gemma 4 26B-A4B QAT 4-bit (MLX)"
+        case .flash:
+            "Gemma 4 E4B QAT 4-bit (MLX)"
+        }
+        return AlphaAssistantResolvedModelDetails(
+            modelLabel: modelLabel,
+            sourceLabel: alphaDirectMLXRepositoryID(for: descriptor).map { "Hugging Face · \($0)" },
+            draftCompanionLabel: descriptor.draftArtifact?.fileName
+        )
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        return nil
+    }
+}
+
 func alphaAssistantSetupSpeedLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,

@@ -778,6 +778,12 @@ private struct AlphaPrivateAISmokeReportCard: View {
                 label: rossLocalized("schema_valid"),
                 value: report.schemaValid ? rossLocalized("yes") : rossLocalized("no")
             )
+            if let assistantDisplayName = report.assistantDisplayName, !assistantDisplayName.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("assistant_used"), value: assistantDisplayName)
+            }
+            if let assistantSourceLabel = report.assistantSourceLabel, !assistantSourceLabel.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("assistant_model_source"), value: assistantSourceLabel)
+            }
             if let durationMs = report.durationMs {
                 AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
             }
@@ -855,6 +861,9 @@ private struct AlphaMatterBundleComparisonReportCard: View {
             )
             if let assistantDisplayName = report.assistantDisplayName, !assistantDisplayName.isEmpty {
                 AlphaSettingsValueRow(label: rossLocalized("assistant_used"), value: assistantDisplayName)
+            }
+            if let assistantSourceLabel = report.assistantSourceLabel, !assistantSourceLabel.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("assistant_model_source"), value: assistantSourceLabel)
             }
             if let runtimeSelectionReason = report.runtimeSelectionReason, !runtimeSelectionReason.isEmpty {
                 AlphaSettingsValueRow(label: rossLocalized("runtime_choice"), value: runtimeSelectionReason)

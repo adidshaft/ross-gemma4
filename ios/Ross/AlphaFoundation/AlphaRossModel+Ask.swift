@@ -1073,6 +1073,14 @@ extension AlphaRossModel {
 
         Task {
             let runtimeHealth = activeRuntimeHealth
+            let comparisonTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+            let unavailableModelDetails = runtimeHealth.flatMap {
+                alphaAssistantResolvedRunModelDetails(
+                    runtimeMode: $0.runtimeMode,
+                    tier: comparisonTier,
+                    activePack: activePack
+                )
+            }
             guard let runtimeHealth, runtimeHealth.available else {
                 recordMatterBundleComparisonReport(
                     AlphaMatterBundleComparisonReport(
@@ -1082,6 +1090,8 @@ extension AlphaRossModel {
                         selectedDocumentCount: 0,
                         sourceBlockCount: 0,
                         sourceRefsReturned: 0,
+                        assistantDisplayName: unavailableModelDetails?.modelLabel,
+                        assistantSourceLabel: unavailableModelDetails?.sourceLabel,
                         message: alphaPrivateAIVisibleRecoveryText(
                             runtimeHealth?.userFacingStatus,
                             fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
@@ -1117,6 +1127,16 @@ extension AlphaRossModel {
                         selectedDocumentCount: sample.selectedDocuments.count,
                         sourceBlockCount: 0,
                         sourceRefsReturned: 0,
+                        assistantDisplayName: alphaAssistantResolvedRunModelDetails(
+                            runtimeMode: runtimeHealth.runtimeMode,
+                            tier: requestedTier,
+                            activePack: activePack
+                        )?.modelLabel,
+                        assistantSourceLabel: alphaAssistantResolvedRunModelDetails(
+                            runtimeMode: runtimeHealth.runtimeMode,
+                            tier: requestedTier,
+                            activePack: activePack
+                        )?.sourceLabel,
                         message: alphaPrivateAIVisibleRecoveryText(
                             runtimeHealth.userFacingStatus,
                             fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
@@ -1202,6 +1222,12 @@ extension AlphaRossModel {
                 sections: payload?.sections ?? [],
                 fallbackRawText: output.rawText
             )
+            let completedRuntimeMode = AlphaPackRuntimeMode(rawValue: completedInvocation.runtimeMode) ?? runtimeHealth.runtimeMode
+            let resolvedModelDetails = alphaAssistantResolvedRunModelDetails(
+                runtimeMode: completedRuntimeMode,
+                tier: requestedTier,
+                activePack: activePack
+            )
 
             recordMatterBundleComparisonReport(
                 AlphaMatterBundleComparisonReport(
@@ -1212,6 +1238,7 @@ extension AlphaRossModel {
                     sourceBlockCount: sourcePack.count,
                     sourceRefsReturned: output.sourceRefs.count,
                     assistantDisplayName: completedInvocation.assistantDisplayName,
+                    assistantSourceLabel: resolvedModelDetails?.sourceLabel,
                     runtimeSelectionReason: completedInvocation.runtimeSelectionReason,
                     executionPathLabel: completedInvocation.executionPathLabel,
                     accelerationSummary: alphaAssistantAccelerationLabel(

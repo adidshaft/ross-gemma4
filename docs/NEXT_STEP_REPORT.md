@@ -85,6 +85,7 @@ Most recent commits that define this pause point:
 - MLX and CoreAI decision paths are implemented in code and covered by unit tests
 - hidden answer details already include `Tokens processed` and `Token speed`
 - hidden iOS Technical details now keep recent sample-file smoke results with runtime, first-response, and token-speed evidence
+- hidden iOS sample-file and longer-bundle evidence now also persist which assistant and model source each saved run used, so later review can tell built-in CoreAI, MLX, and GGUF proofs apart without reopening runtime internals
 - hidden iOS Support details now summarize the latest sample-file readiness result per runtime and call out which lanes still need a sample-file pass
 - hidden iOS Technical details now keep recent longer-bundle comparison runs for the current runtime without adding more front-stage UI
 - hidden iOS Support details now expose a direct GGUF / MLX / CoreAI switcher whenever more than one runtime is immediately available for the current tier
@@ -117,6 +118,7 @@ Most recent commits that define this pause point:
 - focused iOS usability tests now also prove the saved proof export includes persisted delivery-check details for each saved physical target, so proof history stays auditable after multiple exports
 - focused iOS usability tests now also prove the saved proof export includes the saved-note capture timestamp for each physical target, so later reviewers can tell when the current 8 GB or 12 GB+ evidence was actually recorded
 - focused iOS usability tests now also prove the saved proof export includes the saved PDF filename for each physical target, so later reviewers can open the exact proof artifact instead of inferring which `Notes & Drafts` entry was current
+- focused iOS usability tests now also prove the exported sample-file and longer-bundle summaries retain per-run assistant and model-source provenance, so saved device notes make the actual CoreAI / MLX / GGUF lane used by each result explicit
 - focused iOS usability tests now also prove the saved proof export includes the saved system version for each physical target, so later reviewers can tell which iOS build produced the latest counted proof artifact
 - focused iOS usability tests now also prove the saved proof export includes the saved device state for each physical target, so later reviewers can spot low-storage or throttled-device evidence without reopening the saved note
 - focused iOS usability tests now also prove that saved below-target proof records retain an observed runtime blocker summary, and that exports surface that blocker alongside the rest of the saved device-proof metadata
