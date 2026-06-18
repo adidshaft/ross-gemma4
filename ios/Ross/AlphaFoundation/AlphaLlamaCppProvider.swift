@@ -464,6 +464,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             availability.available && draftValidation.metadata != nil
             ? .draftModelSpeculative
             : .standard
+        let draftErrorCategory = Self.draftAccelerationErrorCategory(
+            for: draftValidation.status,
+            runtimeAvailable: availability.available
+        )
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -478,7 +482,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: draftValidation.metadata?.label,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftValidation.status,
-            lastErrorCategory: availability.errorCategory,
+            lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
         )
@@ -997,6 +1001,25 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 : (nil, "validator_rejected")
         } catch {
             return (nil, "validator_failed")
+        }
+    }
+
+    private static func draftAccelerationErrorCategory(
+        for status: String,
+        runtimeAvailable: Bool
+    ) -> String? {
+        guard runtimeAvailable else { return nil }
+        switch status {
+        case "draft_file_unavailable":
+            return "draft_file_unavailable"
+        case "draft_token_policy_blocked":
+            return "draft_token_policy_blocked"
+        case "validator_rejected":
+            return "draft_validator_rejected"
+        case "validator_failed":
+            return "draft_validator_failed"
+        default:
+            return nil
         }
     }
 }

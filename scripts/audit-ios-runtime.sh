@@ -247,6 +247,16 @@ if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summa
     FAIL=1
 fi
 
+if ! grep -q "draft_validator_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP health does not surface draft validator failure categories."
+    FAIL=1
+fi
+
+if ! grep -q "draft_validator_rejected" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP health does not surface draft validator rejection categories."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP guard does not validate draft artifact path shape."
     FAIL=1

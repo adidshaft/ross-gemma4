@@ -6780,10 +6780,78 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_rejected")
+        XCTAssertEqual(health?.lastErrorCategory, "draft_validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
             "Standard generation"
         )
+    }
+
+    func testRuntimeHealthReportsGGUFDraftValidatorFailureWithoutDisablingBaselineRuntime() throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 0 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-throwing-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-throwing-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in StubLlamaContext() }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in
+            throw LlamaError.couldNotInitializeContext
+        }
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .llamaCppGguf)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: mainURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "gguf",
+                draftModelPath: draftURL.path,
+                draftModelTokens: 6
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftAccelerationStatus, "validator_failed")
+        XCTAssertEqual(health?.lastErrorCategory, "draft_validator_failed")
     }
 
     func testExperimentalGGUFProviderPassesDraftModelConfigToContextFactory() async throws {
