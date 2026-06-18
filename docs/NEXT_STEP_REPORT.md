@@ -133,6 +133,9 @@ Most recent commits that define this pause point:
 - focused iOS usability tests now also prove that saved below-target proof carries an explicit guardrail-only note, so later reviewers do not mistake it for the required 8 GB / 12 GB+ ladder-decision evidence
 - focused Android unit tests now also prove the local smoke report still captures a device proof profile even when the real runtime is unavailable, so later physical-device smoke evidence can include model, Android version, and device-state context
 - a physical iPhone GGUF smoke now also passes through the cabled-device helper with `source_native_model=true`, `bengali_native_model=true`, `hindi_native_model=true`, `tamil_native_model=true`, `telugu_native_model=true`, and `general_native_model=true`
+- the repo now also includes an iPhone assistant-download smoke helper at `scripts/ios-device-assistant-download-smoke.sh`, plus a dedicated `--assistant-download-smoke` launch mode that can trigger, observe, and report real production assistant downloads from the phone over `devicectl`
+- on June 18, 2026, Aman's cabled `iPhone 15 Pro` (`iPhone16,1`, iOS `27.0`) also proved that the production `quickStart` MLX pack `gemma-4-e4b-mlx` starts a real client download on device: the smoke observed `ROSS_ASSISTANT_DOWNLOAD_SMOKE_PROGRESS` at `16804 / 6927877785`, `53492 / 6927877785`, `4249555545 / 6927877785`, and, before the first manual stop, `6798361234 / 6927877785`, `6798647387 / 6927877785`, `6830817013 / 6927877785`, and `6830837519 / 6927877785`
+- that same physical-device download proof is still incomplete rather than failed: the app remained in `state=downloading` during both observed runs, no `ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS` or terminal failure line appeared before the manual stops, and the phone still has no non-seeded manifest-backed production pack proof yet
 
 Most recent verification commands:
 
@@ -154,6 +157,11 @@ Most recent verification commands:
 - `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
 - `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
 - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --allow-device-proof-pack --smoke-profile quick --stage-timeout 15`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testLocalModelSmokeProfileParsesQuickAliases|testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags|testAssistantDownloadSmokeConfigRequiresTier|testAssistantDownloadSmokeJobPrefersMostRecentMatchingJob|testDebugLocalModelSmokePackUsesTierAndPackIDOverrides)'`
+- `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
+- `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
+- `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --force-refresh --wait-seconds 900`
+- `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --wait-seconds 180`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test --test-name-pattern 'ios production sessions preserve multi-gb GGUF delivery descriptors end to end' backend/tests/model-registry.test.ts`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/testReleaseReadyAssistantArtifactsPinDownloadMetadata'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testRecommendedOnDeviceTierMatchesCurrentThreeTierProductLineup|testPreferredAssistantRuntimeModeUsesMLXForCaseAssociateBelow12GBPhoneFloor|testLlamaRuntimeHealthMarks12BPackUnavailableOnBelowTargetPhoneMemory)'`
@@ -169,7 +177,8 @@ Most recent verification commands:
 
 - successful physical iPhone proof for the intended `Case Associate` 12B GGUF artifact on a 12 GB+ target, now that the current 7 GB-class A17 Pro phone has a recorded memory-mapping failure for that exact pack
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
-- real end-to-end client download and consumption proof for production multi-GB artifacts on device
+- real end-to-end client download and consumption proof for production multi-GB artifacts on device, even though the current iPhone now proves live production MLX transfer progress well into the multi-GB range
+- a terminal outcome for the real `quickStart` MLX production download on Aman's current phone, plus a follow-up installed-pack smoke without `--allow-device-proof-pack`
 - Android native runtime validation beyond the recent retrieval and budget improvements
 
 ## Why This Is A Good Pause Point
@@ -183,12 +192,13 @@ Most recent verification commands:
 
 Resume with a focused real-device validation pass instead of more code changes:
 
-1. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
-2. use the new below-target behavior as the current shipping guardrail: on smaller iPhones, `Case Associate` should now steer toward MLX and no longer advertise the 12B GGUF lane as ready
-3. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder without the MLX fallback path
-4. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
-5. use `scripts/ios-device-installed-pack-smoke.sh --list-only` to confirm whether the target phone actually holds a real client-downloaded production manifest or only seeded `-device-proof` packs before counting any download evidence
-6. once a phone has a real client-downloaded production pack, rerun the installed-pack helper without `--allow-device-proof-pack` so the final device note can tie delivery verification to actual runtime consumption from app-private storage
-7. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
-8. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-9. only then return to Android real-device runtime validation and deeper runtime work there
+1. start from the new `scripts/ios-device-assistant-download-smoke.sh` helper and let the real `quickStart` MLX production download finish without manually terminating Ross, because the current phone already proved live transfer progress up to `6830837519 / 6927877785` bytes but not yet a terminal install/fail state
+2. immediately after that run, use `scripts/ios-device-installed-pack-smoke.sh --list-only` to confirm whether the phone now holds a real manifest-backed production pack rather than only seeded `-device-proof` packs
+3. if a real production manifest appears, rerun the installed-pack helper without `--allow-device-proof-pack` so the final device proof includes actual runtime consumption from app-private storage
+4. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
+5. use the new below-target behavior as the current shipping guardrail: on smaller iPhones, `Case Associate` should now steer toward MLX and no longer advertise the 12B GGUF lane as ready
+6. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder without the MLX fallback path
+7. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
+8. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
+9. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+10. only then return to Android real-device runtime validation and deeper runtime work there

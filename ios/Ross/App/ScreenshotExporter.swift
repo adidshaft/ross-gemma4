@@ -9,6 +9,7 @@ enum RossLaunchMode {
     case interactive
     case screenshotExport
     case localModelSmoke
+    case assistantDownloadSmoke
 
     static var current: RossLaunchMode {
         let arguments = ProcessInfo.processInfo.arguments
@@ -17,6 +18,9 @@ enum RossLaunchMode {
         }
         if arguments.contains("--local-model-smoke") {
             return .localModelSmoke
+        }
+        if arguments.contains("--assistant-download-smoke") {
+            return .assistantDownloadSmoke
         }
         return .interactive
     }
@@ -28,6 +32,118 @@ enum RossLocalModelSmokeStatusCopy {
     static let unavailableAssistantStatus = "Private assistant sample-file check is unavailable."
     static let passedStatus = "Private assistant sample-file check passed."
     static let failedStatus = "Private assistant sample-file check failed."
+}
+
+enum RossAssistantDownloadSmokeStatusCopy {
+    static let runningStatus = "Checking assistant download flow..."
+    static let failedStatus = "Assistant download flow failed."
+    static let passedStatus = "Assistant download flow passed."
+}
+
+struct RossAssistantDownloadSmokeConfig: Equatable {
+    let tier: AlphaCapabilityTier
+    let runtimeMode: AlphaPackRuntimeMode?
+    let mobileAllowed: Bool
+    let forceRefreshInstalledPack: Bool
+    let waitSeconds: TimeInterval
+
+    static func fromEnvironment(_ environment: [String: String]) -> RossAssistantDownloadSmokeConfig? {
+        func trimmed(_ key: String) -> String? {
+            let value = environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return value.isEmpty ? nil : value
+        }
+
+        func parseTier(_ raw: String?) -> AlphaCapabilityTier? {
+            guard let raw else { return nil }
+            switch raw {
+            case AlphaCapabilityTier.flash.rawValue, "flash":
+                return .flash
+            case AlphaCapabilityTier.quickStart.rawValue, "quickStart":
+                return .quickStart
+            case AlphaCapabilityTier.caseAssociate.rawValue, "caseAssociate":
+                return .caseAssociate
+            case AlphaCapabilityTier.seniorDraftingSupport.rawValue, "seniorDraftingSupport":
+                return .seniorDraftingSupport
+            default:
+                return nil
+            }
+        }
+
+        func parseRuntime(_ raw: String?) -> AlphaPackRuntimeMode? {
+            guard let raw else { return nil }
+            switch raw.lowercased() {
+            case "gguf", AlphaPackRuntimeMode.llamaCppGguf.rawValue:
+                return .llamaCppGguf
+            case "mlx", AlphaPackRuntimeMode.mlxSwiftLm.rawValue:
+                return .mlxSwiftLm
+            case "coreai", AlphaPackRuntimeMode.appleFoundationModels.rawValue:
+                return .appleFoundationModels
+            default:
+                return nil
+            }
+        }
+
+        func parseBool(_ raw: String?, default fallback: Bool) -> Bool {
+            guard let raw else { return fallback }
+            switch raw.lowercased() {
+            case "1", "true", "yes", "on":
+                return true
+            case "0", "false", "no", "off":
+                return false
+            default:
+                return fallback
+            }
+        }
+
+        func parsePositiveSeconds(_ raw: String?, default fallback: TimeInterval) -> TimeInterval {
+            guard let raw, let seconds = TimeInterval(raw), seconds > 0 else { return fallback }
+            return seconds
+        }
+
+        guard let tier = parseTier(trimmed("ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER")) else {
+            return nil
+        }
+        return RossAssistantDownloadSmokeConfig(
+            tier: tier,
+            runtimeMode: parseRuntime(trimmed("ROSS_ASSISTANT_DOWNLOAD_SMOKE_RUNTIME")),
+            mobileAllowed: parseBool(trimmed("ROSS_ASSISTANT_DOWNLOAD_SMOKE_MOBILE_ALLOWED"), default: false),
+            forceRefreshInstalledPack: parseBool(trimmed("ROSS_ASSISTANT_DOWNLOAD_SMOKE_FORCE_REFRESH"), default: false),
+            waitSeconds: parsePositiveSeconds(trimmed("ROSS_ASSISTANT_DOWNLOAD_SMOKE_WAIT_SECONDS"), default: 900)
+        )
+    }
+}
+
+func rossAssistantDownloadSmokeJob(
+    from jobs: [AlphaModelDownloadJob],
+    config: RossAssistantDownloadSmokeConfig
+) -> AlphaModelDownloadJob? {
+    func mostRecentMatch(in candidates: [AlphaModelDownloadJob]) -> AlphaModelDownloadJob? {
+        candidates.max { lhs, rhs in
+            let lhsDate = lhs.completedAt ?? lhs.updatedAt
+            let rhsDate = rhs.completedAt ?? rhs.updatedAt
+            if lhsDate != rhsDate {
+                return lhsDate < rhsDate
+            }
+            if lhs.bytesDownloaded != rhs.bytesDownloaded {
+                return lhs.bytesDownloaded < rhs.bytesDownloaded
+            }
+            return lhs.createdAt < rhs.createdAt
+        }
+    }
+
+    let matchingRuntime = jobs.filter {
+        AlphaCapabilityTier.assistantSelectionsMatch($0.tier, config.tier) &&
+            (config.runtimeMode == nil || $0.runtimeMode == config.runtimeMode)
+    }
+    if let exactMatch = mostRecentMatch(in: matchingRuntime) {
+        return exactMatch
+    }
+
+    return mostRecentMatch(
+        in: jobs.filter {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, config.tier)
+        }
+    )
 }
 
 enum RossLocalModelSmokeProfile: String {
@@ -623,6 +739,128 @@ struct RossLocalModelSmokeView: View {
     private func nonEmpty(_ value: String?) -> String? {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+struct RossAssistantDownloadSmokeView: View {
+    @State private var status = RossAssistantDownloadSmokeStatusCopy.runningStatus
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+            Text(status)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+        }
+        .padding(32)
+        .task {
+            await runSmoke()
+        }
+    }
+
+    @MainActor
+    private func runSmoke() async {
+        let environment = ProcessInfo.processInfo.environment
+        guard let config = RossAssistantDownloadSmokeConfig.fromEnvironment(environment) else {
+            status = RossAssistantDownloadSmokeStatusCopy.failedStatus
+            RossLocalModelSmokeView.log("ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL invalid_config")
+            return
+        }
+
+        let model = AlphaRossModel()
+        RossLocalModelSmokeView.log(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_STAGE load_model_state tier=\(config.tier.rawValue) runtime=\(config.runtimeMode?.rawValue ?? "auto") mobile_allowed=\(config.mobileAllowed) force_refresh=\(config.forceRefreshInstalledPack) wait_seconds=\(Int(config.waitSeconds))"
+        )
+        await model.loadIfNeeded()
+        RossLocalModelSmokeView.log("ROSS_ASSISTANT_DOWNLOAD_SMOKE_STAGE loaded_model_state")
+
+        let startTime = Date()
+        let downloadTask = Task {
+            await model.startPackDownload(
+                for: config.tier,
+                mobileAllowed: config.mobileAllowed,
+                existingJobID: nil,
+                forceRefreshInstalledPack: config.forceRefreshInstalledPack,
+                targetPackId: nil,
+                requestedRuntimeMode: config.runtimeMode
+            )
+        }
+
+        var lastProgressSignature = ""
+        while Date().timeIntervalSince(startTime) < config.waitSeconds {
+            if let job = latestAssistantDownloadSmokeJob(in: model, config: config) {
+                let signature = [
+                    job.state.rawValue,
+                    String(job.bytesDownloaded),
+                    String(job.totalBytes),
+                    job.packId,
+                    job.runtimeMode.rawValue
+                ].joined(separator: "|")
+                if signature != lastProgressSignature {
+                    RossLocalModelSmokeView.log(
+                        "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PROGRESS state=\(job.state.rawValue) bytes=\(job.bytesDownloaded) total=\(job.totalBytes) pack=\(job.packId) runtime=\(job.runtimeMode.rawValue)"
+                    )
+                    lastProgressSignature = signature
+                }
+                if RossAssistantDownloadSmokeView.isTerminal(job.state) {
+                    break
+                }
+            }
+            try? await Task.sleep(for: .seconds(1))
+        }
+
+        let elapsed = Date().timeIntervalSince(startTime)
+
+        guard let job = latestAssistantDownloadSmokeJob(in: model, config: config) else {
+            downloadTask.cancel()
+            _ = await downloadTask.result
+            status = RossAssistantDownloadSmokeStatusCopy.failedStatus
+            RossLocalModelSmokeView.log("ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=\(String(format: "%.2f", elapsed))s")
+            return
+        }
+
+        if !RossAssistantDownloadSmokeView.isTerminal(job.state) {
+            downloadTask.cancel()
+            _ = await downloadTask.result
+            status = RossAssistantDownloadSmokeStatusCopy.failedStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL timeout elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) state=\(job.state.rawValue) pack=\(job.packId) runtime=\(job.runtimeMode.rawValue) bytes=\(job.bytesDownloaded) total=\(job.totalBytes)"
+            )
+            return
+        }
+
+        _ = await downloadTask.result
+
+        if job.state == .installed,
+           let installedPack = model.installedPack(for: config.tier) {
+            status = RossAssistantDownloadSmokeStatusCopy.passedStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) runtime=\(installedPack.runtimeMode.rawValue) pack=\(installedPack.packId) install_path=\(installedPack.installPath) checksum=\(installedPack.checksumVerified)"
+            )
+            return
+        }
+
+        status = RossAssistantDownloadSmokeStatusCopy.failedStatus
+        RossLocalModelSmokeView.log(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) state=\(job.state.rawValue) pack=\(job.packId) runtime=\(job.runtimeMode.rawValue) reason=\(job.failureReason ?? "nil") bytes=\(job.bytesDownloaded) total=\(job.totalBytes)"
+        )
+    }
+
+    @MainActor
+    private func latestAssistantDownloadSmokeJob(
+        in model: AlphaRossModel,
+        config: RossAssistantDownloadSmokeConfig
+    ) -> AlphaModelDownloadJob? {
+        rossAssistantDownloadSmokeJob(from: model.persisted.modelJobs, config: config)
+    }
+
+    private static func isTerminal(_ state: AlphaDownloadState) -> Bool {
+        switch state {
+        case .installed, .failed, .cancelled, .pausedError, .pausedNoStorage, .pausedUser, .pausedWaitingForWifi:
+            return true
+        case .notStarted, .queued, .downloading, .verifying:
+            return false
+        }
     }
 }
 

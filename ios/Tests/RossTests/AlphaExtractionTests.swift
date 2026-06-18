@@ -15198,6 +15198,82 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(RossLocalModelSmokeProfile.fromEnvironment([:]), .full)
     }
 
+    func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
+        let config = RossAssistantDownloadSmokeConfig.fromEnvironment([
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER": "caseAssociate",
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_RUNTIME": "mlx",
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_MOBILE_ALLOWED": "true",
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FORCE_REFRESH": "1",
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_WAIT_SECONDS": "120"
+        ])
+
+        XCTAssertEqual(
+            config,
+            RossAssistantDownloadSmokeConfig(
+                tier: .caseAssociate,
+                runtimeMode: .mlxSwiftLm,
+                mobileAllowed: true,
+                forceRefreshInstalledPack: true,
+                waitSeconds: 120
+            )
+        )
+    }
+
+    func testAssistantDownloadSmokeConfigRequiresTier() {
+        XCTAssertNil(
+            RossAssistantDownloadSmokeConfig.fromEnvironment([
+                "ROSS_ASSISTANT_DOWNLOAD_SMOKE_RUNTIME": "mlx"
+            ])
+        )
+    }
+
+    func testAssistantDownloadSmokeJobPrefersMostRecentMatchingJob() {
+        let earlier = Date(timeIntervalSince1970: 1_700_000_000)
+        let later = earlier.addingTimeInterval(120)
+        let config = RossAssistantDownloadSmokeConfig(
+            tier: .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            mobileAllowed: true,
+            forceRefreshInstalledPack: false,
+            waitSeconds: 300
+        )
+
+        let staleJob = AlphaModelDownloadJob(
+            sessionId: "old-session",
+            packId: "gemma-4-e4b-mlx",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .mobileAllowed,
+            bytesDownloaded: 53_492,
+            totalBytes: 6_927_877_785,
+            checksumSha256: "old",
+            runtimeMode: .mlxSwiftLm,
+            createdAt: earlier,
+            updatedAt: earlier
+        )
+        let freshJob = AlphaModelDownloadJob(
+            sessionId: "new-session",
+            packId: "gemma-4-e4b-mlx",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .mobileAllowed,
+            bytesDownloaded: 6_830_837_519,
+            totalBytes: 6_927_877_785,
+            checksumSha256: "new",
+            runtimeMode: .mlxSwiftLm,
+            createdAt: later,
+            updatedAt: later
+        )
+
+        let selected = rossAssistantDownloadSmokeJob(
+            from: [staleJob, freshJob],
+            config: config
+        )
+
+        XCTAssertEqual(selected?.sessionId, "new-session")
+        XCTAssertEqual(selected?.bytesDownloaded, 6_830_837_519)
+    }
+
     func testModelInvocationStoreRecordsFirstTokenLatencyAndThroughput() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

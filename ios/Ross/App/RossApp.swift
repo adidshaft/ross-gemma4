@@ -10931,7 +10931,7 @@ struct RossApp: App {
     #endif
 
     init() {
-        if RossLaunchMode.current == .localModelSmoke {
+        if RossLaunchMode.current == .localModelSmoke || RossLaunchMode.current == .assistantDownloadSmoke {
             setvbuf(stdout, nil, _IONBF, 0)
             setvbuf(stderr, nil, _IONBF, 0)
         }
@@ -10954,6 +10954,8 @@ struct RossApp: App {
                 ScreenshotExportView()
             case .localModelSmoke:
                 RossLocalModelSmokeView()
+            case .assistantDownloadSmoke:
+                RossAssistantDownloadSmokeView()
             }
         }
     }
