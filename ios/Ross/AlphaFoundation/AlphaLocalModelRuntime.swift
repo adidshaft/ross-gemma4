@@ -3191,6 +3191,11 @@ enum AlphaLocalModelRuntime {
             return debugPath
         }
         guard let activePack else { return nil }
+        if debug.enableRealInference,
+           let runtimeOverride = debug.runtimeModeOverride,
+           runtimeOverride != activePack.runtimeMode {
+            return nil
+        }
         switch activePack.runtimeMode {
         case .appleFoundationModels:
             if alphaPackUsesSystemFoundationModel(activePack) {

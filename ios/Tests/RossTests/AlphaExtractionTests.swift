@@ -19300,6 +19300,37 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
     }
 
+    func testExplicitMLXRuntimeRequestDoesNotBorrowActiveGGUFPath() {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            installPath: "/tmp/private/device/debug/active-gguf.gguf",
+            artifactKind: "local_model_artifact"
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let health = provider?.runtimeHealth()
+
+        XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertNotEqual(health?.modelPathLabel, "active-gguf.gguf")
+        XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
+    }
+
     func testExplicitCoreMLRuntimeRequestDoesNotFallBackToGGUFProvider() {
         let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
         let environment = AlphaLocalRuntimeEnvironment(
@@ -19330,6 +19361,36 @@ final class AlphaExtractionTests: XCTestCase {
             health?.lastErrorCategory == "missing_coreai_artifact" ||
                 health?.lastErrorCategory == "unsupported_runtime_on_platform"
         )
+    }
+
+    func testExplicitCoreMLRuntimeRequestDoesNotBorrowActiveGGUFPath() {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            installPath: "/tmp/private/device/debug/active-gguf.gguf",
+            artifactKind: "local_model_artifact"
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: AlphaPackRuntimeMode(runtimeAlias: "coreml"),
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let health = provider?.runtimeHealth()
+
+        XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
+        XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
+        XCTAssertNotEqual(health?.modelPathLabel, "active-gguf.gguf")
+        XCTAssertNotEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
     func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() {
