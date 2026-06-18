@@ -16039,6 +16039,37 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=nil"))
     }
 
+    func testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed() {
+        let measuredOutput = AlphaLocalModelOutput(
+            rawText: "Answer",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [],
+            inputTokenCount: 410,
+            outputTokenCount: 28,
+            outputTokensPerSecond: 19.375,
+            timeToFirstTokenMs: 480,
+            usesMeasuredTokenCounts: true
+        )
+        let missingMetricsOutput = AlphaLocalModelOutput(
+            rawText: "",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        XCTAssertEqual(
+            RossLocalModelSmokeView.benchmarkFields(stage: "source stage", output: measuredOutput),
+            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
+            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false"
+        )
+    }
+
     func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
         let config = RossAssistantDownloadSmokeConfig.fromEnvironment([
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER": "caseAssociate",
