@@ -252,6 +252,21 @@ if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smo
     FAIL=1
 fi
 
+if ! grep -q "GGUF/MTP simulator draft proof requires a GGUF draft file" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP proof does not preflight GGUF draft artifact shape."
+    FAIL=1
+fi
+
+if ! grep -q "MLX simulator draft proof requires an MLX draft directory" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MLX draft proof does not preflight MLX draft artifact shape."
+    FAIL=1
+fi
+
+if ! grep -q "Draft acceleration proof is only supported for GGUF/MLX simulator smokes" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator CoreAI smoke does not reject unsupported draft proof."
+    FAIL=1
+fi
+
 if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared MTP guard does not require active draft status."
     FAIL=1

@@ -34,6 +34,24 @@ run_expect_exit_2 \
   "GGUF file passed as MLX" \
   "$SIM_SMOKE" --runtime mlx --model "$gguf_as_mlx"
 
+usable_mlx="$tmpdir/usable-mlx"
+mkdir -p "$usable_mlx"
+printf '{}' >"$usable_mlx/config.json"
+printf '{}' >"$usable_mlx/tokenizer.json"
+printf 'weights' >"$usable_mlx/model.safetensors"
+
+run_expect_exit_2 \
+  "MLX directory passed as GGUF draft proof" \
+  "$SIM_SMOKE" --runtime gguf --model "$gguf_as_mlx" --draft-model "$usable_mlx" --require-draft-acceleration
+
+run_expect_exit_2 \
+  "GGUF file passed as MLX draft proof" \
+  "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --draft-model "$gguf_as_mlx" --require-draft-acceleration
+
+run_expect_exit_2 \
+  "CoreAI draft proof requested" \
+  "$SIM_SMOKE" --runtime coreai --draft-model "$gguf_as_mlx" --require-draft-acceleration
+
 coreml_file="$tmpdir/foundation-adapter.mlmodelc"
 printf 'adapter' >"$coreml_file"
 run_expect_exit_2 \

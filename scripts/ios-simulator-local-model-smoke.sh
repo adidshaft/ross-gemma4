@@ -248,9 +248,43 @@ if [[ -n "$draft_model_path" && ! -e "$draft_model_path" ]]; then
   exit 2
 fi
 
+if [[ "$require_draft_acceleration" == "1" && "$normalized_runtime" == "apple_foundation_models" ]]; then
+  echo "Draft acceleration proof is only supported for GGUF/MLX simulator smokes, not apple_foundation_models." >&2
+  exit 2
+fi
+
 if [[ "$require_draft_acceleration" == "1" && -z "$draft_model_path" ]]; then
   echo "Draft acceleration proof requires --draft-model so identity cannot pass with draft_model=nil." >&2
   exit 2
+fi
+
+if [[ -n "$draft_model_path" ]]; then
+  case "$normalized_runtime" in
+    gemma_local_runtime)
+      lower_draft_model_path="$(printf '%s' "$draft_model_path" | tr '[:upper:]' '[:lower:]')"
+      if [[ ! -f "$draft_model_path" || "$lower_draft_model_path" != *.gguf ]]; then
+        echo "GGUF/MTP simulator draft proof requires a GGUF draft file, got: $draft_model_path" >&2
+        exit 2
+      fi
+      ;;
+    mlx_swift_lm)
+      lower_draft_model_path="$(printf '%s' "$draft_model_path" | tr '[:upper:]' '[:lower:]')"
+      case "$lower_draft_model_path" in
+        *.gguf|*.bin)
+          echo "MLX simulator draft proof requires an MLX draft directory, not a GGUF/bin file: $draft_model_path" >&2
+          exit 2
+          ;;
+      esac
+      if [[ ! -d "$draft_model_path" ]]; then
+        echo "MLX simulator draft proof requires an MLX draft directory: $draft_model_path" >&2
+        exit 2
+      fi
+      if ! mlx_directory_looks_usable "$draft_model_path"; then
+        echo "MLX simulator draft proof requires a usable MLX draft directory with config.json, tokenizer metadata, and safetensors weights or index: $draft_model_path" >&2
+        exit 2
+      fi
+      ;;
+  esac
 fi
 
 if [[ -z "$pack_id" ]]; then
