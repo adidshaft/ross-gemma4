@@ -19,6 +19,11 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - the same installed-pack smoke now logs `ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=mlx_swift_lm available=false ... error=insufficient_device_memory`
   - it now stops at `ROSS_LOCAL_MODEL_SMOKE_FAIL ... stage=active_pack error=insufficient_device_memory`
   - it no longer emits misleading `available=true` or `provider_ready` lines for that unsupported lane
+- Quick Start policy for below-12 GB iPhones is now explicit in shipped product flow:
+  - setup/download/catalog selection now keeps Quick Start on GGUF when MLX is unsupported on the current iPhone
+  - explicit Quick Start MLX requests in product setup flow now fall back to GGUF on below-12 GB iPhones instead of preserving the unsupported runtime choice
+  - cached/backend catalog helpers now filter unsupported Quick Start MLX entries for that device class instead of letting them remain selectable earlier in setup flow
+  - MLX on that device class is now effectively a deliberate debug/runtime-experiment path rather than a shipped setup/download default
 
 ## Latest MLX Runtime Checkpoint
 
@@ -58,7 +63,9 @@ Resume from the new physical-device checkpoint above, not from the older Gemma 4
 2. treat the old launch-time watchdog and the later MLX `signal 9` path on Aman’s phone as mitigated for the current product flow, because the app now refuses the unsupported lane instead of crashing
 3. treat the smoke/runtime-health reporting mismatch as cleared for the current repo state:
    - the smoke path now agrees with the device-support guard and refuses the unsupported lane before `provider_ready`
-4. decide whether Quick Start on this device class should remain GGUF-only or whether a later MLX fallback/profile experiment is still worth pursuing behind a deliberate debug-only path
+4. treat the product-policy decision as made for the current repo state:
+   - below-12 GB iPhones keep Quick Start on GGUF in shipped setup/download/catalog flow
+   - any later Quick Start MLX work on that device class should stay behind deliberate debug/runtime experimentation until a new physical-device proof changes the policy
 5. only after that policy decision should the next pass revisit any deeper MLX memory experiments on physical hardware
 
 ## Current Stable State
@@ -174,6 +181,7 @@ Most recent commits that define this pause point:
 - Ross production metadata now also pins the downloaded 12B GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, reconciling the earlier mismatch with the CDN/Xet `etag` value observed during the physical-device proof pass
 - below-target iPhones now also treat the `Case Associate` 12B GGUF lane as unavailable up front instead of merely broken: the shipped minimum memory floor is now 12 GB for that pack, the hidden runtime-lane readiness copy reports it as unavailable on this iPhone, and the phone-side runtime chooser now prefers MLX for `Case Associate` when GGUF would not fit
 - below-target iPhones now also stop offering the unsupported `Case Associate` GGUF lane in setup/runtime variant chips, so smaller phones are steered toward viable MLX or built-in lanes instead of advertising a path that cannot activate there
+- below-target iPhones now also keep Quick Start on GGUF through shipped setup/download/catalog selection instead of letting explicit or cached MLX choices survive earlier in product flow
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins

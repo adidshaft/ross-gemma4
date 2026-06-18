@@ -770,10 +770,20 @@ func alphaPreferredAssistantDownloadFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
     targetPackId: String? = nil,
-    cachedDownloads: [AlphaAssistantDownloadDescriptor]?
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> AlphaAssistantDownloadDescriptor {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     let cachedCandidates = (cachedDownloads ?? []).filter {
-        $0.tier == tier && alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0)
+        $0.tier == tier &&
+            alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0) &&
+            alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: normalizedTier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let targetPackId,
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
@@ -786,6 +796,11 @@ func alphaPreferredAssistantDownloadFallback(
         for: tier,
         preferredRuntimeMode: preferredRuntimeMode,
         targetPackId: targetPackId
+    ), alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+        tier: normalizedTier,
+        runtimeMode: bundledPreferred.runtimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes
     ) {
         return bundledPreferred
     }
@@ -868,12 +883,20 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]?,
-    cachedDownloads: [AlphaAssistantDownloadDescriptor]?
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> AlphaAssistantCatalogDescriptor? {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     let catalogCandidates = (cachedCatalogs ?? []).filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
-            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0) &&
+            alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: effectiveTier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let preferredCatalog = catalogCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return preferredCatalog
@@ -881,7 +904,13 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
 
     let downloadCandidates = (cachedDownloads ?? []).filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
-            alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0)
+            alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0) &&
+            alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: effectiveTier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let preferredDownload = downloadCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return alphaAssistantCatalogDescriptor(from: preferredDownload)
@@ -933,6 +962,53 @@ func alphaPreferredAssistantSetupRuntimeMode(
         return preferredRuntime
     }
     return .llamaCppGguf
+}
+
+private func alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+    tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
+) -> Bool {
+    alphaAssistantRuntimeSupportedOnCurrentDevice(
+        runtimeMode: runtimeMode,
+        tier: tier,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        systemAssistantAvailable: false
+    )
+}
+
+func alphaResolvedAssistantSetupRuntimeMode(
+    for tier: AlphaCapabilityTier,
+    requestedRuntimeMode: AlphaPackRuntimeMode? = nil,
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool? = nil,
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> AlphaPackRuntimeMode {
+    let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
+        for: tier,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: systemAssistantAvailable,
+        lastInvocation: lastInvocation
+    )
+    guard let requestedRuntimeMode else {
+        return preferredRuntime
+    }
+    let supportsRequestedRuntime = alphaAssistantRuntimeSupportedOnCurrentDevice(
+        runtimeMode: requestedRuntimeMode,
+        tier: tier,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        systemAssistantAvailable: systemAssistantAvailable ?? false
+    )
+    return supportsRequestedRuntime ? requestedRuntimeMode : preferredRuntime
 }
 
 struct AlphaAssistantSetupPresentation: Equatable, Sendable {
@@ -1362,22 +1438,16 @@ func alphaAssistantSetupPresentation(
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
 ) -> AlphaAssistantSetupPresentation? {
-    let preferredRuntime: AlphaPackRuntimeMode
-    if let preferredRuntimeMode,
-       preferredRuntimeMode == .appleFoundationModels ||
-        alphaAssistantTierSupportsInstallerRuntime(tier, runtimeMode: preferredRuntimeMode) {
-        preferredRuntime = preferredRuntimeMode
-    } else {
-        preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
-            for: tier,
-            existingRuntimeMode: existingRuntimeMode,
-            isPhoneFormFactor: isPhoneFormFactor,
-            physicalMemoryBytes: physicalMemoryBytes,
-            freeStorageGB: freeStorageGB,
-            systemAssistantAvailable: systemAssistantAvailable,
-            lastInvocation: lastInvocation
-        )
-    }
+    let preferredRuntime = alphaResolvedAssistantSetupRuntimeMode(
+        for: tier,
+        requestedRuntimeMode: preferredRuntimeMode,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: systemAssistantAvailable,
+        lastInvocation: lastInvocation
+    )
     if preferredRuntime == .appleFoundationModels {
         return AlphaAssistantSetupPresentation(
             runtimeMode: .appleFoundationModels,
@@ -1407,7 +1477,9 @@ func alphaAssistantSetupPresentation(
         for: tier,
         preferredRuntimeMode: preferredRuntime,
         cachedCatalogs: cachedCatalogs,
-        cachedDownloads: cachedDownloads
+        cachedDownloads: cachedDownloads,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes
     ) ?? (defaultDescriptor.runtimeMode == preferredRuntime ? defaultDescriptor : nil)
     guard let descriptor, descriptor.runtimeMode == preferredRuntime else {
         return nil
@@ -1439,7 +1511,9 @@ func alphaAssistantSetupPresentation(
 func alphaAssistantAvailableSetupRuntimeModes(
     for tier: AlphaCapabilityTier,
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
-    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> [AlphaPackRuntimeMode] {
     let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     var descriptors: [AlphaAssistantCatalogDescriptor] = [
@@ -1466,6 +1540,12 @@ func alphaAssistantAvailableSetupRuntimeModes(
         guard AlphaCapabilityTier.normalizedAssistantSelection(descriptor.tier) == normalizedTier,
               !descriptor.developmentOnly,
               alphaAssistantTierSupportsInstallerRuntime(normalizedTier, runtimeMode: descriptor.runtimeMode),
+              alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: normalizedTier,
+                runtimeMode: descriptor.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+              ),
               seen.insert(descriptor.runtimeMode).inserted else {
             return nil
         }
@@ -1512,7 +1592,9 @@ func alphaShouldPrimeAssistantSetupCatalogs(
             for: tier,
             preferredRuntimeMode: preferredRuntime,
             cachedCatalogs: cachedCatalogs,
-            cachedDownloads: cachedDownloads
+            cachedDownloads: cachedDownloads,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes
         )
         let hasPreferredDescriptor = preferredDescriptor.map {
             AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
@@ -1530,12 +1612,20 @@ func alphaPreferredAssistantCatalogFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
     targetPackId: String? = nil,
-    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> AlphaAssistantCatalogDescriptor {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     let cachedCandidates = (cachedCatalogs ?? []).filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
-            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0) &&
+            alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: effectiveTier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let targetPackId,
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
@@ -1548,6 +1638,11 @@ func alphaPreferredAssistantCatalogFallback(
         for: tier,
         preferredRuntimeMode: preferredRuntimeMode,
         targetPackId: targetPackId
+    ), alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+        tier: effectiveTier,
+        runtimeMode: bundledPreferred.runtimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes
     ) {
         return bundledPreferred
     }
@@ -1561,12 +1656,20 @@ func alphaPreferredCachedAssistantInstalledReuseCatalogDescriptor(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
     targetPackId: String? = nil,
-    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> AlphaAssistantCatalogDescriptor? {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     let cachedCandidates = (cachedCatalogs ?? []).filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
-            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0) &&
+            alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: effectiveTier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let targetPackId,
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
@@ -1606,7 +1709,9 @@ func alphaAssistantCatalogDescriptor(
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
     targetPackId: String? = nil,
     compatibleOnly: Bool = false,
-    manifest: AlphaBackendCatalogManifest?
+    manifest: AlphaBackendCatalogManifest?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> AlphaAssistantCatalogDescriptor {
     guard let manifest else {
         return alphaDefaultAssistantCatalogDescriptor(for: tier)
@@ -1616,6 +1721,12 @@ func alphaAssistantCatalogDescriptor(
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier)
             && !$0.developmentOnly
             && (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller($0))
+            && alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: tier,
+                runtimeMode: $0.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            )
     }
     if let targetPackId,
        let targeted = matchingTier.first(where: { $0.packId == targetPackId }) {
@@ -1651,14 +1762,22 @@ func alphaAssistantCatalogDescriptor(
 func alphaAssistantCatalogCacheDescriptors(
     for tier: AlphaCapabilityTier,
     compatibleOnly: Bool = false,
-    manifest: AlphaBackendCatalogManifest?
+    manifest: AlphaBackendCatalogManifest?,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> [AlphaAssistantCatalogDescriptor] {
     guard let manifest else { return [] }
 
     return manifest.packs.compactMap { pack in
         guard AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier),
               !pack.developmentOnly,
-              (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller(pack)) else {
+              (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller(pack)),
+              alphaAssistantDownloadRuntimeSupportedOnCurrentDevice(
+                tier: tier,
+                runtimeMode: pack.runtimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+              ) else {
             return nil
         }
         return AlphaAssistantCatalogDescriptor(
@@ -3401,9 +3520,12 @@ extension AlphaRossModel {
         cancelPrivateAISnapshotValidation()
         let artifact = alphaAssistantModelArtifact(for: tier)
         let lastInvocation = alphaLastModelInvocation(in: persisted)
-        let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantSetupRuntimeMode(
+        let systemAssistantAvailable = systemAssistantHealth(for: tier)?.available == true
+        let preferredRuntime = alphaResolvedAssistantSetupRuntimeMode(
             for: tier,
+            requestedRuntimeMode: requestedRuntimeMode,
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
+            systemAssistantAvailable: systemAssistantAvailable,
             lastInvocation: lastInvocation
         )
         clearAssistantSetupRuntimeOverride(for: tier)

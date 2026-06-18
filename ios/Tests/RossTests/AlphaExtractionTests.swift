@@ -7140,6 +7140,44 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
     }
 
+    func testAssistantCatalogCacheDescriptorsHideUnsupportedQuickStartMLXOnBelow12GBPhone() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-mlx",
+                    displayName: "Gemma 4 E4B MLX",
+                    tier: .quickStart,
+                    sizeBytes: 4_500_000_000,
+                    checksumSha256: String(repeating: "1", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-gguf",
+                    displayName: "Gemma 4 E4B GGUF",
+                    tier: .quickStart,
+                    sizeBytes: 5_405_168_384,
+                    checksumSha256: String(repeating: "2", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptors = alphaAssistantCatalogCacheDescriptors(
+            for: .quickStart,
+            compatibleOnly: true,
+            manifest: manifest,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(descriptors.map(\.packId), ["gemma-4-e4b-gguf"])
+        XCTAssertEqual(descriptors.map(\.runtimeMode), [.llamaCppGguf])
+    }
+
     func testAssistantCatalogCacheDescriptorsPreserveMLXDraftCompanionFromBackendManifest() {
         let manifest = AlphaBackendCatalogManifest(
             packs: [
@@ -11923,6 +11961,46 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
     }
 
+    func testAssistantCatalogDescriptorCompatibleOnlyFallsBackToQuickStartGGUFOnBelow12GBPhoneWhenMLXIsRequested() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-mlx",
+                    displayName: "Gemma 4 E4B MLX",
+                    tier: .quickStart,
+                    sizeBytes: 4_500_000_000,
+                    checksumSha256: String(repeating: "1", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-gguf",
+                    displayName: "Gemma 4 E4B GGUF",
+                    tier: .quickStart,
+                    sizeBytes: 5_405_168_384,
+                    checksumSha256: String(repeating: "2", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptor = alphaAssistantCatalogDescriptor(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            compatibleOnly: true,
+            manifest: manifest,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(descriptor.packId, "gemma-4-e4b-gguf")
+        XCTAssertEqual(descriptor.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(descriptor.artifactKind, "local_model_artifact")
+    }
+
     func testAssistantCatalogDescriptorHonorsExplicitTargetPackIdOverPreferredRuntime() {
         let manifest = AlphaBackendCatalogManifest(
             packs: [
@@ -12221,6 +12299,33 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(options.map(\.runtimeMode), [.llamaCppGguf])
         XCTAssertNotNil(options.first?.detailLabel)
+    }
+
+    func testResolvedAssistantSetupRuntimeModeFallsBackToGGUFForUnsupportedQuickStartMLXOnBelow12GBPhone() {
+        let runtime = alphaResolvedAssistantSetupRuntimeMode(
+            for: .quickStart,
+            requestedRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824,
+            freeStorageGB: 12,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
+    func testAssistantSetupPresentationFallsBackToGGUFForUnsupportedQuickStartMLXOverrideOnBelow12GBPhone() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824,
+            freeStorageGB: 12,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(presentation?.sizeLabel, "5.2 GB")
     }
 
     func testAssistantVariantOptionsHideInstalledUnsupportedCaseAssociateGGUFOnBelow12GBPhone() {
@@ -12992,6 +13097,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(fallback.fileName, "gemma-4-12b-mlx.zip")
         XCTAssertEqual(fallback.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-mlx.zip")
+    }
+
+    func testPreferredAssistantDownloadFallbackFallsBackToQuickStartGGUFOnBelow12GBPhoneWhenMLXIsRequested() {
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(fallback.packId, "gemma-4-e4b-q4")
+        XCTAssertEqual(fallback.runtimeMode, .llamaCppGguf)
     }
 
     func testPreferredAssistantDownloadFallbackHonorsTargetPackId() {
