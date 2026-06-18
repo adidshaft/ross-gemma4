@@ -1084,6 +1084,14 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                     }
 
                     if let latestSavedRecord = status.latestSavedRecord,
+                       let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {
+                        Text(rossLocalized("notes_drafts_metadata_saved_file") + ": " + savedFileName)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let latestSavedRecord = status.latestSavedRecord,
                        let deliveryContract = alphaPrivateAIDeviceComparisonSavedDeliveryContract(latestSavedRecord) {
                         Text(rossLocalized("private_assistant_device_comparison_delivery_contract_label") + ": " + deliveryContract)
                             .font(.caption2)
@@ -1614,6 +1622,14 @@ func alphaPrivateAIDeviceComparisonSavedCapturedAt(
     _ record: AlphaPrivateAIDeviceComparisonProofRecord
 ) -> String {
     record.createdAt.formatted(date: .abbreviated, time: .shortened)
+}
+
+func alphaPrivateAIDeviceComparisonSavedFileName(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String? {
+    let trimmed = record.exportRelativePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    guard !trimmed.isEmpty else { return nil }
+    return URL(fileURLWithPath: trimmed).lastPathComponent
 }
 
 func alphaPrivateAIDeviceComparisonSavedDeliveryContract(

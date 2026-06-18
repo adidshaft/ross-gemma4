@@ -3677,6 +3677,10 @@ func alphaMatterBundleComparisonExportBodyLines(
                 )
             }
             if let latestSavedRecord = status.latestSavedRecord,
+               let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {
+                lines.append("  \(rossLocalized("notes_drafts_metadata_saved_file")): \(savedFileName)")
+            }
+            if let latestSavedRecord = status.latestSavedRecord,
                let deliveryStatus = alphaPrivateAIDeviceComparisonSavedDeliveryStatus(latestSavedRecord) {
                 lines.append("  \(rossLocalized("private_assistant_device_comparison_delivery_status_label")): \(deliveryStatus)")
             }
