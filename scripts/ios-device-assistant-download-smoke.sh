@@ -94,6 +94,37 @@ import sys
     wait_seconds,
 ) = sys.argv[1:]
 
+def normalize_runtime(value):
+    lowered = value.strip().lower()
+    aliases = {
+        "auto": "auto",
+        "gguf": "gemma_local_runtime",
+        "gemma_local_runtime": "gemma_local_runtime",
+        "mlx": "mlx_swift_lm",
+        "mlx_swift_lm": "mlx_swift_lm",
+        "coreai": "apple_foundation_models",
+        "coreml": "apple_foundation_models",
+        "apple_foundation_models": "apple_foundation_models",
+    }
+    return aliases.get(lowered)
+
+expected_runtime = normalize_runtime(selected_runtime)
+if expected_runtime is None:
+    print(
+        f"ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL reason=invalid_requested_runtime runtime={selected_runtime}",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+def parse_fields(line):
+    fields = {}
+    for chunk in line.split()[1:]:
+        if "=" not in chunk:
+            continue
+        key, value = chunk.split("=", 1)
+        fields[key] = value
+    return fields
+
 env = os.environ.copy()
 env.update(
     {
@@ -124,6 +155,7 @@ pass_re = re.compile(r"ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL\b")
 
 outcome = None
+pass_fields = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -139,6 +171,7 @@ try:
         line = raw_line.rstrip("\n")
         print(line)
         if pass_re.search(line):
+            pass_fields = parse_fields(line)
             outcome = "pass"
             process.send_signal(signal.SIGINT)
             break
@@ -154,6 +187,15 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
+    if expected_runtime != "auto":
+        actual_runtime = (pass_fields or {}).get("runtime")
+        if actual_runtime != expected_runtime:
+            print(
+                "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+                f"reason=runtime_pass_mismatch requested={expected_runtime} actual={actual_runtime}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
     sys.exit(0)
 if outcome == "fail":
     sys.exit(1)
