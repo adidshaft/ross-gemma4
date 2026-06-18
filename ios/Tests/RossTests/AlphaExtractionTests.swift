@@ -3615,6 +3615,72 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testStoreRejectsMalformedMLXDirectoryArtifactAtInstall() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-malformed-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: sourceDirectory.appendingPathComponent("config.json"))
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        do {
+            _ = try await store.installDownloadedPackArtifact(
+                for: .caseAssociate,
+                fileName: "gemma-4-12b-it-mlx",
+                downloadedFileURL: sourceDirectory,
+                expectedChecksum: expected.checksum,
+                expectedBytes: expected.bytes,
+                packId: "gemma-4-12b-it-mlx",
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm
+            )
+            XCTFail("Malformed MLX directories should not install.")
+        } catch {
+            XCTAssertEqual((error as NSError).domain, "RossAlphaPack")
+            XCTAssertEqual((error as NSError).code, 4)
+        }
+    }
+
+    @MainActor
+    func testStoreRejectsMalformedZippedMLXDirectoryArtifactAtInstall() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-zipped-malformed-\(UUID().uuidString)", isDirectory: true)
+        let archive = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-zipped-malformed-\(UUID().uuidString).zip")
+        try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: sourceDirectory.appendingPathComponent("config.json"))
+        try FileManager.default.zipItem(at: sourceDirectory, to: archive, shouldKeepParent: false)
+        defer {
+            try? FileManager.default.removeItem(at: sourceDirectory)
+            try? FileManager.default.removeItem(at: archive)
+        }
+
+        let expectedArchive = try XCTUnwrap(alphaModelArtifactVerification(at: archive))
+        do {
+            _ = try await store.installDownloadedPackArtifact(
+                for: .caseAssociate,
+                fileName: "gemma-4-12b-it-mlx.zip",
+                downloadedFileURL: archive,
+                expectedChecksum: expectedArchive.checksum,
+                expectedBytes: expectedArchive.bytes,
+                packId: "gemma-4-12b-it-mlx",
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm
+            )
+            XCTFail("Malformed zipped MLX directories should not install.")
+        } catch {
+            XCTAssertEqual((error as NSError).domain, "RossAlphaPack")
+            XCTAssertEqual((error as NSError).code, 4)
+        }
+    }
+
+    @MainActor
     func testRecoveredInstalledPackFromDiskRestoresMLXDirectoryArtifact() async throws {
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()

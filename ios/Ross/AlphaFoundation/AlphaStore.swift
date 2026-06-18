@@ -387,6 +387,42 @@ func alphaPackagedMLXArchiveArtifact(
     return fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".zip")
 }
 
+func alphaMLXDirectoryArtifactLooksUsable(
+    at directoryURL: URL,
+    fileManager: FileManager = .default
+) -> Bool {
+    var isDirectory: ObjCBool = false
+    guard fileManager.fileExists(atPath: directoryURL.path, isDirectory: &isDirectory),
+          isDirectory.boolValue else {
+        return false
+    }
+    guard fileManager.fileExists(atPath: directoryURL.appendingPathComponent("config.json").path) else {
+        return false
+    }
+
+    let tokenizerCandidates = [
+        "tokenizer.json",
+        "tokenizer.model",
+        "tokenizer_config.json"
+    ]
+    guard tokenizerCandidates.contains(where: {
+        fileManager.fileExists(atPath: directoryURL.appendingPathComponent($0).path)
+    }) else {
+        return false
+    }
+
+    guard let enumerator = fileManager.enumerator(at: directoryURL, includingPropertiesForKeys: nil) else {
+        return false
+    }
+    for case let fileURL as URL in enumerator {
+        if fileURL.pathExtension == "safetensors" ||
+            fileURL.lastPathComponent.hasSuffix(".safetensors.index.json") {
+            return true
+        }
+    }
+    return false
+}
+
 func alphaModelSHA256Hex(
     forFileAt url: URL,
     smokeProgressLabel: String? = nil
@@ -1066,6 +1102,13 @@ actor AlphaRossStore {
                 archiveURL: downloadedFileURL,
                 fileName: fileName
             )
+            guard alphaMLXDirectoryArtifactLooksUsable(at: installSourceURL, fileManager: fileManager) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: "The downloaded MLX model folder is missing required runtime files."]
+                )
+            }
             guard let extractedVerification = alphaModelArtifactVerification(
                 at: installSourceURL,
                 fileManager: fileManager
@@ -1152,6 +1195,15 @@ actor AlphaRossStore {
                 print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_VERIFICATION \(summary)")
             }
             throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+        }
+        if runtimeMode == .mlxSwiftLm || artifactKind == "mlx_directory" {
+            guard alphaMLXDirectoryArtifactLooksUsable(at: downloadedFileURL, fileManager: fileManager) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: "The downloaded MLX model folder is missing required runtime files."]
+                )
+            }
         }
         alphaAssistantDownloadSmokeTrace(
             "verify_artifact_done file=\(fileName) kind=\(artifactKind) runtime=\(runtimeMode.rawValue) bytes=\(directVerification.bytes) checksum=\(directVerification.checksum)"
