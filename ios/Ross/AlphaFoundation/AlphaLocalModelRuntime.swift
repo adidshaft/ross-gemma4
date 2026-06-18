@@ -2731,7 +2731,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             modelPathPresent: modelPath != nil || modelPathLabel == "system-model",
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            supportedTasks: Array(plannedTasks),
+            supportedTasks: status.available ? Array(plannedTasks) : [],
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: .standard,

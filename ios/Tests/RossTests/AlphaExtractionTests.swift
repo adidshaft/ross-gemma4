@@ -20911,6 +20911,28 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderHealthDoesNotAdvertiseTasksWhenUnavailable() {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "system-model",
+            modelPath: nil,
+            checksumVerified: true
+        )
+        let health = provider.runtimeHealth()
+
+        XCTAssertFalse(health.available)
+        XCTAssertTrue(health.supportedTasks.isEmpty)
+        XCTAssertTrue(provider.supportedTasks().isEmpty)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
     func testFoundationProviderReportsSpecificGenerationFailure() async {
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
         let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
