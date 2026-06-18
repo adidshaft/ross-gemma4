@@ -296,7 +296,7 @@ private func alphaRetainedFallbackAssistantManifestURLs(
     fileManager: FileManager = .default
 ) -> Set<URL> {
     let retainedSystemTiers = Set(installedPacks.compactMap { pack -> AlphaCapabilityTier? in
-        guard pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" else {
+        guard alphaPackUsesSystemFoundationModel(pack) else {
             return nil
         }
         return AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
@@ -329,7 +329,6 @@ private func alphaRetainedFallbackAssistantManifestURLs(
                   let manifest = try? decoder.decode(AlphaModelArtifactManifest.self, from: data),
                   manifest.tier == tier,
                   !manifest.developmentOnly,
-                  manifest.runtimeMode != .appleFoundationModels,
                   manifest.artifactKind != "system_model" else {
                 continue
             }
@@ -436,6 +435,23 @@ struct AlphaExpectedDownloadedAssistantArtifact {
     let draftArtifact: AlphaInstalledAssistantDraftArtifact?
 }
 
+func alphaPackUsesSystemFoundationModel(_ pack: AlphaInstalledModelPack) -> Bool {
+    pack.runtimeMode == .appleFoundationModels &&
+        (
+            pack.artifactKind == "system_model" ||
+                pack.installPath == "system-model" ||
+                pack.installPath.hasPrefix("system://")
+        )
+}
+
+private func alphaJobUsesSystemFoundationModel(_ job: AlphaModelDownloadJob) -> Bool {
+    job.runtimeMode == .appleFoundationModels &&
+        (
+            job.artifactKind == "system_model" ||
+                (job.state == .installed && job.totalBytes == 0)
+        )
+}
+
 func alphaExpectedDownloadedAssistantArtifact(for pack: AlphaInstalledModelPack) -> AlphaExpectedDownloadedAssistantArtifact? {
     let fileURL = alphaAbsoluteURL(for: pack.installPath)
     if let manifest = alphaModelArtifactManifest(forFileAt: fileURL),
@@ -520,7 +536,7 @@ func alphaInstalledAssistantPackPassesRuntimeValidation(_ pack: AlphaInstalledMo
     guard !pack.developmentOnly else {
         return true
     }
-    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+    if alphaPackUsesSystemFoundationModel(pack) {
         return AlphaLocalModelRuntime.runtimeHealth(
             activePack: pack,
             requestedTier: pack.tier
@@ -533,7 +549,7 @@ func alphaInstalledAssistantPackPassesRuntimeValidation(_ pack: AlphaInstalledMo
 }
 
 private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
-    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+    if alphaPackUsesSystemFoundationModel(pack) {
         guard !pack.developmentOnly || alphaAllowsDevelopmentModelArtifacts() else {
             return false
         }
@@ -1026,7 +1042,7 @@ private func alphaPreferredInstalledPack(
               alphaInstalledAssistantPackPassesRuntimeValidation(pack) else {
             return false
         }
-        if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+        if alphaPackUsesSystemFoundationModel(pack) {
             return systemRuntimeAvailable(pack)
         }
         return true
@@ -1256,11 +1272,11 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
         state.modelJobs[jobIndex].runtimeMode = preferredPack.runtimeMode
         state.modelJobs[jobIndex].developmentOnly = preferredPack.developmentOnly
         state.modelJobs[jobIndex].failureReason = nil
-        state.modelJobs[jobIndex].bytesDownloaded = preferredPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].bytesDownloaded
-        state.modelJobs[jobIndex].totalBytes = preferredPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].totalBytes
+        state.modelJobs[jobIndex].bytesDownloaded = alphaPackUsesSystemFoundationModel(preferredPack) ? 0 : state.modelJobs[jobIndex].bytesDownloaded
+        state.modelJobs[jobIndex].totalBytes = alphaPackUsesSystemFoundationModel(preferredPack) ? 0 : state.modelJobs[jobIndex].totalBytes
         state.modelJobs[jobIndex].updatedAt = .now
         state.modelJobs[jobIndex].completedAt = state.modelJobs[jobIndex].completedAt ?? .now
-    } else if preferredPack.runtimeMode == .appleFoundationModels || preferredPack.artifactKind == "system_model" {
+    } else if alphaPackUsesSystemFoundationModel(preferredPack) {
         state.modelJobs.insert(
             AlphaModelDownloadJob(
                 sessionId: "system-\(selectedTier.rawValue)",
@@ -2190,7 +2206,7 @@ private func alphaBuildPrivateAISnapshot(
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&recoveredState)
         let activePack = alphaValidatedActivePack(from: recoveredState)
         if let activePack,
-           (activePack.runtimeMode == .appleFoundationModels || activePack.artifactKind == "system_model"),
+           alphaPackUsesSystemFoundationModel(activePack),
            !recoveredState.installedPacks.contains(where: {
                $0.packId == activePack.packId &&
                    $0.runtimeMode == activePack.runtimeMode &&
@@ -3499,13 +3515,11 @@ extension AlphaRossModel {
 
     func removeSystemAssistantShortcutState(from state: inout AlphaPersistedState) {
         state.installedPacks.removeAll { pack in
-            pack.artifactKind == "system_model" ||
-                pack.runtimeMode == .appleFoundationModels ||
+            alphaPackUsesSystemFoundationModel(pack) ||
                 (!alphaAllowsDevelopmentModelArtifacts() && pack.developmentOnly)
         }
         state.modelJobs.removeAll { job in
-            job.artifactKind == "system_model" ||
-                (job.runtimeMode == .appleFoundationModels && (job.state == .installed || job.totalBytes == 0)) ||
+            alphaJobUsesSystemFoundationModel(job) ||
                 (!alphaAllowsDevelopmentModelArtifacts() && job.developmentOnly)
         }
     }

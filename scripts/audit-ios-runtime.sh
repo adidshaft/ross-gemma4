@@ -80,6 +80,11 @@ if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelR
     FAIL=1
 fi
 
+if ! grep -q "alphaPackUsesSystemFoundationModel" ios/Ross/AlphaFoundation/AlphaRossModel+Persistence.swift 2>/dev/null; then
+    echo "❌ FAIL: CoreAI system shortcut and adapter artifact distinction missing."
+    FAIL=1
+fi
+
 if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1

@@ -14260,6 +14260,80 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(details?.draftCompanionLabel)
     }
 
+    func testSystemFoundationPredicateDistinguishesCoreMLAdapterArtifacts() {
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        let adapterPack = AlphaInstalledModelPack(
+            packId: "case-coreml-adapter",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "coreml_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        XCTAssertTrue(alphaPackUsesSystemFoundationModel(systemPack))
+        XCTAssertFalse(alphaPackUsesSystemFoundationModel(adapterPack))
+    }
+
+    @MainActor
+    func testRemovingSystemAssistantShortcutStatePreservesCoreMLAdapterArtifacts() {
+        let model = AlphaRossModel(previewState: .empty())
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        let adapterPack = AlphaInstalledModelPack(
+            packId: "case-coreml-adapter",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "coreml_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+        var state = AlphaPersistedState.empty()
+        state.installedPacks = [systemPack, adapterPack]
+        state.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "system-case-associate",
+                packId: systemPack.packId,
+                tier: systemPack.tier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 0,
+                checksumSha256: systemPack.checksumSha256,
+                artifactKind: systemPack.artifactKind,
+                runtimeMode: systemPack.runtimeMode,
+                developmentOnly: systemPack.developmentOnly,
+                completedAt: .now
+            ),
+            AlphaModelDownloadJob(
+                sessionId: "coreml-case-associate",
+                packId: adapterPack.packId,
+                tier: adapterPack.tier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 4_096,
+                totalBytes: 4_096,
+                checksumSha256: adapterPack.checksumSha256,
+                artifactKind: adapterPack.artifactKind,
+                runtimeMode: adapterPack.runtimeMode,
+                developmentOnly: adapterPack.developmentOnly,
+                completedAt: .now
+            )
+        ]
+
+        model.removeSystemAssistantShortcutState(from: &state)
+
+        XCTAssertFalse(state.installedPacks.contains { $0.packId == systemPack.packId })
+        XCTAssertTrue(state.installedPacks.contains { $0.packId == adapterPack.packId })
+        XCTAssertFalse(state.modelJobs.contains { $0.packId == systemPack.packId })
+        XCTAssertTrue(state.modelJobs.contains { $0.packId == adapterPack.packId })
+    }
+
     func testInstalledPackRuntimeSummaryUsesMeasuredMLXSpeedOnRecentIPhone() {
         let pack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-mlx",
