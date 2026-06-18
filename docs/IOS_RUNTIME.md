@@ -48,6 +48,8 @@ Do not claim release-ready physical iPhone inference until these are recorded:
 
 The MLX lane remains unproven on physical iPhone hardware. It now supports both developer-supplied local directories and ZIP-packaged MLX installs, but physical-device validation is still pending.
 
+Before morning device validation, run `scripts/ios-morning-runtime-checkpoint-plan.sh --device <udid>` to print the short, guarded command sequence without launching the app. The printed order starts with `--list-only`, then GGUF baseline, MTP `mtp_quick` with `--require-draft-acceleration`, MLX quick, and CoreAI/CoreML quick if those installed artifacts are available.
+
 Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI/CoreML benchmark must show `actual_runtime=apple_foundation_models`. In this codebase, `coreai` and `coreml` are smoke/runtime aliases for Apple's Foundation Models path, not separate benchmark lanes. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI/CoreML benchmark.
 
 The Apple built-in/CoreAI/CoreML debug-smoke path now treats `artifactKind=system_model` and `modelPath=system-model` or `system://...` as the system Foundation Models runtime, not as a missing adapter file. A June 19, 2026 simulator check produced a real identity marker with `provider=AlphaFoundationModelsLocalProvider`, `actual_runtime=apple_foundation_models`, and `artifact_path_type=system`; generation still failed in simulator, now categorized as `coreai_generation_failed`, so this is routing evidence only, not a CoreAI/CoreML generation benchmark.

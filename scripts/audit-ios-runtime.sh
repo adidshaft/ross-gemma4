@@ -167,6 +167,16 @@ if [ ! -x scripts/test-ross-smoke-summary.py ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/ios-morning-runtime-checkpoint-plan.sh ]; then
+    echo "❌ FAIL: executable morning runtime checkpoint dry-run planner missing."
+    FAIL=1
+fi
+
+if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan does not include guarded MTP proof."
+    FAIL=1
+fi
+
 if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
     echo "❌ FAIL: CoreAI missing-artifact error category missing."
     FAIL=1
