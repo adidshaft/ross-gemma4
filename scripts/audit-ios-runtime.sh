@@ -199,6 +199,11 @@ if ! grep -q "draftModelPathType: draftModelPathType()" ios/Ross/AlphaFoundation
     FAIL=1
 fi
 
+if ! grep -q "unavailableDraftAccelerationStatus" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: unavailable MLX runtime health does not surface concrete draft status for blocked lanes."
+    FAIL=1
+fi
+
 if ! grep -q "alphaMLXDirectoryArtifactLooksUsable" ios/Ross/AlphaFoundation/AlphaStore.swift 2>/dev/null; then
     echo "❌ FAIL: MLX install-time artifact content guard missing."
     FAIL=1

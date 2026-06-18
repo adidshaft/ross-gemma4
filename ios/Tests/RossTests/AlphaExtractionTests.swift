@@ -19860,7 +19860,9 @@ final class AlphaExtractionTests: XCTestCase {
                 runtimeModeOverride: .mlxSwiftLm,
                 modelPath: "/tmp/ross-mlx-quickstart",
                 modelChecksum: String(repeating: "a", count: 64),
-                modelKind: "mlx_directory"
+                modelKind: "mlx_directory",
+                draftModelPath: "/tmp/ross-missing-mlx-draft",
+                draftModelTokens: 4
             )
         )
 
@@ -19868,6 +19870,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "insufficient_device_memory")
         XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_llama_needs_more_memory"))
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathLabel, "ross-missing-mlx-draft")
+        XCTAssertEqual(health?.draftModelPathType, "missing")
+        XCTAssertEqual(health?.draftAccelerationStatus, "insufficient_device_memory")
     }
 
     func testResolveProviderReturnsExperimentalMLXProviderForDebugDirectory() throws {

@@ -2442,6 +2442,29 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
     let plannedTasks: Set<AlphaLocalModelTask>
     let errorCategory: String
     let explicitOptInEnabled: Bool
+    let draftModelPath: String?
+
+    init(
+        capabilityTier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode,
+        modelPathLabel: String?,
+        checksumVerified: Bool,
+        statusMessage: String,
+        plannedTasks: Set<AlphaLocalModelTask>,
+        errorCategory: String,
+        explicitOptInEnabled: Bool,
+        draftModelPath: String? = nil
+    ) {
+        self.capabilityTier = capabilityTier
+        self.runtimeMode = runtimeMode
+        self.modelPathLabel = modelPathLabel
+        self.checksumVerified = checksumVerified
+        self.statusMessage = statusMessage
+        self.plannedTasks = plannedTasks
+        self.errorCategory = errorCategory
+        self.explicitOptInEnabled = explicitOptInEnabled
+        self.draftModelPath = draftModelPath
+    }
 
     func isAvailable() -> Bool { false }
 
@@ -2457,12 +2480,58 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            accelerationMode: runtimeMode == .appleFoundationModels ? .standard : nil,
-            draftAccelerationStatus: runtimeMode == .appleFoundationModels ? "not_supported" : nil,
+            accelerationMode: unavailableAccelerationMode(),
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: draftModelPathLabel(),
+            draftModelPathType: draftModelPathType(),
+            draftAccelerationStatus: unavailableDraftAccelerationStatus(),
             lastErrorCategory: errorCategory,
             userFacingStatus: statusMessage,
             explicitOptInEnabled: explicitOptInEnabled
         )
+    }
+
+    private func unavailableAccelerationMode() -> AlphaLocalRuntimeAccelerationMode? {
+        switch runtimeMode {
+        case .appleFoundationModels, .mlxSwiftLm:
+            return .standard
+        case .llamaCppGguf, .deterministicDev, .mediapipeLlm, .unavailable:
+            return nil
+        }
+    }
+
+    private func unavailableDraftAccelerationStatus() -> String? {
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return "not_supported"
+        case .mlxSwiftLm:
+            return errorCategory
+        case .llamaCppGguf, .deterministicDev, .mediapipeLlm, .unavailable:
+            return nil
+        }
+    }
+
+    private func configuredDraftURL() -> URL? {
+        guard let draftModelPath else { return nil }
+        let trimmedPath = draftModelPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPath.isEmpty else { return nil }
+        return URL(fileURLWithPath: trimmedPath)
+    }
+
+    private func draftModelPathLabel() -> String? {
+        guard let draftURL = configuredDraftURL() else { return nil }
+        return draftURL.lastPathComponent.nilIfEmpty
+    }
+
+    private func draftModelPathType() -> String? {
+        guard let draftURL = configuredDraftURL() else { return nil }
+        if (try? draftURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            return "directory"
+        }
+        if FileManager.default.fileExists(atPath: draftURL.path) {
+            return "file"
+        }
+        return "missing"
     }
 
     func contextWindowEstimate() -> Int? {
@@ -3144,7 +3213,8 @@ enum AlphaLocalModelRuntime {
                     statusMessage: alphaRuntimeHealthStatus(.llamaNeedsMoreMemory),
                     plannedTasks: Set(AlphaLocalModelTask.allCases),
                     errorCategory: "insufficient_device_memory",
-                    explicitOptInEnabled: true
+                    explicitOptInEnabled: true,
+                    draftModelPath: debug.draftModelPath
                 )
             }
             return AlphaMLXLocalProvider(
