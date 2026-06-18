@@ -3108,6 +3108,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Thermal state",
             "te": "Thermal state"
         ],
+        "private_assistant_runtime_lane_readiness_title": [
+            "en": "Runtime lane readiness",
+            "hi": "Runtime lane readiness",
+            "bn": "Runtime lane readiness",
+            "ta": "Runtime lane readiness",
+            "te": "Runtime lane readiness"
+        ],
+        "private_assistant_runtime_lane_active_now": [
+            "en": "Active now",
+            "hi": "Active now",
+            "bn": "Active now",
+            "ta": "Active now",
+            "te": "Active now"
+        ],
+        "private_assistant_runtime_lane_ready_now": [
+            "en": "Ready now",
+            "hi": "Ready now",
+            "bn": "Ready now",
+            "ta": "Ready now",
+            "te": "Ready now"
+        ],
+        "private_assistant_runtime_lane_needs_setup": [
+            "en": "Needs setup",
+            "hi": "Needs setup",
+            "bn": "Needs setup",
+            "ta": "Needs setup",
+            "te": "Needs setup"
+        ],
+        "private_assistant_runtime_lane_needs_repair": [
+            "en": "Needs repair",
+            "hi": "Needs repair",
+            "bn": "Needs repair",
+            "ta": "Needs repair",
+            "te": "Needs repair"
+        ],
+        "private_assistant_runtime_lane_built_in_unavailable": [
+            "en": "Built-in unavailable on this iPhone",
+            "hi": "Built-in unavailable on this iPhone",
+            "bn": "Built-in unavailable on this iPhone",
+            "ta": "Built-in unavailable on this iPhone",
+            "te": "Built-in unavailable on this iPhone"
+        ],
         "private_assistant_runtime_comparison_export_title": [
             "en": "Private assistant runtime comparison note",
             "hi": "Private assistant runtime comparison note",

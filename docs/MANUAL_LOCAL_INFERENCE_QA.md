@@ -150,7 +150,8 @@ Manual in-app flow:
 14. Use the hidden `Device-proof coverage` summary to confirm whether each lane already has both sample-file evidence and longer-bundle evidence, and note any lane that still lacks one side of the proof.
 15. Read the hidden `Next device steps` list under that coverage summary to see the exact remaining runs still needed for each lane before you save the note.
 16. Confirm the hidden `Device proof profile` shows the expected iPhone model identifier, OS version, memory class, storage state, and current device condition before you save the note.
-17. Tap `Save runtime comparison note` in hidden `Support details` once you have the comparison set you want to keep. This writes a local PDF into `Notes & Drafts` so the device run has a shareable artifact without adding front-stage UI, and now includes the per-runtime readiness snapshot, the combined device-proof coverage summary, and the current iPhone proof profile.
+17. Confirm the hidden `Runtime lane readiness` summary matches reality for this device before you start or save the pass, especially if one lane still needs setup or repair on this iPhone.
+18. Tap `Save runtime comparison note` in hidden `Support details` once you have the comparison set you want to keep. This writes a local PDF into `Notes & Drafts` so the device run has a shareable artifact without adding front-stage UI, and now includes the per-runtime readiness snapshot, the combined device-proof coverage summary, the current iPhone proof profile, and the lane-readiness state at capture time.
 
 If the runtime is unavailable:
 

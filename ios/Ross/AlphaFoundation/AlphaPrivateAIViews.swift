@@ -496,6 +496,19 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         )
     }
 
+    private var laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus] {
+        guard let comparisonTier else { return [] }
+        return alphaPrivateAIRuntimeLaneReadinessStatuses(
+            for: comparisonTier,
+            installedPacks: model.privateAISnapshot.installedPacks,
+            activePack: model.activePack,
+            systemAssistantAvailable: model.systemAssistantHealth(for: comparisonTier)?.available == true,
+            canActivateRuntime: { runtimeMode in
+                model.canActivateAssistantRuntimeImmediately(for: comparisonTier, runtimeMode: runtimeMode)
+            }
+        )
+    }
+
     private var comparisonRuntimeChoiceLabel: String? {
         guard let comparisonTier,
               let selectedRuntimeMode = model.activePack?.runtimeMode ?? model.activeRuntimeHealth?.runtimeMode else {
@@ -645,6 +658,11 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                         .padding(.vertical, 2)
                     }
                 }
+            }
+
+            if !laneReadinessStatuses.isEmpty {
+                Divider()
+                AlphaPrivateAIRuntimeLaneReadinessSection(statuses: laneReadinessStatuses)
             }
 
             if !model.matterBundleComparisonReports.isEmpty {
@@ -892,6 +910,31 @@ private struct AlphaPrivateAIDeviceProofProfileSection: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaPrivateAIRuntimeLaneReadinessSection: View {
+    let statuses: [AlphaPrivateAIRuntimeLaneReadinessStatus]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_runtime_lane_readiness_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            ForEach(Array(statuses.enumerated()), id: \.offset) { _, status in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(status.runtimeMode.displayLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(alphaPrivateAIRuntimeLaneReadinessSummary(status))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .padding(.vertical, 2)
+            }
         }
     }
 }
@@ -1212,6 +1255,70 @@ struct AlphaPrivateAIRuntimeCoverageStatus: Hashable {
 
     var hasSampleProof: Bool { latestSmokeReport != nil }
     var hasLongerBundleProof: Bool { latestComparisonReport != nil }
+}
+
+enum AlphaPrivateAIRuntimeLaneReadinessState: Hashable {
+    case activeNow
+    case readyNow
+    case needsSetup
+    case needsRepair
+    case builtInUnavailable
+}
+
+struct AlphaPrivateAIRuntimeLaneReadinessStatus: Hashable {
+    let runtimeMode: AlphaPackRuntimeMode
+    let state: AlphaPrivateAIRuntimeLaneReadinessState
+}
+
+func alphaPrivateAIRuntimeLaneReadinessStatuses(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack],
+    activePack: AlphaInstalledModelPack?,
+    systemAssistantAvailable: Bool,
+    canActivateRuntime: (AlphaPackRuntimeMode) -> Bool
+) -> [AlphaPrivateAIRuntimeLaneReadinessStatus] {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let orderedModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+
+    return orderedModes.map { runtimeMode in
+        let installedPack = installedPacks.first {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, normalizedTier) &&
+                $0.runtimeMode == runtimeMode
+        }
+        let isActive = activePack?.runtimeMode == runtimeMode &&
+            AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, normalizedTier)
+        let canActivate = canActivateRuntime(runtimeMode)
+
+        let state: AlphaPrivateAIRuntimeLaneReadinessState
+        if isActive && canActivate {
+            state = .activeNow
+        } else if canActivate {
+            state = .readyNow
+        } else if runtimeMode == .appleFoundationModels {
+            state = systemAssistantAvailable ? .readyNow : .builtInUnavailable
+        } else if installedPack != nil {
+            state = .needsRepair
+        } else {
+            state = .needsSetup
+        }
+
+        return AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: runtimeMode, state: state)
+    }
+}
+
+func alphaPrivateAIRuntimeLaneReadinessSummary(_ status: AlphaPrivateAIRuntimeLaneReadinessStatus) -> String {
+    switch status.state {
+    case .activeNow:
+        return rossLocalized("private_assistant_runtime_lane_active_now")
+    case .readyNow:
+        return rossLocalized("private_assistant_runtime_lane_ready_now")
+    case .needsSetup:
+        return rossLocalized("private_assistant_runtime_lane_needs_setup")
+    case .needsRepair:
+        return rossLocalized("private_assistant_runtime_lane_needs_repair")
+    case .builtInUnavailable:
+        return rossLocalized("private_assistant_runtime_lane_built_in_unavailable")
+    }
 }
 
 func alphaPrivateAIRuntimeCoverageStatuses(

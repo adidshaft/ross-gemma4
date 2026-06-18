@@ -2897,6 +2897,16 @@ extension AlphaRossModel {
         let reports = matterBundleComparisonReports
         guard !reports.isEmpty else { return }
         let deviceProofProfile = alphaCurrentPrivateAIDeviceProofProfile()
+        let tier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let laneReadinessStatuses = alphaPrivateAIRuntimeLaneReadinessStatuses(
+            for: tier,
+            installedPacks: privateAISnapshot.installedPacks,
+            activePack: activePack,
+            systemAssistantAvailable: systemAssistantHealth(for: tier)?.available == true,
+            canActivateRuntime: { runtimeMode in
+                canActivateAssistantRuntimeImmediately(for: tier, runtimeMode: runtimeMode)
+            }
+        )
 
         matterBundleComparisonExportRunning = true
         matterBundleComparisonExportErrorMessage = nil
@@ -2910,7 +2920,8 @@ extension AlphaRossModel {
                     bodyLines: alphaMatterBundleComparisonExportBodyLines(
                         reports: reports,
                         smokeReports: localInferenceSmokeReports,
-                        deviceProofProfile: deviceProofProfile
+                        deviceProofProfile: deviceProofProfile,
+                        laneReadinessStatuses: laneReadinessStatuses
                     )
                 )
                 persisted.exports.insert(report, at: 0)
@@ -3429,6 +3440,7 @@ func alphaMatterBundleComparisonExportBodyLines(
     reports: [AlphaMatterBundleComparisonReport],
     smokeReports: [AlphaLocalInferenceSmokeReport] = [],
     deviceProofProfile: AlphaPrivateAIDeviceProofProfile? = nil,
+    laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus] = [],
     generatedAt: Date = .now
 ) -> [String] {
     let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
@@ -3486,6 +3498,15 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("  \(rossLocalized("private_assistant_device_storage_label")): \(deviceProofProfile.freeStorageGB) GB")
         lines.append("  \(rossLocalized("private_assistant_device_low_power_label")): \(deviceProofProfile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))")
         lines.append("  \(rossLocalized("private_assistant_device_thermal_label")): \(deviceProofProfile.thermalCondition)")
+    }
+
+    if !laneReadinessStatuses.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_runtime_lane_readiness_title"))
+        for status in laneReadinessStatuses {
+            lines.append("- \(status.runtimeMode.displayLabel)")
+            lines.append("  \(alphaPrivateAIRuntimeLaneReadinessSummary(status))")
+        }
     }
 
     if !coverageStatuses.isEmpty {

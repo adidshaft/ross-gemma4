@@ -4703,6 +4703,43 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(profile.thermalCondition, "Nominal")
     }
 
+    func testPrivateAIRuntimeLaneReadinessStatusesDescribeActiveReadySetupAndRepair() {
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-gguf",
+            tier: .caseAssociate,
+            installPath: "/tmp/case.gguf",
+            checksumSha256: "abc",
+            runtimeMode: .llamaCppGguf,
+            checksumVerified: true,
+            isActive: true
+        )
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "/tmp/case-mlx",
+            checksumSha256: "def",
+            artifactKind: "mlx_model_directory",
+            runtimeMode: .mlxSwiftLm,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let statuses = alphaPrivateAIRuntimeLaneReadinessStatuses(
+            for: .caseAssociate,
+            installedPacks: [ggufPack, mlxPack],
+            activePack: ggufPack,
+            systemAssistantAvailable: false,
+            canActivateRuntime: { runtimeMode in
+                runtimeMode == .llamaCppGguf
+            }
+        )
+
+        XCTAssertEqual(statuses.map(\.runtimeMode), [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf])
+        XCTAssertEqual(statuses[0].state, .builtInUnavailable)
+        XCTAssertEqual(statuses[1].state, .needsRepair)
+        XCTAssertEqual(statuses[2].state, .activeNow)
+    }
+
     func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
         rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
@@ -5043,11 +5080,17 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             lowPowerModeEnabled: false,
             thermalCondition: "Nominal"
         )
+        let laneReadinessStatuses = [
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .appleFoundationModels, state: .builtInUnavailable),
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .mlxSwiftLm, state: .needsSetup),
+            AlphaPrivateAIRuntimeLaneReadinessStatus(runtimeMode: .llamaCppGguf, state: .readyNow)
+        ]
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
             reports: reports,
             smokeReports: smokeReports,
             deviceProofProfile: deviceProofProfile,
+            laneReadinessStatuses: laneReadinessStatuses,
             generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
         )
         let joined = lines.joined(separator: "\n")
@@ -5057,6 +5100,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Device model: iPhone17,2"))
         XCTAssertTrue(joined.contains("System version: iOS 26.4.1"))
         XCTAssertTrue(joined.contains("Memory: 8 GB"))
+        XCTAssertTrue(joined.contains("Runtime lane readiness"))
+        XCTAssertTrue(joined.contains("Built-in unavailable on this iPhone"))
+        XCTAssertTrue(joined.contains("Needs setup"))
+        XCTAssertTrue(joined.contains("Ready now"))
         XCTAssertTrue(joined.contains("Device-proof coverage"))
         XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
         XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))
@@ -5168,6 +5215,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNil(exportError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
             XCTAssertTrue(imported.document.extractedText?.contains("Device proof profile") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("Runtime lane readiness") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Device-proof coverage") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Next device steps") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
