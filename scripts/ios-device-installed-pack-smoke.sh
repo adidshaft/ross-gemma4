@@ -356,6 +356,13 @@ import sys
 print(json.loads(open(sys.argv[1]).read())["artifactKind"])
 PY
 )"
+selected_bytes="$(python3 - "$selection_json" <<'PY'
+import json
+import sys
+value = json.loads(open(sys.argv[1]).read()).get("bytes")
+print("" if value is None else value)
+PY
+)"
 selected_draft_relative_path="$(python3 - "$selection_json" <<'PY'
 import json
 import sys
@@ -378,13 +385,26 @@ draft = json.loads(open(sys.argv[1]).read()).get("draftArtifact") or {}
 print(draft.get("artifactKind", ""))
 PY
 )"
+selected_draft_bytes="$(python3 - "$selection_json" <<'PY'
+import json
+import sys
+draft = json.loads(open(sys.argv[1]).read()).get("draftArtifact") or {}
+value = draft.get("bytes")
+print("" if value is None else value)
+PY
+)"
 
-python3 - "$selected_runtime_raw" "$selected_artifact_kind" "$selected_relative_path" <<'PY'
+python3 - "$selected_runtime_raw" "$selected_artifact_kind" "$selected_relative_path" "$selected_bytes" <<'PY'
 import sys
 
 runtime = (sys.argv[1] or "").strip()
 artifact_kind = (sys.argv[2] or "").strip()
 relative_path = (sys.argv[3] or "").strip()
+raw_bytes = (sys.argv[4] or "").strip()
+try:
+    artifact_bytes = int(raw_bytes) if raw_bytes else 0
+except ValueError:
+    artifact_bytes = 0
 
 allowed_artifact_kinds = {
     "gemma_local_runtime": {"local_model_artifact", "gguf", "gguf_model"},
@@ -400,6 +420,22 @@ if allowed is not None and artifact_kind not in allowed:
         file=sys.stderr,
     )
     sys.exit(1)
+
+if runtime == "gemma_local_runtime":
+    if not relative_path.lower().endswith(".gguf"):
+        print(
+            "Selected GGUF manifest points at a non-GGUF artifact: "
+            f"relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if artifact_bytes <= 1_000_000:
+        print(
+            "Selected GGUF manifest reports an implausibly small artifact for device smoke: "
+            f"bytes={artifact_bytes} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 if runtime == "apple_foundation_models":
     uses_system_sentinel = relative_path == "system-model" or relative_path.startswith("system://")
@@ -440,14 +476,19 @@ if [[ "$require_draft_acceleration" == "1" ]]; then
     exit 1
   fi
 
-  python3 - "$selected_runtime_raw" "$selected_draft_artifact_kind" "$selected_draft_relative_path" "$selected_pack_id" "$selected_tier_raw" <<'PY'
+  python3 - "$selected_runtime_raw" "$selected_draft_artifact_kind" "$selected_draft_relative_path" "$selected_draft_bytes" "$selected_pack_id" "$selected_tier_raw" <<'PY'
 import sys
 
 runtime = (sys.argv[1] or "").strip()
 draft_artifact_kind = (sys.argv[2] or "").strip()
 draft_relative_path = (sys.argv[3] or "").strip()
-pack_id = (sys.argv[4] or "").strip()
-tier = (sys.argv[5] or "").strip()
+raw_draft_bytes = (sys.argv[4] or "").strip()
+pack_id = (sys.argv[5] or "").strip()
+tier = (sys.argv[6] or "").strip()
+try:
+    draft_bytes = int(raw_draft_bytes) if raw_draft_bytes else 0
+except ValueError:
+    draft_bytes = 0
 
 allowed_draft_kinds = {
     "gemma_local_runtime": {"local_model_artifact", "gguf", "gguf_model"},
@@ -484,6 +525,14 @@ if runtime == "gemma_local_runtime" and not draft_relative_path.lower().endswith
     print(
         "Selected GGUF/MTP manifest points its draft companion at a non-GGUF artifact: "
         f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if runtime == "gemma_local_runtime" and draft_bytes <= 1_000_000:
+    print(
+        "Selected GGUF/MTP manifest reports an implausibly small draft artifact for device smoke: "
+        f"draftArtifact.bytes={draft_bytes} draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
         file=sys.stderr,
     )
     sys.exit(1)
