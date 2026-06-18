@@ -14010,6 +14010,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedRangeUnit() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-gguf-range-unit",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "items",
+            resumeStrategy: "range_request_segments",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedResumeStrategy() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-gguf-resume-strategy",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "multipart_manifest",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
     func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQRepository() {
         let descriptor = AlphaAssistantDownloadDescriptor(
             sessionId: nil,
@@ -14070,6 +14116,46 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerRejectsUnsupportedRangeUnit() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadPath: "/artifacts/gemma-4-12b-it.gguf",
+            downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "records",
+            resumeStrategy: "range_request_segments",
+            segments: []
+        )
+
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerRejectsUnsupportedResumeStrategy() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadPath: "/artifacts/gemma-4-12b-it.gguf",
+            downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "multipart_manifest",
+            segments: []
+        )
+
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
     func testBackendCatalogPackSupportsCurrentInstallerRejectsOptiQPackID() {

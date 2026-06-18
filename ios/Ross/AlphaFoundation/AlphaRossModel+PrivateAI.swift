@@ -510,11 +510,46 @@ private func alphaAssistantTierSupportsInstallerRuntime(
     }
 }
 
+private func alphaAssistantDeliveryMetadataSupportsCurrentInstaller(
+    rangeUnit: String?,
+    resumeStrategy: String?,
+    segmentSizeBytes: Int64?,
+    segmentCount: Int?
+) -> Bool {
+    if let normalizedRangeUnit = rangeUnit?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased(),
+       !normalizedRangeUnit.isEmpty,
+       normalizedRangeUnit != "bytes" {
+        return false
+    }
+    if let normalizedResumeStrategy = resumeStrategy?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased(),
+       !normalizedResumeStrategy.isEmpty,
+       normalizedResumeStrategy != "range_request_segments" {
+        return false
+    }
+    if let segmentSizeBytes, segmentSizeBytes <= 0 {
+        return false
+    }
+    if let segmentCount, segmentCount <= 0 {
+        return false
+    }
+    return true
+}
+
 func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantDownloadDescriptor) -> Bool {
     guard !descriptor.developmentOnly,
           descriptor.sizeBytes > 0,
           descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
           alphaAssistantTierSupportsInstallerRuntime(descriptor.tier, runtimeMode: descriptor.runtimeMode),
+          alphaAssistantDeliveryMetadataSupportsCurrentInstaller(
+            rangeUnit: descriptor.rangeUnit,
+            resumeStrategy: descriptor.resumeStrategy,
+            segmentSizeBytes: descriptor.segmentSizeBytes,
+            segmentCount: descriptor.segmentCount
+          ),
           !descriptor.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return false
     }
@@ -1676,6 +1711,12 @@ func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalog
 func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifact) -> Bool {
     guard artifact.developmentOnly == false,
           artifact.sizeBytes > 0,
+          alphaAssistantDeliveryMetadataSupportsCurrentInstaller(
+            rangeUnit: artifact.rangeUnit,
+            resumeStrategy: artifact.resumeStrategy,
+            segmentSizeBytes: artifact.segmentSizeBytes,
+            segmentCount: artifact.segmentCount
+          ),
           artifact.finalSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
         return false
     }

@@ -30,6 +30,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - Android debug compile and assemble now succeed in the current dirty worktree, so the remaining Android gap is narrowed to real runtime validation rather than baseline build breakage
 - backend production download sessions now prove that the default 12B and 26B iOS GGUF packs preserve their real multi-GB size, byte-range resume metadata, and direct delivery URLs end to end through signed session payloads
 - iOS assistant download descriptors now preserve multi-GB segment and byte-range resume metadata from signed backend sessions, and bundled GGUF defaults now expose the same single-segment range assumptions on the client side
+- iOS installer acceptance now rejects assistant downloads whose delivery metadata falls outside the current client contract, so unsupported range units or resume strategies fail before real download begins
 
 ## Visible Pack Mapping
 
@@ -80,12 +81,14 @@ Most recent commits that define this pause point:
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
+- focused iOS extraction tests now also prove the installer rejects backend artifacts or cached download descriptors that advertise unsupported delivery metadata, instead of carrying them into a broken client download path
 
 Most recent verification commands:
 
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testAskRuntimeSourcePackChunksLongTaggedPageIntoMultipleBlocks|testAskRuntimeSourcePackHonorsChunkSizingFromOverridePolicy)'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones)'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testAssistantDownloadDescriptorPreservesMultiGBSessionDeliveryMetadata|testDefaultAssistantDownloadDescriptorUsesSingleSegmentByteRangeDefaultsForGGUF)'`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testAssistantDownloadDescriptorPreservesMultiGBSessionDeliveryMetadata|testDefaultAssistantDownloadDescriptorUsesSingleSegmentByteRangeDefaultsForGGUF|testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsDirectMLXRepository|testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsMLXDraftCompanion|testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedRangeUnit|testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedResumeStrategy|testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQRepository|testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQDraftCompanion|testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository|testBackendArtifactSupportsCurrentInstallerRejectsUnsupportedRangeUnit|testBackendArtifactSupportsCurrentInstallerRejectsUnsupportedResumeStrategy|testBackendArtifactSupportsCurrentInstallerRejectsOptiQRepository|testBackendArtifactSupportsCurrentInstallerAllowsMLXDraftCompanion)'`
 - `./gradlew :app:compileDebugKotlin`
 - `./gradlew :app:assembleDebug`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
