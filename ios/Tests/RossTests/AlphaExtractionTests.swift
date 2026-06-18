@@ -14056,6 +14056,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsMultiSegmentMetadata() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-gguf-multi-segment",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 3_690_691_024,
+            segmentCount: 2,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsMismatchedSingleSegmentSize() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-gguf-segment-size",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_300_000,
+            segmentCount: 1,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
     func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQRepository() {
         let descriptor = AlphaAssistantDownloadDescriptor(
             sessionId: nil,
@@ -14152,6 +14198,46 @@ final class AlphaExtractionTests: XCTestCase {
             downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
             rangeUnit: "bytes",
             resumeStrategy: "multipart_manifest",
+            segments: []
+        )
+
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerRejectsMultiSegmentMetadata() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 3_690_691_024,
+            segmentCount: 2,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadPath: "/artifacts/gemma-4-12b-it.gguf",
+            downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
+            segments: []
+        )
+
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerRejectsMismatchedSingleSegmentSize() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_300_000,
+            segmentCount: 1,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadPath: "/artifacts/gemma-4-12b-it.gguf",
+            downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
             segments: []
         )
 

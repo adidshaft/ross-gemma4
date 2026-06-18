@@ -514,7 +514,8 @@ private func alphaAssistantDeliveryMetadataSupportsCurrentInstaller(
     rangeUnit: String?,
     resumeStrategy: String?,
     segmentSizeBytes: Int64?,
-    segmentCount: Int?
+    segmentCount: Int?,
+    totalSizeBytes: Int64
 ) -> Bool {
     if let normalizedRangeUnit = rangeUnit?
         .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -536,6 +537,14 @@ private func alphaAssistantDeliveryMetadataSupportsCurrentInstaller(
     if let segmentCount, segmentCount <= 0 {
         return false
     }
+    if let segmentCount, segmentCount != 1 {
+        return false
+    }
+    if let segmentSizeBytes,
+       totalSizeBytes > 0,
+       segmentSizeBytes != totalSizeBytes {
+        return false
+    }
     return true
 }
 
@@ -548,7 +557,8 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
             rangeUnit: descriptor.rangeUnit,
             resumeStrategy: descriptor.resumeStrategy,
             segmentSizeBytes: descriptor.segmentSizeBytes,
-            segmentCount: descriptor.segmentCount
+            segmentCount: descriptor.segmentCount,
+            totalSizeBytes: descriptor.sizeBytes
           ),
           !descriptor.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return false
@@ -1715,7 +1725,8 @@ func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifa
             rangeUnit: artifact.rangeUnit,
             resumeStrategy: artifact.resumeStrategy,
             segmentSizeBytes: artifact.segmentSizeBytes,
-            segmentCount: artifact.segmentCount
+            segmentCount: artifact.segmentCount,
+            totalSizeBytes: artifact.sizeBytes
           ),
           artifact.finalSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
         return false
