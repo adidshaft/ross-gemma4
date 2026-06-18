@@ -15112,6 +15112,8 @@ final class AlphaExtractionTests: XCTestCase {
         let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
             "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "1",
             "ROSS_LOCAL_RUNTIME": "apple_foundation_models",
+            "ROSS_LOCAL_MODEL_TIER": "caseAssociate",
+            "ROSS_LOCAL_MODEL_PACK_ID": "case-coreai-proof",
             "ROSS_LOCAL_MODEL_PATH": "/tmp/ross/model.bundle",
             "ROSS_LOCAL_MODEL_CHECKSUM": String(repeating: "a", count: 64),
             "ROSS_LOCAL_MODEL_KIND": "foundation_adapter",
@@ -15119,6 +15121,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(environment.enableRealInference)
         XCTAssertEqual(environment.runtimeModeOverride, .appleFoundationModels)
+        XCTAssertEqual(environment.tierOverride, .caseAssociate)
+        XCTAssertEqual(environment.packIDOverride, "case-coreai-proof")
         XCTAssertEqual(environment.modelPath, "/tmp/ross/model.bundle")
         XCTAssertEqual(environment.modelChecksum, String(repeating: "a", count: 64))
         XCTAssertEqual(environment.modelKind, "foundation_adapter")
@@ -15142,6 +15146,34 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.modelKind, "mlx_directory")
         XCTAssertEqual(environment.draftModelPath, "/tmp/ross/mlx-draft")
         XCTAssertEqual(environment.draftModelTokens, 4)
+    }
+
+    func testDebugLocalModelSmokePackUsesTierAndPackIDOverrides() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let modelURL = root.appendingPathComponent("case.gguf")
+        try Data("debug".utf8).write(to: modelURL)
+
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .llamaCppGguf,
+            tierOverride: .caseAssociate,
+            packIDOverride: "gemma-4-12b-q4",
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "c", count: 64),
+            modelKind: "local_model_artifact"
+        )
+
+        let pack = try XCTUnwrap(alphaDebugLocalModelSmokePack(environment: environment))
+
+        XCTAssertEqual(pack.packId, "gemma-4-12b-q4")
+        XCTAssertEqual(pack.tier, .caseAssociate)
+        XCTAssertEqual(pack.installPath, modelURL.path)
+        XCTAssertEqual(pack.runtimeMode, .llamaCppGguf)
+        XCTAssertTrue(pack.checksumVerified)
     }
 
     func testModelInvocationStoreRecordsFirstTokenLatencyAndThroughput() {

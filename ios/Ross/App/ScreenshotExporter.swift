@@ -30,6 +30,39 @@ enum RossLocalModelSmokeStatusCopy {
     static let failedStatus = "Private assistant sample-file check failed."
 }
 
+func alphaDebugLocalModelSmokePack(
+    environment: AlphaLocalRuntimeEnvironment,
+    fileManager: FileManager = .default
+) -> AlphaInstalledModelPack? {
+    func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    guard environment.enableRealInference,
+          let modelPath = environment.modelPath,
+          fileManager.fileExists(atPath: modelPath) else {
+        return nil
+    }
+    let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
+    guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
+        return nil
+    }
+    let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"
+    return AlphaInstalledModelPack(
+        packId: nonEmpty(environment.packIDOverride) ?? "debug-local-smoke-\(runtimeMode.rawValue)",
+        tier: environment.tierOverride ?? .quickStart,
+        installPath: modelPath,
+        checksumSha256: checksum,
+        artifactKind: nonEmpty(environment.modelKind) ?? "debug_local_model",
+        runtimeMode: runtimeMode,
+        developmentOnly: false,
+        checksumVerified: nonEmpty(environment.modelChecksum) != nil,
+        minimumAppVersion: "0.1.0-alpha",
+        isActive: true
+    )
+}
+
 struct RossLocalModelSmokeView: View {
     @State private var status = RossLocalModelSmokeStatusCopy.runningStatus
 
@@ -544,28 +577,8 @@ struct RossLocalModelSmokeView: View {
     }
 
     private func debugLocalModelSmokePack() -> AlphaInstalledModelPack? {
-        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
-        guard environment.enableRealInference,
-              let modelPath = environment.modelPath,
-              FileManager.default.fileExists(atPath: modelPath) else {
-            return nil
-        }
-        let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
-        guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
-            return nil
-        }
-        let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"
-        return AlphaInstalledModelPack(
-            packId: "debug-local-smoke-\(runtimeMode.rawValue)",
-            tier: .quickStart,
-            installPath: modelPath,
-            checksumSha256: checksum,
-            artifactKind: nonEmpty(environment.modelKind) ?? "debug_local_model",
-            runtimeMode: runtimeMode,
-            developmentOnly: false,
-            checksumVerified: nonEmpty(environment.modelChecksum) != nil,
-            minimumAppVersion: "0.1.0-alpha",
-            isActive: true
+        alphaDebugLocalModelSmokePack(
+            environment: AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
         )
     }
 

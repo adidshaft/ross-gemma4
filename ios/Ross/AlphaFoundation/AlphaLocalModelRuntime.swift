@@ -2915,6 +2915,8 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
 struct AlphaLocalRuntimeEnvironment: Sendable {
     let enableRealInference: Bool
     let runtimeModeOverride: AlphaPackRuntimeMode?
+    let tierOverride: AlphaCapabilityTier?
+    let packIDOverride: String?
     let modelPath: String?
     let modelChecksum: String?
     let modelKind: String?
@@ -2924,6 +2926,8 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     init(
         enableRealInference: Bool,
         runtimeModeOverride: AlphaPackRuntimeMode?,
+        tierOverride: AlphaCapabilityTier? = nil,
+        packIDOverride: String? = nil,
         modelPath: String?,
         modelChecksum: String?,
         modelKind: String?,
@@ -2932,6 +2936,8 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     ) {
         self.enableRealInference = enableRealInference
         self.runtimeModeOverride = runtimeModeOverride
+        self.tierOverride = tierOverride
+        self.packIDOverride = packIDOverride
         self.modelPath = modelPath
         self.modelChecksum = modelChecksum
         self.modelKind = modelKind
@@ -2947,6 +2953,8 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
         return AlphaLocalRuntimeEnvironment(
             enableRealInference: ["1", "true", "yes", "on"].contains(trimmedValue("ROSS_ENABLE_REAL_LOCAL_INFERENCE")?.lowercased()),
             runtimeModeOverride: parseRuntimeMode(trimmedValue("ROSS_LOCAL_RUNTIME")),
+            tierOverride: parseCapabilityTier(trimmedValue("ROSS_LOCAL_MODEL_TIER")),
+            packIDOverride: trimmedValue("ROSS_LOCAL_MODEL_PACK_ID"),
             modelPath: trimmedValue("ROSS_LOCAL_MODEL_PATH"),
             modelChecksum: trimmedValue("ROSS_LOCAL_MODEL_CHECKSUM"),
             modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND"),
@@ -2958,6 +2966,22 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     private static func parseRuntimeMode(_ raw: String?) -> AlphaPackRuntimeMode? {
         guard let raw else { return nil }
         return AlphaPackRuntimeMode(rawValue: raw)
+    }
+
+    private static func parseCapabilityTier(_ raw: String?) -> AlphaCapabilityTier? {
+        guard let raw else { return nil }
+        switch raw {
+        case AlphaCapabilityTier.flash.rawValue, "flash":
+            return .flash
+        case AlphaCapabilityTier.quickStart.rawValue, "quickStart":
+            return .quickStart
+        case AlphaCapabilityTier.caseAssociate.rawValue, "caseAssociate":
+            return .caseAssociate
+        case AlphaCapabilityTier.seniorDraftingSupport.rawValue, "seniorDraftingSupport":
+            return .seniorDraftingSupport
+        default:
+            return nil
+        }
     }
 
     private static func parsePositiveInt(_ raw: String?) -> Int? {
