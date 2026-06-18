@@ -49,6 +49,45 @@ Ross is an active engineering project, not a packaged App Store release. The rep
 
 The latest verified local inference checkpoint is the iOS Quick Start GGUF lane on a physical iPhone using the patched `llama.swift` / `llama.cpp` runtime. The 12B and 26B tiers are intentionally treated as higher-risk until full download, storage-pressure, thermal, and representative-device validation is complete.
 
+## Physical iPhone Benchmark
+
+Latest physical-device run: **Aman's iPhone, iPhone 15 Pro / iPhone16,1 / iOS 27.0 / 7 GB RAM**. The current checkout built for device, installed successfully, and ran real local GGUF smoke tests through `com.ross.ios`.
+
+| Pack | Profile | Result | Document/query coverage | Runtime |
+| --- | --- | --- | --- | --- |
+| Gemma 4 E4B Quick Start, 5.13 GB | quick | PASS | Source-grounded document query plus general query. | `gemma_local_runtime` |
+| Gemma 4 E4B Quick Start, 5.13 GB | full | PASS | Source, general, Bengali, Hindi, Tamil, and Telugu queries. | `gemma_local_runtime` |
+| Gemma 2 2B baseline, 1.71 GB | quick | PASS | Source-grounded document query plus general query. | Seeded proof pack |
+| Gemma 4 12B Case Associate, 7.37 GB | quick | BLOCKED | Generation did not run because the device failed the memory guard. | `insufficient_device_memory` |
+
+Visible speed numbers from the physical iPhone run:
+
+| Run | Stage | Tokens processed | Duration | Token speed |
+| --- | --- | ---: | ---: | ---: |
+| E4B current app | Source document query | 399 scheduled tokens | 11.91s | 16.12 output tok/s, 33.49 total tok/s |
+| E4B current app | General query | 382 scheduled tokens | 8.76s | 21.92 output tok/s, 43.62 total tok/s |
+| E4B full | Bengali | 432 scheduled tokens | 12.51s | 15.34 output tok/s |
+| E4B full | Hindi | 438 scheduled tokens | 14.77s | 13.00 output tok/s |
+| E4B full | Tamil | 445 scheduled tokens | 15.39s | 12.47 output tok/s |
+| E4B full | Telugu | 473 scheduled tokens | 20.37s | 9.43 output tok/s |
+| 2B baseline | Source document query | 399 scheduled tokens | 6.28s | 30.56 output tok/s |
+| 2B baseline | General query | 382 scheduled tokens | 10.58s | 18.15 output tok/s |
+
+The smoke path currently reports prompt tokens, maximum new tokens, and stage duration. `output tok/s` is calculated as `max_new_tokens / stage duration`; `tokens processed` is `prompt_tokens + max_new_tokens`.
+
+| Metric | E4B Quick Start |
+| --- | ---: |
+| Context window used | 4,096 tokens |
+| Max input chars | 22,000 |
+| GPU layers | 0 |
+| CPU mapped model buffer | 4,873.73 MiB |
+| App resident memory after provider ready | ~3.15 GB |
+| Peak observed resident memory | ~3.95 GB |
+| Device recommended working set | 5,726.63 MB |
+| Draft acceleration | Not active: `acceleration=standard`, `draft_tokens=nil` |
+
+Practical device conclusion: **Quick Start E4B works on iPhone 15 Pro-class hardware; Case Associate 12B should stay gated off for this 7 GB device class.**
+
 ## Architecture
 
 ```mermaid
