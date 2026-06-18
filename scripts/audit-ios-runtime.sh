@@ -202,6 +202,11 @@ if [ ! -x scripts/test-ios-runtime-smoke-preflights.sh ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/test-ios-device-installed-pack-preflights.sh ]; then
+    echo "❌ FAIL: executable installed-pack manifest preflight test script missing."
+    FAIL=1
+fi
+
 if [ ! -x scripts/test-ross-smoke-summary.py ]; then
     echo "❌ FAIL: executable smoke benchmark summary parser test missing."
     FAIL=1
@@ -342,6 +347,7 @@ if [ "$FAIL" -eq 1 ]; then
     exit 1
 else
     scripts/test-ios-runtime-smoke-preflights.sh
+    scripts/test-ios-device-installed-pack-preflights.sh
     scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
