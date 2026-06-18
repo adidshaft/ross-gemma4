@@ -1005,6 +1005,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             runtimeAvailable: availability.available,
             unavailableReason: availability.errorCategory
         )
+        let draftErrorCategory = Self.draftAccelerationErrorCategory(
+            for: draftStatus.status,
+            runtimeAvailable: availability.available
+        )
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -1019,7 +1023,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: draftStatus.label,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftStatus.status,
-            lastErrorCategory: availability.errorCategory,
+            lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
         )
@@ -1428,6 +1432,21 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             draftDirectoryURL.lastPathComponent,
             "active"
         )
+    }
+
+    private static func draftAccelerationErrorCategory(
+        for status: String,
+        runtimeAvailable: Bool
+    ) -> String? {
+        guard runtimeAvailable else { return nil }
+        switch status {
+        case "draft_file_unavailable",
+             "invalid_mlx_draft_artifact",
+             "unsupported_mlx_draft_artifact":
+            return status
+        default:
+            return nil
+        }
     }
 
     private func extractJSON(from text: String) -> String? {

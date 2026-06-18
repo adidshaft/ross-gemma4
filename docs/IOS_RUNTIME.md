@@ -64,6 +64,7 @@ Clear unavailable categories for benchmark triage:
 - `invalid_mlx_artifact`: the requested MLX directory exists but lacks the required MLX runtime files.
 - `invalid_mlx_draft_artifact`: the primary MLX directory is usable, but the configured draft companion is not.
 - MLX identity markers also carry `draft_status`; MLX draft acceleration is reported as `active` only when the primary runtime is available and the draft directory is usable. Invalid or unsupported draft companions stay `acceleration=standard` with a concrete `draft_status` instead of poisoning the whole MLX lane.
+- When the primary MLX runtime is available but the draft companion is missing, invalid, or unsupported, `ROSS_RUNTIME_IDENTITY` keeps `available=true` for MLX and reports the draft-specific `error` category. Treat that as failed MLX draft proof, not failed MLX standard-generation proof.
 - `missing_coreai_artifact`: a configured CoreAI/Foundation adapter path was required but could not be opened.
 - `unsupported_runtime_on_platform`: the Apple built-in/CoreAI runtime is unavailable on the current OS, device, or build.
 - `coreai_generation_failed`: the Apple built-in/CoreAI provider was selected and available, but a generation call failed before returning a usable answer.

@@ -19695,7 +19695,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, true)
-        XCTAssertNil(health?.lastErrorCategory)
+        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_draft_artifact")
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertNil(health?.draftModelPathLabel)
@@ -19725,7 +19725,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, true)
-        XCTAssertNil(health?.lastErrorCategory)
+        XCTAssertEqual(health?.lastErrorCategory, "draft_file_unavailable")
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertNil(health?.draftModelPathLabel)

@@ -177,6 +177,11 @@ if grep -q 'return (false, "invalid_mlx_draft_artifact"' ios/Ross/AlphaFoundatio
     FAIL=1
 fi
 
+if ! grep -q "unsupported_mlx_draft_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: MLX draft companion diagnostics do not surface unsupported draft archive categories."
+    FAIL=1
+fi
+
 if ! grep -q "alphaMLXDirectoryArtifactLooksUsable" ios/Ross/AlphaFoundation/AlphaStore.swift 2>/dev/null; then
     echo "❌ FAIL: MLX install-time artifact content guard missing."
     FAIL=1
