@@ -2940,6 +2940,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Comparison readout",
             "te": "Comparison readout"
         ],
+        "private_assistant_runtime_comparison_export_title": [
+            "en": "Private assistant runtime comparison note",
+            "hi": "Private assistant runtime comparison note",
+            "bn": "Private assistant runtime comparison note",
+            "ta": "Private assistant runtime comparison note",
+            "te": "Private assistant runtime comparison note"
+        ],
+        "save_private_assistant_runtime_comparison_note": [
+            "en": "Save runtime comparison note",
+            "hi": "Runtime comparison note सेव करें",
+            "bn": "Runtime comparison note সেভ করুন",
+            "ta": "Runtime comparison note சேமிக்கவும்",
+            "te": "Runtime comparison note సేవ్ చేయండి"
+        ],
+        "saving_private_assistant_runtime_comparison_note": [
+            "en": "Saving runtime comparison note...",
+            "hi": "Runtime comparison note सेव हो रहा है...",
+            "bn": "Runtime comparison note সেভ হচ্ছে...",
+            "ta": "Runtime comparison note சேமிக்கப்படுகிறது...",
+            "te": "Runtime comparison note సేవ్ అవుతోంది..."
+        ],
         "private_assistant_runtime_summary_fastest_first_response": [
             "en": "Fastest first response: %@ (%@)",
             "hi": "Fastest first response: %@ (%@)",

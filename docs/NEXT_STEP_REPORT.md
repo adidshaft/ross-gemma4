@@ -18,6 +18,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS longer-bundle comparison history now also retains runtime-choice, execution-path, and acceleration detail for each run
 - hidden iOS Support details now summarize the latest longer-bundle result per runtime and call out which of GGUF / MLX / CoreAI still need a run
 - hidden iOS Support details now surface a small comparison readout from the latest per-runtime runs, including current leaders on first response, token speed, and visible coverage
+- hidden iOS Support details can now save the current multi-runtime comparison set into `Notes & Drafts` as a local PDF note, so device QA evidence is easier to keep and share without exposing it in the main flow
 
 ## Visible Pack Mapping
 
@@ -56,6 +57,7 @@ Most recent commits that define this pause point:
 - hidden iOS longer-bundle comparison runs now capture why that runtime was selected and whether draft acceleration was active
 - hidden iOS Support details now make it obvious whether the current comparison set already covers all three runtime lanes
 - hidden iOS Support details now reduce manual comparison work by surfacing current leaders from the latest three-lane evidence set
+- hidden iOS Support details can now export the current comparison evidence set straight into `Notes & Drafts` for later device-proof handoff
 
 Most recent verification commands:
 
@@ -86,5 +88,6 @@ Resume with a focused real-device validation pass instead of more code changes:
 
 1. verify Case Associate on a physical iPhone using the current GGUF lane
 2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
-3. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-4. only then return to Android cleanup and deeper runtime work there
+3. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
+4. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+5. only then return to Android cleanup and deeper runtime work there

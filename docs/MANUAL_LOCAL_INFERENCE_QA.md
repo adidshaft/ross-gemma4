@@ -146,6 +146,7 @@ Manual in-app flow:
    - runtime choice / execution path / acceleration detail shown for that run
 11. Use the hidden `Latest by runtime` summary to confirm whether GGUF, MLX, and CoreAI each have a recent longer-bundle result before making the final ladder decision.
 12. Read the hidden `Comparison readout` after the three runtime lanes have recent results so you can note the current leaders on first response, token speed, and visible source coverage before deciding whether the ladder should change.
+13. Tap `Save runtime comparison note` in hidden `Support details` once you have the comparison set you want to keep. This writes a local PDF into `Notes & Drafts` so the device run has a shareable artifact without adding front-stage UI.
 
 If the runtime is unavailable:
 

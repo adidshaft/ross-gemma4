@@ -782,6 +782,7 @@ struct AlphaStorageSnapshot {
 final class AlphaRossModel {
     static let localInferenceSmokeHistoryLimit = 6
     static let matterBundleComparisonHistoryLimit = 6
+    static let matterBundleComparisonExportKind = "private_assistant_runtime_comparison"
 
     enum DockCommandAction: Hashable {
         case addTask(title: String, dueDate: Date?)
@@ -848,6 +849,8 @@ final class AlphaRossModel {
         persisted.matterBundleComparisonReports ?? []
     }
     var matterBundleComparisonRunning = false
+    var matterBundleComparisonExportRunning = false
+    var matterBundleComparisonExportErrorMessage: String?
     var privateAISnapshot = AlphaPrivateAISnapshot()
     var refreshingCaseOverviewIDs: Set<UUID> = []
     var loaded = false

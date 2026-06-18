@@ -2828,6 +2828,56 @@ extension AlphaRossModel {
         persisted.matterBundleComparisonReports = reports
     }
 
+    func saveMatterBundleComparisonExport() {
+        guard !matterBundleComparisonExportRunning else { return }
+
+        let reports = matterBundleComparisonReports
+        guard !reports.isEmpty else { return }
+
+        matterBundleComparisonExportRunning = true
+        matterBundleComparisonExportErrorMessage = nil
+
+        Task {
+            do {
+                let report = try await store.createPDFExport(
+                    title: rossLocalized("private_assistant_runtime_comparison_export_title"),
+                    kind: Self.matterBundleComparisonExportKind,
+                    caseId: nil,
+                    bodyLines: alphaMatterBundleComparisonExportBodyLines(reports: reports)
+                )
+                persisted.exports.insert(report, at: 0)
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Local export generated",
+                        detail: "\(Self.matterBundleComparisonExportKind) was generated locally for advocate review.",
+                        purpose: .local_only,
+                        payloadClass: .local_only,
+                        endpointLabel: "device://export",
+                        success: true
+                    ),
+                    at: 0
+                )
+                persist()
+            } catch {
+                matterBundleComparisonExportErrorMessage = rossLocalized("ask_could_not_create_local_draft")
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Export generation failed",
+                        detail: "Ross could not write the local report file.",
+                        purpose: .local_only,
+                        payloadClass: .local_only,
+                        endpointLabel: "device://export",
+                        success: false
+                    ),
+                    at: 0
+                )
+                persist()
+            }
+
+            matterBundleComparisonExportRunning = false
+        }
+    }
+
     func advanceOnboarding() {
         selectedTier = preferredSelectedAssistantTier(fallbackSelectedTier: selectedTier)
         finishPackSetup()
@@ -3305,4 +3355,99 @@ extension AlphaRossModel {
             }
         }
     }
+}
+
+func alphaMatterBundleComparisonExportBodyLines(
+    reports: [AlphaMatterBundleComparisonReport],
+    generatedAt: Date = .now
+) -> [String] {
+    let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
+    let missingRuntimeLabels = alphaMatterBundleMissingRuntimeLabels(reports)
+    let decisionHints = alphaMatterBundleDecisionHints(reports)
+    let generatedLine = String(
+        format: rossLocalized("export_generated"),
+        generatedAt.formatted(date: .abbreviated, time: .shortened)
+    )
+
+    var lines = [
+        rossLocalized("private_assistant_runtime_comparison_export_title"),
+        generatedLine,
+        rossLocalized("export_draft_review"),
+        ""
+    ]
+
+    if missingRuntimeLabels.isEmpty {
+        lines.append(rossLocalized("private_assistant_runtime_summary_ready"))
+    } else {
+        lines.append(
+            String(
+                format: rossLocalized("private_assistant_runtime_summary_missing"),
+                missingRuntimeLabels.joined(separator: ", ")
+            )
+        )
+    }
+
+    if !decisionHints.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_runtime_summary_readout"))
+        lines.append(contentsOf: decisionHints.map { "- \($0)" })
+    }
+
+    if !latestReports.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_runtime_summary_title"))
+        for report in latestReports {
+            lines.append("- \(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))")
+            lines.append("  \(rossLocalized("status")): \(alphaMatterBundleComparisonStatusLabel(report))")
+            lines.append("  \(rossLocalized("schema_valid")): \(report.schemaValid ? rossLocalized("yes") : rossLocalized("no"))")
+            lines.append("  \(rossLocalized("selected_files_count"))".replacingOccurrences(of: "%d", with: "\(report.selectedDocumentCount)"))
+            lines.append("  \(rossLocalized("source_blocks_count"))".replacingOccurrences(of: "%d", with: "\(report.sourceBlockCount)"))
+            lines.append("  \(rossLocalized("source_refs_count"))".replacingOccurrences(of: "%d", with: "\(report.sourceRefsReturned)"))
+
+            if let assistantDisplayName = report.assistantDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !assistantDisplayName.isEmpty {
+                lines.append("  \(rossLocalized("assistant_used")): \(assistantDisplayName)")
+            }
+            if let runtimeSelectionReason = report.runtimeSelectionReason?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !runtimeSelectionReason.isEmpty {
+                lines.append("  \(rossLocalized("runtime_choice")): \(runtimeSelectionReason)")
+            }
+            if let executionPathLabel = report.executionPathLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !executionPathLabel.isEmpty {
+                lines.append("  \(rossLocalized("execution_path")): \(executionPathLabel)")
+            }
+            if let accelerationSummary = report.accelerationSummary?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !accelerationSummary.isEmpty {
+                lines.append("  \(rossLocalized("runtime_acceleration")): \(accelerationSummary)")
+            }
+            if let durationMs = report.durationMs {
+                lines.append("  \(rossLocalized("approx_time")): \(alphaAssistantDurationLabel(milliseconds: durationMs))")
+            }
+            if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+                lines.append("  \(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")
+            }
+            if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+                lines.append("  \(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
+            }
+            if let answerHeadline = report.answerHeadline?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !answerHeadline.isEmpty {
+                lines.append("  \(answerHeadline)")
+            }
+            if let answerPreview = report.answerPreview?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !answerPreview.isEmpty {
+                lines.append("  \(rossLocalized("preview")): \(answerPreview)")
+            }
+            if let needsReviewWarning = report.needsReviewWarning?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !needsReviewWarning.isEmpty {
+                lines.append("  \(rossLocalized("needs_review")): \(needsReviewWarning)")
+            }
+            if !report.message.isEmpty {
+                lines.append("  \(report.message)")
+            }
+            lines.append("")
+        }
+    }
+
+    lines.append(rossLocalized("export_generated_locally_verify"))
+    return lines
 }

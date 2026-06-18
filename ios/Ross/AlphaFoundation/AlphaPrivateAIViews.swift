@@ -468,6 +468,10 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         model.matterBundleComparisonReport ?? model.matterBundleComparisonReports.first
     }
 
+    private var latestMatterBundleComparisonExport: AlphaExportedReport? {
+        model.persisted.exports.first { $0.kind == AlphaRossModel.matterBundleComparisonExportKind }
+    }
+
     private var comparisonTier: AlphaCapabilityTier? {
         model.activePack?.tier ?? model.persisted.settings.activeTier ?? model.selectedTier
     }
@@ -636,6 +640,40 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 AlphaMatterBundleComparisonRuntimeSummarySection(
                     reports: model.matterBundleComparisonReports
                 )
+
+                Button(
+                    model.matterBundleComparisonExportRunning
+                    ? rossLocalized("saving_private_assistant_runtime_comparison_note")
+                    : rossLocalized("save_private_assistant_runtime_comparison_note")
+                ) {
+                    model.saveMatterBundleComparisonExport()
+                }
+                .rossGlassButtonStyle(tint: Color.rossAccent)
+                .disabled(model.matterBundleComparisonExportRunning)
+
+                if let latestMatterBundleComparisonExport {
+                    VStack(alignment: .leading, spacing: 8) {
+                        AlphaSettingsValueRow(
+                            label: rossLocalized("notes_drafts_metadata_saved_file"),
+                            value: URL(fileURLWithPath: latestMatterBundleComparisonExport.relativePath).lastPathComponent
+                        )
+                        AlphaSettingsValueRow(
+                            label: rossLocalized("notes_drafts_metadata_created"),
+                            value: latestMatterBundleComparisonExport.createdAt.formatted(date: .abbreviated, time: .shortened)
+                        )
+                        Text(rossLocalized("ask_open_notes_drafts_to_review_pdf"))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.60))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let exportErrorMessage = model.matterBundleComparisonExportErrorMessage, !exportErrorMessage.isEmpty {
+                    Text(exportErrorMessage)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Divider()

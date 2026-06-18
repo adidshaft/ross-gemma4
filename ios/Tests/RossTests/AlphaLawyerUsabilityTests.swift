@@ -4737,6 +4737,140 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(hints.contains(where: { $0.contains("Cleanest recent run: Gemma GGUF") || $0.contains("Cleanest recent run: MLX") }))
     }
 
+    func testMatterBundleComparisonExportBodyLinesIncludeReadoutAndLatestRuntimeDetails() {
+        let reports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 10,
+                sourceRefsReturned: 3,
+                assistantDisplayName: "Gemma GGUF",
+                runtimeSelectionReason: "GGUF preferred for stable bundled setup",
+                executionPathLabel: "llama.cpp direct",
+                accelerationSummary: nil,
+                answerHeadline: "Retention and filing risks",
+                answerPreview: "The bundle points to queue delay and a retention mismatch.",
+                needsReviewWarning: nil,
+                durationMs: 2200,
+                timeToFirstTokenMs: 420,
+                estimatedOutputTokensPerSecond: 13.8,
+                message: "gguf latest"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 8,
+                sourceRefsReturned: 2,
+                assistantDisplayName: "MLX Gemma",
+                runtimeSelectionReason: "MLX available for the same tier",
+                executionPathLabel: "MLX with draft acceleration",
+                accelerationSummary: "Draft model x4",
+                answerHeadline: "Export queue priority",
+                answerPreview: "The answer emphasizes queue priority and citation cleanup.",
+                needsReviewWarning: "Needs advocate review",
+                durationMs: 1700,
+                timeToFirstTokenMs: 260,
+                estimatedOutputTokensPerSecond: 18.5,
+                message: "mlx latest"
+            )
+        ]
+
+        let lines = alphaMatterBundleComparisonExportBodyLines(
+            reports: reports,
+            generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
+        )
+        let joined = lines.joined(separator: "\n")
+
+        XCTAssertTrue(joined.contains("Private assistant runtime comparison note"))
+        XCTAssertTrue(joined.contains("Still needed for this comparison: CoreAI"))
+        XCTAssertTrue(joined.contains("Comparison readout"))
+        XCTAssertTrue(joined.contains("Fastest token speed: MLX"))
+        XCTAssertTrue(joined.contains("Latest by runtime"))
+        XCTAssertTrue(joined.contains("llama.cpp direct"))
+        XCTAssertTrue(joined.contains("Preview: The answer emphasizes queue priority and citation cleanup."))
+        XCTAssertTrue(joined.contains("Needs review: Needs advocate review"))
+    }
+
+    func testSaveMatterBundleComparisonExportCreatesNotesDraft() async throws {
+        try await withRestoredStore { store in
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            await MainActor.run {
+                model.recordMatterBundleComparisonReport(
+                    AlphaMatterBundleComparisonReport(
+                        ran: true,
+                        runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                        schemaValid: true,
+                        selectedDocumentCount: 3,
+                        sourceBlockCount: 7,
+                        sourceRefsReturned: 2,
+                        assistantDisplayName: "CoreAI",
+                        runtimeSelectionReason: "Built-in Apple model was ready",
+                        executionPathLabel: "Foundation Models built-in",
+                        accelerationSummary: nil,
+                        answerHeadline: "CoreAI result",
+                        answerPreview: "CoreAI covered the bundle with fewer visible sources.",
+                        needsReviewWarning: nil,
+                        durationMs: 1600,
+                        timeToFirstTokenMs: 310,
+                        estimatedOutputTokensPerSecond: 12.4,
+                        message: "coreai latest"
+                    )
+                )
+                model.recordMatterBundleComparisonReport(
+                    AlphaMatterBundleComparisonReport(
+                        ran: true,
+                        runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                        schemaValid: true,
+                        selectedDocumentCount: 3,
+                        sourceBlockCount: 9,
+                        sourceRefsReturned: 3,
+                        assistantDisplayName: "Gemma GGUF",
+                        runtimeSelectionReason: "GGUF selected for the current tier",
+                        executionPathLabel: "llama.cpp direct",
+                        accelerationSummary: nil,
+                        answerHeadline: "GGUF result",
+                        answerPreview: "GGUF covered the overwrite and retention issue.",
+                        needsReviewWarning: nil,
+                        durationMs: 2100,
+                        timeToFirstTokenMs: 390,
+                        estimatedOutputTokensPerSecond: 14.0,
+                        message: "gguf latest"
+                    )
+                )
+                model.saveMatterBundleComparisonExport()
+            }
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run {
+                    !model.matterBundleComparisonExportRunning &&
+                        model.persisted.exports.contains { $0.kind == AlphaRossModel.matterBundleComparisonExportKind }
+                }
+            }
+
+            let export = try await MainActor.run {
+                try XCTUnwrap(
+                    model.persisted.exports.first { $0.kind == AlphaRossModel.matterBundleComparisonExportKind }
+                )
+            }
+            let exportURL = await MainActor.run { model.exportURL(for: export) }
+            let ledgerTitle = await MainActor.run { model.persisted.ledgerEntries.first?.title }
+            let exportError = await MainActor.run { model.matterBundleComparisonExportErrorMessage }
+
+            XCTAssertEqual(export.title, rossLocalized("private_assistant_runtime_comparison_export_title"))
+            XCTAssertEqual(ledgerTitle, "Local export generated")
+            XCTAssertNil(exportError)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
+        }
+    }
+
     func testAssistantComparisonRuntimeOptionsOnlyKeepImmediatelyAvailableRuntimes() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
