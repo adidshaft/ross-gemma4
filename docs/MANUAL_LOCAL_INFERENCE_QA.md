@@ -8,14 +8,17 @@ This runbook exists to keep the repo honest about what was actually proven.
 
 ## Latest observed status
 
-Observed on 2026-06-02:
+Observed through 2026-06-18:
 
 - iOS Swift tests and simulator build passed for the Gemma GGUF download/install/readiness plumbing.
 - iOS simulator real Gemma GGUF smoke passed with `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf` (`e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`) using `ROSS_LOCAL_RUNTIME=gemma_local_runtime`.
 - The smoke passed English source grounding, Bengali Bangla-script source grounding, Hindi Devanagari source grounding, and a general cautious answer.
 - A stricter rerun later on 2026-06-02 emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=89.36s ... source_native_model=true bengali_native_model=true hindi_native_model=true general_native_model=true`.
 - Native Bengali and Hindi behavior are proven in that simulator smoke; no language-preserving fallback was used in the latest pass.
-- A physical/device QA pass over user-imported files is still required before claiming App Store/device performance.
+- A June 18, 2026 cabled-device helper run on Aman's physical iPhone passed with the 2B GGUF artifact, proving the real physical-device GGUF path itself.
+- A later June 18, 2026 cabled-device helper run with the intended `gemma-4-12b-it-UD-Q4_K_XL.gguf` artifact reached the phone and entered real GGUF load on the A17 Pro GPU, but failed with `mmap failed: Cannot allocate memory` before any smoke stage could generate output.
+- The observed physical iPhone in that 12B attempt reported `System physical memory: 7 GB`, so this run should be treated as below-target evidence for the current Case Associate 12B footprint rather than as a successful pack proof.
+- A physical/device QA pass over user-imported files is still required before claiming App Store/device performance on a target that can actually run the intended 12B pack.
 
 ## Canonical environment names
 
@@ -122,7 +125,9 @@ scripts/ios-device-gguf-smoke.sh \
 
 - The helper seeds the GGUF plus a manifest into `Library/Application Support/RossAlpha/model-packs/<tier>/`, resolves the absolute device-side model path with a probe copy, then launches Ross with `--local-model-smoke` and the required `DEVICECTL_CHILD_ROSS_*` environment variables.
 - A June 18, 2026 run on Aman's physical iPhone (`iPhone16,1`, iOS `27.0`) passed this flow with the 2B GGUF artifact and emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start`.
-- This helper proves the physical GGUF runtime path itself. It does not replace the still-needed `Case Associate` 12B proof on device.
+- A later June 18, 2026 run with `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf` under `--tier caseAssociate` proved that the intended 12B artifact can be staged and opened on the phone, but it failed with `llama_model_load: error loading model: mmap failed: Cannot allocate memory`.
+- That same 12B run also showed a checksum-contract nuance worth preserving for resume work: the locally-downloaded file hashed to `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, while current repo metadata still records `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`.
+- This helper proves the physical GGUF runtime path itself. It does not replace the still-needed successful `Case Associate` 12B proof on a device class that can actually fit that pack.
 
 The current `--local-model-smoke` pass requires all of these from the real provider:
 

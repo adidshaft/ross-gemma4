@@ -1,5 +1,46 @@
 # Real Model QA Results
 
+## 2026-06-18 physical iPhone intended 12B GGUF attempt
+
+- Branch: `main`
+- Platform: physical iPhone (`Aman's iPhone`, `iPhone16,1`, iOS `27.0`)
+- Runtime mode: `gemma_local_runtime`
+- Intended visible tier under test: `Case Associate`
+- Model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
+- Model bytes observed locally: `7366421920`
+- Model SHA-256 observed locally: `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`
+- Repo metadata SHA-256 currently recorded for this artifact: `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
+- Live HEAD nuance observed on June 18, 2026:
+  - the Hugging Face resolver still advertised `content-length: 7366421920`
+  - `x-linked-etag` matched the local file hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`
+  - the final CDN `etag` still showed `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
+- Smoke helper: `/Users/amanpandey/projects/ross-gemma4/scripts/ios-device-gguf-smoke.sh`
+- Smoke command:
+  - `scripts/ios-device-gguf-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --tier caseAssociate --stage-timeout 120`
+- Whether model files were committed: No
+- Whether the intended 12B GGUF reached the physical device: Yes
+- Whether generation passed on the physical device: No
+- Observed device/runtime details:
+  - the app resolved and opened the intended `Gemma-4-12B-It` GGUF from the physical app container on device
+  - the smoke run reported `System physical memory: 7 GB`
+  - Metal reported `recommendedMaxWorkingSetSize  =  5726.63 MB`
+  - the active GPU path was `Apple A17 Pro GPU`
+- Failure signature:
+  - `llama_model_load: error loading model: mmap failed: Cannot allocate memory`
+  - `ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime tier=quick_start elapsed=98.53s source_error=inference_failed bengali_error=inference_failed hindi_error=inference_failed tamil_error=inference_failed telugu_error=inference_failed general_error=inference_failed ... source_native_model=true ... general_native_model=true`
+- Observed physical-device behavior:
+  - the helper successfully seeded the full 12B artifact plus manifest into `Library/Application Support/RossAlpha/model-packs/caseAssociate/`
+  - Ross resolved the seeded debug pack, constructed the GGUF provider path, and repeatedly attempted real model loading for each smoke stage
+  - every stage failed before generation because the model could not be memory-mapped on this 7 GB-class iPhone
+  - the fail marker still reported `tier=quick_start` even though the seeded artifact lived under the `caseAssociate` slot, so the smoke tier label should not be treated as the authored pack slot in this run
+- What this proves:
+  - the intended Case Associate 12B artifact is reachable from the current cabled-device helper and the app can begin real on-device load on Aman's iPhone
+  - the current `gemma-4-12b-it-UD-Q4_K_XL.gguf` footprint does not fit this physical iPhone's available memory budget
+- What is still not proven:
+  - successful physical-device generation for the intended 12B artifact on a 12 GB+ iPhone class target
+  - physical iPhone download/resume/verify/activate of the production 12B artifact with the current checksum contract
+  - the longer-bundle comparison loop across GGUF, MLX, and CoreAI on a device that can actually run the intended 12B pack
+
 ## 2026-06-18 physical iPhone GGUF smoke via cabled-device helper
 
 - Branch: `main`
