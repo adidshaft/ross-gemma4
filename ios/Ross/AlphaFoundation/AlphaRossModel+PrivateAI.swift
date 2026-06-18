@@ -1863,11 +1863,15 @@ struct AlphaAssistantDownloadDeliveryVerificationSummary: Hashable, Sendable {
     let statusLabel: String
     let lastCheckedLabel: String?
     let isVerifiedOnDevice: Bool
+    let consumptionStatusLabel: String
+    let isConsumedOnDevice: Bool
 }
 
 func alphaAssistantDownloadDeliveryVerificationSummary(
     _ descriptor: AlphaAssistantDownloadDescriptor,
-    ledgerEntries: [AlphaPrivacyLedgerEntry]
+    ledgerEntries: [AlphaPrivacyLedgerEntry],
+    smokeReports: [AlphaLocalInferenceSmokeReport] = [],
+    comparisonReports: [AlphaMatterBundleComparisonReport] = []
 ) -> AlphaAssistantDownloadDeliveryVerificationSummary {
     let latestRelevantEntry = ledgerEntries.first {
         switch $0.title {
@@ -1911,6 +1915,11 @@ func alphaAssistantDownloadDeliveryVerificationSummary(
     }
 
     let lastCheckedLabel = latestRelevantEntry?.timestamp.formatted(date: .abbreviated, time: .shortened)
+    let consumptionSummary = alphaAssistantDownloadConsumptionSummary(
+        descriptor,
+        smokeReports: smokeReports,
+        comparisonReports: comparisonReports
+    )
 
     return AlphaAssistantDownloadDeliveryVerificationSummary(
         fileName: descriptor.fileName,
@@ -1918,7 +1927,9 @@ func alphaAssistantDownloadDeliveryVerificationSummary(
         contractLabel: contractLabel,
         statusLabel: statusLabel,
         lastCheckedLabel: lastCheckedLabel,
-        isVerifiedOnDevice: isVerifiedOnDevice
+        isVerifiedOnDevice: isVerifiedOnDevice,
+        consumptionStatusLabel: consumptionSummary.statusLabel,
+        isConsumedOnDevice: consumptionSummary.isConsumedOnDevice
     )
 }
 
@@ -1926,7 +1937,9 @@ func alphaAssistantPreferredDeliveryVerificationSummary(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]?,
-    ledgerEntries: [AlphaPrivacyLedgerEntry]
+    ledgerEntries: [AlphaPrivacyLedgerEntry],
+    smokeReports: [AlphaLocalInferenceSmokeReport] = [],
+    comparisonReports: [AlphaMatterBundleComparisonReport] = []
 ) -> AlphaAssistantDownloadDeliveryVerificationSummary {
     let descriptor = alphaPreferredAssistantDownloadFallback(
         for: tier,
@@ -1935,8 +1948,46 @@ func alphaAssistantPreferredDeliveryVerificationSummary(
     )
     return alphaAssistantDownloadDeliveryVerificationSummary(
         descriptor,
-        ledgerEntries: ledgerEntries
+        ledgerEntries: ledgerEntries,
+        smokeReports: smokeReports,
+        comparisonReports: comparisonReports
     )
+}
+
+private func alphaAssistantDownloadConsumptionSummary(
+    _ descriptor: AlphaAssistantDownloadDescriptor,
+    smokeReports: [AlphaLocalInferenceSmokeReport],
+    comparisonReports: [AlphaMatterBundleComparisonReport]
+) -> (statusLabel: String, isConsumedOnDevice: Bool) {
+    let runtimeRawValue = descriptor.runtimeMode.rawValue
+    let needsSourceProvenance = descriptor.runtimeMode != .appleFoundationModels
+
+    let latestSmokeByRuntime = alphaLocalInferenceSmokeLatestReportsByRuntime(smokeReports)
+    let latestComparisonsByRuntime = alphaMatterBundleLatestReportsByRuntime(comparisonReports)
+
+    let hasSmokeConsumption = latestSmokeByRuntime.contains { report in
+        guard report.ran, report.runtimeUsed == runtimeRawValue else { return false }
+        guard needsSourceProvenance else { return true }
+        let sourceLabel = report.assistantSourceLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !sourceLabel.isEmpty
+    }
+    let hasComparisonConsumption = latestComparisonsByRuntime.contains { report in
+        guard report.ran, report.runtimeUsed == runtimeRawValue else { return false }
+        guard needsSourceProvenance else { return true }
+        let sourceLabel = report.assistantSourceLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !sourceLabel.isEmpty
+    }
+
+    switch (hasSmokeConsumption, hasComparisonConsumption) {
+    case (true, true):
+        return (rossLocalized("private_assistant_download_consumption_status_sample_and_bundle"), true)
+    case (true, false):
+        return (rossLocalized("private_assistant_download_consumption_status_sample"), true)
+    case (false, true):
+        return (rossLocalized("private_assistant_download_consumption_status_bundle"), true)
+    case (false, false):
+        return (rossLocalized("private_assistant_download_consumption_status_pending"), false)
+    }
 }
 
 extension AlphaRossModel {

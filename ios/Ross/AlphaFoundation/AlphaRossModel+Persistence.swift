@@ -1844,6 +1844,8 @@ func alphaPrivateAIDeviceComparisonProofRecord(
         downloadDeliveryVerified: downloadDeliverySummary?.isVerifiedOnDevice ?? false,
         downloadDeliveryStatusLabel: downloadDeliverySummary?.statusLabel,
         downloadDeliveryContractLabel: downloadDeliverySummary?.contractLabel,
+        downloadConsumptionVerified: downloadDeliverySummary?.isConsumedOnDevice ?? false,
+        downloadConsumptionStatusLabel: downloadDeliverySummary?.consumptionStatusLabel,
         exportRelativePath: exportRelativePath,
         createdAt: createdAt
     )
@@ -3078,7 +3080,9 @@ extension AlphaRossModel {
             for: tier,
             preferredRuntimeMode: deliveryPreferredRuntimeMode,
             cachedDownloads: persisted.cachedAssistantDownloads,
-            ledgerEntries: persisted.ledgerEntries
+            ledgerEntries: persisted.ledgerEntries,
+            smokeReports: localInferenceSmokeReports,
+            comparisonReports: reports
         )
         let provisionalDeviceComparisonProofRecord = alphaPrivateAIDeviceComparisonProofRecord(
             smokeReports: localInferenceSmokeReports,
@@ -3698,6 +3702,7 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("  \(rossLocalized("assistant_model_source")): \(downloadDeliverySummary.sourceLabel)")
         lines.append("  \(rossLocalized("private_assistant_download_delivery_contract_label")): \(downloadDeliverySummary.contractLabel)")
         lines.append("  \(rossLocalized("private_assistant_download_delivery_status_label")): \(downloadDeliverySummary.statusLabel)")
+        lines.append("  \(rossLocalized("private_assistant_download_consumption_label")): \(downloadDeliverySummary.consumptionStatusLabel)")
         if let lastCheckedLabel = downloadDeliverySummary.lastCheckedLabel {
             lines.append("  \(rossLocalized("private_assistant_download_delivery_last_checked_label")): \(lastCheckedLabel)")
         }
@@ -3750,6 +3755,10 @@ func alphaMatterBundleComparisonExportBodyLines(
             if let latestSavedRecord = status.latestSavedRecord,
                let deliveryContract = alphaPrivateAIDeviceComparisonSavedDeliveryContract(latestSavedRecord) {
                 lines.append("  \(rossLocalized("private_assistant_device_comparison_delivery_contract_label")): \(deliveryContract)")
+            }
+            if let latestSavedRecord = status.latestSavedRecord,
+               let consumptionStatus = alphaPrivateAIDeviceComparisonSavedConsumptionStatus(latestSavedRecord) {
+                lines.append("  \(rossLocalized("private_assistant_device_comparison_consumption_status_label")): \(consumptionStatus)")
             }
         }
 

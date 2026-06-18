@@ -491,7 +491,9 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
             for: comparisonTier,
             preferredRuntimeMode: preferredRuntimeMode,
             cachedDownloads: model.persisted.cachedAssistantDownloads,
-            ledgerEntries: model.persisted.ledgerEntries
+            ledgerEntries: model.persisted.ledgerEntries,
+            smokeReports: model.localInferenceSmokeReports,
+            comparisonReports: model.matterBundleComparisonReports
         )
     }
 
@@ -982,6 +984,10 @@ private struct AlphaAssistantDownloadDeliverySummarySection: View {
             AlphaSettingsValueRow(
                 label: rossLocalized("private_assistant_download_delivery_status_label"),
                 value: summary.statusLabel
+            )
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_download_consumption_label"),
+                value: summary.consumptionStatusLabel
             )
             if let lastCheckedLabel = summary.lastCheckedLabel {
                 AlphaSettingsValueRow(
@@ -1680,24 +1686,40 @@ func alphaPrivateAIDeviceComparisonProofSummary(_ status: AlphaPrivateAIDeviceCo
         return rossLocalized("private_assistant_device_comparison_not_saved")
     }
 
-    if latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified {
+    if latestSavedRecord.runtimeCoverageComplete &&
+        latestSavedRecord.downloadDeliveryVerified &&
+        latestSavedRecord.downloadConsumptionVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_saved_complete_with_delivery"),
+            format: rossLocalized("private_assistant_device_comparison_saved_complete_with_delivery_and_consumption"),
             latestSavedRecord.profile.deviceModelLabel
         )
     }
 
-    if latestSavedRecord.runtimeCoverageComplete && !latestSavedRecord.downloadDeliveryVerified {
+    if latestSavedRecord.runtimeCoverageComplete &&
+        latestSavedRecord.downloadDeliveryVerified &&
+        !latestSavedRecord.downloadConsumptionVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_saved_missing_delivery"),
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_consumption"),
             latestSavedRecord.profile.deviceModelLabel
         )
     }
 
     let missingLabels = latestSavedRecord.missingRuntimeCoverageLabels.joined(separator: ", ")
-    if !missingLabels.isEmpty && !latestSavedRecord.downloadDeliveryVerified {
+    if !missingLabels.isEmpty &&
+        !latestSavedRecord.downloadDeliveryVerified &&
+        !latestSavedRecord.downloadConsumptionVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime_and_delivery"),
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime_delivery_and_consumption"),
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
+    if !missingLabels.isEmpty &&
+        latestSavedRecord.downloadDeliveryVerified &&
+        !latestSavedRecord.downloadConsumptionVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime_and_consumption"),
             latestSavedRecord.profile.deviceModelLabel,
             missingLabels
         )
@@ -1708,6 +1730,20 @@ func alphaPrivateAIDeviceComparisonProofSummary(_ status: AlphaPrivateAIDeviceCo
             format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime"),
             latestSavedRecord.profile.deviceModelLabel,
             missingLabels
+        )
+    }
+
+    if !latestSavedRecord.downloadDeliveryVerified && !latestSavedRecord.downloadConsumptionVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_delivery_and_consumption"),
+            latestSavedRecord.profile.deviceModelLabel
+        )
+    }
+
+    if !latestSavedRecord.downloadDeliveryVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_delivery"),
+            latestSavedRecord.profile.deviceModelLabel
         )
     }
 
@@ -1752,6 +1788,13 @@ func alphaPrivateAIDeviceComparisonSavedDeliveryContract(
     _ record: AlphaPrivateAIDeviceComparisonProofRecord
 ) -> String? {
     let trimmed = record.downloadDeliveryContractLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonSavedConsumptionStatus(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String? {
+    let trimmed = record.downloadConsumptionStatusLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? nil : trimmed
 }
 
@@ -1819,7 +1862,9 @@ func alphaPrivateAIDeviceComparisonMissingTargetLabels(
         guard let latestSavedRecord = status.latestSavedRecord else {
             return status.target.localizedLabel
         }
-        return latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified
+        return latestSavedRecord.runtimeCoverageComplete &&
+            latestSavedRecord.downloadDeliveryVerified &&
+            latestSavedRecord.downloadConsumptionVerified
             ? nil
             : status.target.localizedLabel
     }
@@ -1830,9 +1875,22 @@ func alphaPrivateAIDeviceComparisonRerunStep(
     latestSavedRecord: AlphaPrivateAIDeviceComparisonProofRecord
 ) -> String {
     let missingLabels = latestSavedRecord.missingRuntimeCoverageLabels.joined(separator: ", ")
-    if !missingLabels.isEmpty && !latestSavedRecord.downloadDeliveryVerified {
+    if !missingLabels.isEmpty &&
+        !latestSavedRecord.downloadDeliveryVerified &&
+        !latestSavedRecord.downloadConsumptionVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_runtime_and_delivery"),
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_runtime_delivery_and_consumption"),
+            target.localizedLabel,
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
+    if !missingLabels.isEmpty &&
+        latestSavedRecord.downloadDeliveryVerified &&
+        !latestSavedRecord.downloadConsumptionVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_runtime_and_consumption"),
             target.localizedLabel,
             latestSavedRecord.profile.deviceModelLabel,
             missingLabels
@@ -1848,9 +1906,17 @@ func alphaPrivateAIDeviceComparisonRerunStep(
         )
     }
 
-    if !latestSavedRecord.downloadDeliveryVerified {
+    if !latestSavedRecord.downloadDeliveryVerified && !latestSavedRecord.downloadConsumptionVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_delivery"),
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_delivery_and_consumption"),
+            target.localizedLabel,
+            latestSavedRecord.profile.deviceModelLabel
+        )
+    }
+
+    if latestSavedRecord.downloadDeliveryVerified && !latestSavedRecord.downloadConsumptionVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_consumption"),
             target.localizedLabel,
             latestSavedRecord.profile.deviceModelLabel
         )
@@ -1877,7 +1943,9 @@ func alphaPrivateAIDeviceComparisonNextSteps(
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_8gb")
             }
-            guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
+            guard !(latestSavedRecord.runtimeCoverageComplete &&
+                latestSavedRecord.downloadDeliveryVerified &&
+                latestSavedRecord.downloadConsumptionVerified) else { return nil }
             return alphaPrivateAIDeviceComparisonRerunStep(
                 target: status.target,
                 latestSavedRecord: latestSavedRecord
@@ -1886,7 +1954,9 @@ func alphaPrivateAIDeviceComparisonNextSteps(
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_12gb")
             }
-            guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
+            guard !(latestSavedRecord.runtimeCoverageComplete &&
+                latestSavedRecord.downloadDeliveryVerified &&
+                latestSavedRecord.downloadConsumptionVerified) else { return nil }
             return alphaPrivateAIDeviceComparisonRerunStep(
                 target: status.target,
                 latestSavedRecord: latestSavedRecord

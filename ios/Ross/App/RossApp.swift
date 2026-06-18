@@ -3129,6 +3129,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved note covers the full runtime comparison and verified download delivery on %@.",
             "te": "Saved note covers the full runtime comparison and verified download delivery on %@."
         ],
+        "private_assistant_device_comparison_saved_complete_with_delivery_and_consumption": [
+            "en": "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on %@.",
+            "hi": "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on %@.",
+            "bn": "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on %@.",
+            "ta": "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on %@.",
+            "te": "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on %@."
+        ],
         "private_assistant_device_comparison_saved_partial": [
             "en": "Saved note exists on %@, but the runtime comparison still needs another pass.",
             "hi": "Saved note exists on %@, but the runtime comparison still needs another pass.",
@@ -3150,6 +3157,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved note exists on %@, but it still misses %@ and a verified download delivery check.",
             "te": "Saved note exists on %@, but it still misses %@ and a verified download delivery check."
         ],
+        "private_assistant_device_comparison_saved_missing_runtime_delivery_and_consumption": [
+            "en": "Saved note exists on %@, but it still misses %@, a verified download delivery check, and saved runtime consumption proof.",
+            "hi": "Saved note exists on %@, but it still misses %@, a verified download delivery check, and saved runtime consumption proof.",
+            "bn": "Saved note exists on %@, but it still misses %@, a verified download delivery check, and saved runtime consumption proof.",
+            "ta": "Saved note exists on %@, but it still misses %@, a verified download delivery check, and saved runtime consumption proof.",
+            "te": "Saved note exists on %@, but it still misses %@, a verified download delivery check, and saved runtime consumption proof."
+        ],
+        "private_assistant_device_comparison_saved_missing_runtime_and_consumption": [
+            "en": "Saved note exists on %@, but it still misses %@ and saved runtime consumption proof.",
+            "hi": "Saved note exists on %@, but it still misses %@ and saved runtime consumption proof.",
+            "bn": "Saved note exists on %@, but it still misses %@ and saved runtime consumption proof.",
+            "ta": "Saved note exists on %@, but it still misses %@ and saved runtime consumption proof.",
+            "te": "Saved note exists on %@, but it still misses %@ and saved runtime consumption proof."
+        ],
         "private_assistant_device_comparison_saved_missing_delivery": [
             "en": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
             "hi": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
@@ -3157,12 +3178,33 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
             "te": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check."
         ],
+        "private_assistant_device_comparison_saved_missing_delivery_and_consumption": [
+            "en": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check and saved runtime consumption proof.",
+            "hi": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check and saved runtime consumption proof.",
+            "bn": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check and saved runtime consumption proof.",
+            "ta": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check and saved runtime consumption proof.",
+            "te": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check and saved runtime consumption proof."
+        ],
+        "private_assistant_device_comparison_saved_missing_consumption": [
+            "en": "Saved note covers the runtime comparison and verified download delivery on %@, but still needs saved runtime consumption proof.",
+            "hi": "Saved note covers the runtime comparison and verified download delivery on %@, but still needs saved runtime consumption proof.",
+            "bn": "Saved note covers the runtime comparison and verified download delivery on %@, but still needs saved runtime consumption proof.",
+            "ta": "Saved note covers the runtime comparison and verified download delivery on %@, but still needs saved runtime consumption proof.",
+            "te": "Saved note covers the runtime comparison and verified download delivery on %@, but still needs saved runtime consumption proof."
+        ],
         "private_assistant_device_comparison_delivery_status_label": [
             "en": "Saved delivery check",
             "hi": "Saved delivery check",
             "bn": "Saved delivery check",
             "ta": "Saved delivery check",
             "te": "Saved delivery check"
+        ],
+        "private_assistant_device_comparison_consumption_status_label": [
+            "en": "Saved runtime consumption",
+            "hi": "Saved runtime consumption",
+            "bn": "Saved runtime consumption",
+            "ta": "Saved runtime consumption",
+            "te": "Saved runtime consumption"
         ],
         "private_assistant_device_comparison_saved_captured_at_label": [
             "en": "Saved note captured",
@@ -3255,12 +3297,40 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check.",
             "te": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check."
         ],
+        "private_assistant_device_comparison_next_step_rerun_missing_runtime_delivery_and_consumption": [
+            "en": "Re-run and save the full %@ comparison note on %@ to cover %@, add a verified download delivery check, and add saved runtime consumption proof.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to cover %@, add a verified download delivery check, and add saved runtime consumption proof.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to cover %@, add a verified download delivery check, and add saved runtime consumption proof.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to cover %@, add a verified download delivery check, and add saved runtime consumption proof.",
+            "te": "Re-run and save the full %@ comparison note on %@ to cover %@, add a verified download delivery check, and add saved runtime consumption proof."
+        ],
+        "private_assistant_device_comparison_next_step_rerun_missing_runtime_and_consumption": [
+            "en": "Re-run and save the full %@ comparison note on %@ to cover %@ and add saved runtime consumption proof.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to cover %@ and add saved runtime consumption proof.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to cover %@ and add saved runtime consumption proof.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to cover %@ and add saved runtime consumption proof.",
+            "te": "Re-run and save the full %@ comparison note on %@ to cover %@ and add saved runtime consumption proof."
+        ],
         "private_assistant_device_comparison_next_step_rerun_missing_delivery": [
             "en": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
             "hi": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
             "bn": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
             "ta": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
             "te": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check."
+        ],
+        "private_assistant_device_comparison_next_step_rerun_missing_delivery_and_consumption": [
+            "en": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check and saved runtime consumption proof.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check and saved runtime consumption proof.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check and saved runtime consumption proof.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check and saved runtime consumption proof.",
+            "te": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check and saved runtime consumption proof."
+        ],
+        "private_assistant_device_comparison_next_step_rerun_missing_consumption": [
+            "en": "Re-run and save the full %@ comparison note on %@ to add saved runtime consumption proof.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to add saved runtime consumption proof.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to add saved runtime consumption proof.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to add saved runtime consumption proof.",
+            "te": "Re-run and save the full %@ comparison note on %@ to add saved runtime consumption proof."
         ],
         "private_assistant_ladder_decision_readiness_title": [
             "en": "Ladder decision readiness",
@@ -3465,12 +3535,47 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Verification status",
             "te": "Verification status"
         ],
+        "private_assistant_download_consumption_label": [
+            "en": "Runtime consumption",
+            "hi": "Runtime consumption",
+            "bn": "Runtime consumption",
+            "ta": "Runtime consumption",
+            "te": "Runtime consumption"
+        ],
         "private_assistant_download_delivery_last_checked_label": [
             "en": "Last checked",
             "hi": "Last checked",
             "bn": "Last checked",
             "ta": "Last checked",
             "te": "Last checked"
+        ],
+        "private_assistant_download_consumption_status_sample_and_bundle": [
+            "en": "Verified in sample file and longer bundle",
+            "hi": "Verified in sample file and longer bundle",
+            "bn": "Verified in sample file and longer bundle",
+            "ta": "Verified in sample file and longer bundle",
+            "te": "Verified in sample file and longer bundle"
+        ],
+        "private_assistant_download_consumption_status_sample": [
+            "en": "Verified in sample file",
+            "hi": "Verified in sample file",
+            "bn": "Verified in sample file",
+            "ta": "Verified in sample file",
+            "te": "Verified in sample file"
+        ],
+        "private_assistant_download_consumption_status_bundle": [
+            "en": "Verified in longer bundle",
+            "hi": "Verified in longer bundle",
+            "bn": "Verified in longer bundle",
+            "ta": "Verified in longer bundle",
+            "te": "Verified in longer bundle"
+        ],
+        "private_assistant_download_consumption_status_pending": [
+            "en": "Not yet confirmed from saved runtime evidence",
+            "hi": "Not yet confirmed from saved runtime evidence",
+            "bn": "Not yet confirmed from saved runtime evidence",
+            "ta": "Not yet confirmed from saved runtime evidence",
+            "te": "Not yet confirmed from saved runtime evidence"
         ],
         "private_assistant_download_delivery_source_signed": [
             "en": "Signed session",

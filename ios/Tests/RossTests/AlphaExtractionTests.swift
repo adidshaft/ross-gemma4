@@ -12579,8 +12579,68 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(summary.sourceLabel, "Signed session")
         XCTAssertEqual(summary.contractLabel, "bytes · 1 segment · range_request_segments")
         XCTAssertEqual(summary.statusLabel, "Verified on this device")
+        XCTAssertEqual(summary.consumptionStatusLabel, "Not yet confirmed from saved runtime evidence")
         XCTAssertNotNil(summary.lastCheckedLabel)
         XCTAssertTrue(summary.isVerifiedOnDevice)
+        XCTAssertFalse(summary.isConsumedOnDevice)
+    }
+
+    func testAssistantDownloadDeliveryVerificationSummaryTracksSavedRuntimeConsumption() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-case-associate-gguf",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
+            verified: true,
+            releaseReady: true
+        )
+        let smokeReports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                assistantDisplayName: "Gemma GGUF",
+                assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
+                schemaValid: true,
+                fieldsFound: 8,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "GGUF sample ready"
+            )
+        ]
+        let comparisonReports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 2,
+                sourceBlockCount: 8,
+                sourceRefsReturned: 2,
+                assistantDisplayName: "Gemma GGUF",
+                assistantSourceLabel: "Hugging Face · unsloth/gemma-4-12b-it-GGUF",
+                message: "GGUF longer bundle ready"
+            )
+        ]
+
+        let summary = alphaAssistantDownloadDeliveryVerificationSummary(
+            descriptor,
+            ledgerEntries: [],
+            smokeReports: smokeReports,
+            comparisonReports: comparisonReports
+        )
+
+        XCTAssertEqual(summary.consumptionStatusLabel, "Verified in sample file and longer bundle")
+        XCTAssertTrue(summary.isConsumedOnDevice)
     }
 
     func testAssistantDownloadDescriptorPrefersCompatibleMLXArchiveSessionArtifact() {

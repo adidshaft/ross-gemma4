@@ -132,6 +132,8 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
     var downloadDeliveryVerified: Bool
     var downloadDeliveryStatusLabel: String?
     var downloadDeliveryContractLabel: String?
+    var downloadConsumptionVerified: Bool
+    var downloadConsumptionStatusLabel: String?
     var exportRelativePath: String?
     var createdAt: Date = .now
 
@@ -143,6 +145,8 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         downloadDeliveryVerified: Bool = false,
         downloadDeliveryStatusLabel: String? = nil,
         downloadDeliveryContractLabel: String? = nil,
+        downloadConsumptionVerified: Bool = false,
+        downloadConsumptionStatusLabel: String? = nil,
         exportRelativePath: String? = nil,
         createdAt: Date = .now
     ) {
@@ -153,6 +157,8 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         self.downloadDeliveryVerified = downloadDeliveryVerified
         self.downloadDeliveryStatusLabel = downloadDeliveryStatusLabel
         self.downloadDeliveryContractLabel = downloadDeliveryContractLabel
+        self.downloadConsumptionVerified = downloadConsumptionVerified
+        self.downloadConsumptionStatusLabel = downloadConsumptionStatusLabel
         self.exportRelativePath = exportRelativePath
         self.createdAt = createdAt
     }
@@ -165,6 +171,8 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         case downloadDeliveryVerified
         case downloadDeliveryStatusLabel
         case downloadDeliveryContractLabel
+        case downloadConsumptionVerified
+        case downloadConsumptionStatusLabel
         case exportRelativePath
         case createdAt
     }
@@ -178,6 +186,8 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
         downloadDeliveryVerified = try container.decodeIfPresent(Bool.self, forKey: .downloadDeliveryVerified) ?? false
         downloadDeliveryStatusLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryStatusLabel)
         downloadDeliveryContractLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryContractLabel)
+        downloadConsumptionVerified = try container.decodeIfPresent(Bool.self, forKey: .downloadConsumptionVerified) ?? false
+        downloadConsumptionStatusLabel = try container.decodeIfPresent(String.self, forKey: .downloadConsumptionStatusLabel)
         exportRelativePath = try container.decodeIfPresent(String.self, forKey: .exportRelativePath)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
     }

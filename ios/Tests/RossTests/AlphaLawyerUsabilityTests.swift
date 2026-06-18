@@ -4753,6 +4753,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             downloadDeliveryVerified: true,
             downloadDeliveryStatusLabel: "Verified on this device",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            downloadConsumptionVerified: true,
+            downloadConsumptionStatusLabel: "Verified in sample file and longer bundle",
             exportRelativePath: "exports/device-note-below-target.pdf"
         )
         let saved8GBRecord = AlphaPrivateAIDeviceComparisonProofRecord(
@@ -4771,6 +4773,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             downloadDeliveryVerified: true,
             downloadDeliveryStatusLabel: "Verified on this device",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            downloadConsumptionVerified: true,
+            downloadConsumptionStatusLabel: "Verified in sample file and longer bundle",
             exportRelativePath: "exports/device-note-8gb.pdf"
         )
 
@@ -4781,7 +4785,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(statuses[0].latestSavedRecord?.profile.deviceModelLabel, "iPhone16,1")
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
-            "Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."
+            "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on iPhone16,1."
         )
         XCTAssertEqual(statuses[1].target, .class8GB)
         XCTAssertEqual(statuses[2].target, .class12GBOrHigher)
@@ -4890,6 +4894,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             downloadDeliveryVerified: true,
             downloadDeliveryStatusLabel: "Verified on this device",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            downloadConsumptionVerified: true,
+            downloadConsumptionStatusLabel: "Verified in sample file and longer bundle",
             exportRelativePath: "exports/device-note-8gb.pdf"
         )
         let simulatorRecord = AlphaPrivateAIDeviceComparisonProofRecord(
@@ -4918,7 +4924,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(statuses[0].latestSavedRecord?.profile.deviceModelLabel, "iPhone17,2")
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
-            "Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."
+            "Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on iPhone17,2."
         )
         XCTAssertEqual(statuses[1].target, .class12GBOrHigher)
         XCTAssertNil(statuses[1].latestSavedRecord)
@@ -4951,6 +4957,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             downloadDeliveryVerified: false,
             downloadDeliveryStatusLabel: "Ready for on-device verification",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            downloadConsumptionVerified: false,
+            downloadConsumptionStatusLabel: "Not yet confirmed from saved runtime evidence",
             exportRelativePath: "exports/device-note-8gb.pdf"
         )
 
@@ -4958,13 +4966,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
-            "Saved note covers the runtime comparison on iPhone17,2, but still needs a verified download delivery check."
+            "Saved note covers the runtime comparison on iPhone17,2, but still needs a verified download delivery check and saved runtime consumption proof."
         )
         XCTAssertEqual(alphaPrivateAIDeviceComparisonMissingTargetLabels([saved8GBRecord]), ["8 GB class", "12 GB+ class"])
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord]),
             [
-                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to add a verified download delivery check.",
+                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to add a verified download delivery check and saved runtime consumption proof.",
                 "Save a full physical iPhone comparison note on a 12 GB+-class device."
             ]
         )
@@ -4987,6 +4995,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             downloadDeliveryVerified: false,
             downloadDeliveryStatusLabel: "Ready for on-device verification",
             downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            downloadConsumptionVerified: false,
+            downloadConsumptionStatusLabel: "Not yet confirmed from saved runtime evidence",
             exportRelativePath: "exports/device-note-8gb.pdf"
         )
 
@@ -4994,12 +5004,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
-            "Saved note exists on iPhone17,2, but it still misses CoreAI longer bundle and a verified download delivery check."
+            "Saved note exists on iPhone17,2, but it still misses CoreAI longer bundle, a verified download delivery check, and saved runtime consumption proof."
         )
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord]),
             [
-                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to cover CoreAI longer bundle and add a verified download delivery check.",
+                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to cover CoreAI longer bundle, add a verified download delivery check, and add saved runtime consumption proof.",
                 "Save a full physical iPhone comparison note on a 12 GB+-class device."
             ]
         )
@@ -5411,6 +5421,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 downloadDeliveryVerified: true,
                 downloadDeliveryStatusLabel: "Verified on this device",
                 downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+                downloadConsumptionVerified: true,
+                downloadConsumptionStatusLabel: "Verified in sample file and longer bundle",
                 exportRelativePath: "exports/device-note-below-target.pdf",
                 createdAt: Date(timeIntervalSince1970: 1_718_000_060)
             ),
@@ -5421,6 +5433,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 downloadDeliveryVerified: true,
                 downloadDeliveryStatusLabel: "Verified on this device",
                 downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+                downloadConsumptionVerified: true,
+                downloadConsumptionStatusLabel: "Verified in sample file and longer bundle",
                 exportRelativePath: "exports/device-note-8gb.pdf",
                 createdAt: Date(timeIntervalSince1970: 1_718_000_120)
             )
@@ -5431,7 +5445,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             contractLabel: "bytes · 1 segment · range_request_segments",
             statusLabel: "Verified on this device",
             lastCheckedLabel: "Jun 13, 2024 at 1:46 PM",
-            isVerifiedOnDevice: true
+            isVerifiedOnDevice: true,
+            consumptionStatusLabel: "Verified in sample file and longer bundle",
+            isConsumedOnDevice: true
         )
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
@@ -5457,15 +5473,16 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Model source: Signed session"))
         XCTAssertTrue(joined.contains("Delivery contract: bytes · 1 segment · range_request_segments"))
         XCTAssertTrue(joined.contains("Verification status: Verified on this device"))
+        XCTAssertTrue(joined.contains("Runtime consumption: Verified in sample file and longer bundle"))
         XCTAssertTrue(joined.contains("Last checked: Jun 13, 2024 at 1:46 PM"))
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
         XCTAssertTrue(joined.contains("Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Below 8 GB target"))
-        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."))
+        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on iPhone16,1."))
         XCTAssertTrue(joined.contains("Saved runtime blocker: Gemma GGUF needs at least 12 GB memory on this iPhone class; the saved proof device reported 7 GB."))
-        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."))
+        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison, verified download delivery, and saved runtime consumption proof on iPhone17,2."))
         XCTAssertTrue(joined.contains("Saved note captured:"))
         XCTAssertTrue(joined.contains("Saved system version: iOS 26.4.1"))
         XCTAssertTrue(joined.contains("Saved device state:"))
@@ -5475,6 +5492,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Saved file: device-note-8gb.pdf"))
         XCTAssertTrue(joined.contains("Saved delivery check: Verified on this device"))
         XCTAssertTrue(joined.contains("Saved delivery contract: bytes · 1 segment · range_request_segments"))
+        XCTAssertTrue(joined.contains("Saved runtime consumption: Verified in sample file and longer bundle"))
         XCTAssertTrue(joined.contains("12 GB+ class"))
         XCTAssertTrue(joined.contains("No saved note yet."))
         XCTAssertTrue(joined.contains("Physical note next steps"))
@@ -5613,6 +5631,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("GGUF sample ready") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Model source: Hugging Face · unsloth/gemma-4-12b-it-GGUF") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("Runtime consumption: Verified in sample file and longer bundle") == true)
         }
     }
 
