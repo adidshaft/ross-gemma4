@@ -1480,12 +1480,15 @@ struct AlphaPrivateAIRuntimeCoverageStatus: Hashable {
     var hasLongerBundleProof: Bool { latestComparisonReport != nil }
 }
 
-enum AlphaPrivateAIDeviceComparisonProofTarget: CaseIterable, Hashable {
+enum AlphaPrivateAIDeviceComparisonProofTarget: Hashable {
+    case belowTarget
     case class8GB
     case class12GBOrHigher
 
     var localizedLabel: String {
         switch self {
+        case .belowTarget:
+            return rossLocalized("private_assistant_device_representative_class_below_target")
         case .class8GB:
             return rossLocalized("private_assistant_device_representative_class_8gb")
         case .class12GBOrHigher:
@@ -1495,10 +1498,21 @@ enum AlphaPrivateAIDeviceComparisonProofTarget: CaseIterable, Hashable {
 
     var representativeClass: AlphaPrivateAIDeviceProofRepresentativeClass {
         switch self {
+        case .belowTarget:
+            return .belowTarget
         case .class8GB:
             return .class8GB
         case .class12GBOrHigher:
             return .class12GBOrHigher
+        }
+    }
+
+    var requiredForDecisionGate: Bool {
+        switch self {
+        case .belowTarget:
+            return false
+        case .class8GB, .class12GBOrHigher:
+            return true
         }
     }
 }
@@ -1608,7 +1622,16 @@ func alphaPrivateAIRuntimeLaneReadinessSummary(_ status: AlphaPrivateAIRuntimeLa
 func alphaPrivateAIDeviceComparisonProofStatuses(
     _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
 ) -> [AlphaPrivateAIDeviceComparisonProofStatus] {
-    AlphaPrivateAIDeviceComparisonProofTarget.allCases.map { target in
+    var targets: [AlphaPrivateAIDeviceComparisonProofTarget] = []
+    if records.contains(where: { record in
+        record.profile.captureSource == .physicalIPhone &&
+            record.profile.representativeClass == .belowTarget
+    }) {
+        targets.append(.belowTarget)
+    }
+    targets.append(contentsOf: [.class8GB, .class12GBOrHigher])
+
+    return targets.map { target in
         let latestSavedRecord = records
             .filter { record in
                 record.profile.captureSource == .physicalIPhone &&
@@ -1708,6 +1731,9 @@ func alphaPrivateAIDeviceComparisonMissingTargetLabels(
     _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
 ) -> [String] {
     alphaPrivateAIDeviceComparisonProofStatuses(records).compactMap { status in
+        guard status.target.requiredForDecisionGate else {
+            return nil
+        }
         guard let latestSavedRecord = status.latestSavedRecord else {
             return status.target.localizedLabel
         }
@@ -1759,7 +1785,12 @@ func alphaPrivateAIDeviceComparisonNextSteps(
     _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
 ) -> [String] {
     alphaPrivateAIDeviceComparisonProofStatuses(records).compactMap { status in
+        guard status.target.requiredForDecisionGate else {
+            return nil
+        }
         switch status.target {
+        case .belowTarget:
+            return nil
         case .class8GB:
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_8gb")

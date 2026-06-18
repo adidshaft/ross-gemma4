@@ -4714,6 +4714,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(physicalIPhoneCaptureSource, .physicalIPhone)
         XCTAssertEqual(
             alphaPrivateAIDeviceProofRepresentativeClass(
+                memoryGB: 7,
+                captureSource: physicalIPhoneCaptureSource
+            ),
+            .belowTarget
+        )
+        XCTAssertEqual(
+            alphaPrivateAIDeviceProofRepresentativeClass(
                 memoryGB: 8,
                 captureSource: physicalIPhoneCaptureSource
             ),
@@ -4725,6 +4732,66 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 captureSource: physicalIPhoneCaptureSource
             ),
             .class12GBOrHigher
+        )
+    }
+
+    func testPrivateAIDeviceComparisonProofStatusesShowBelowTargetProofWithoutBlockingDecisionGate() {
+        let savedBelowTargetRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .physicalIPhone,
+                deviceModelLabel: "iPhone16,1",
+                systemVersionLabel: "iOS 27.0",
+                memoryGB: 7,
+                representativeClass: .belowTarget,
+                freeStorageGB: 24,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: true,
+            missingRuntimeCoverageLabels: [],
+            downloadDeliveryVerified: true,
+            downloadDeliveryStatusLabel: "Verified on this device",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            exportRelativePath: "exports/device-note-below-target.pdf"
+        )
+        let saved8GBRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .physicalIPhone,
+                deviceModelLabel: "iPhone17,2",
+                systemVersionLabel: "iOS 26.4.1",
+                memoryGB: 8,
+                representativeClass: .class8GB,
+                freeStorageGB: 28,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: true,
+            missingRuntimeCoverageLabels: [],
+            downloadDeliveryVerified: true,
+            downloadDeliveryStatusLabel: "Verified on this device",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            exportRelativePath: "exports/device-note-8gb.pdf"
+        )
+
+        let statuses = alphaPrivateAIDeviceComparisonProofStatuses([savedBelowTargetRecord, saved8GBRecord])
+
+        XCTAssertEqual(statuses.count, 3)
+        XCTAssertEqual(statuses[0].target, .belowTarget)
+        XCTAssertEqual(statuses[0].latestSavedRecord?.profile.deviceModelLabel, "iPhone16,1")
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
+            "Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."
+        )
+        XCTAssertEqual(statuses[1].target, .class8GB)
+        XCTAssertEqual(statuses[2].target, .class12GBOrHigher)
+        XCTAssertEqual(alphaPrivateAIDeviceComparisonMissingTargetLabels([savedBelowTargetRecord, saved8GBRecord]), ["12 GB+ class"])
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonNextSteps([savedBelowTargetRecord, saved8GBRecord]),
+            ["Save a full physical iPhone comparison note on a 12 GB+-class device."]
+        )
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonDecisionReadinessSummary([savedBelowTargetRecord, saved8GBRecord]),
+            "Hold the final pack decision until these physical notes are complete: 12 GB+ class."
         )
     }
 
@@ -5246,6 +5313,25 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         ]
         let deviceComparisonProofRecords = [
             AlphaPrivateAIDeviceComparisonProofRecord(
+                profile: AlphaPrivateAIDeviceProofProfile(
+                    captureSource: .physicalIPhone,
+                    deviceModelLabel: "iPhone16,1",
+                    systemVersionLabel: "iOS 27.0",
+                    memoryGB: 7,
+                    representativeClass: .belowTarget,
+                    freeStorageGB: 24,
+                    lowPowerModeEnabled: false,
+                    thermalCondition: "Nominal"
+                ),
+                runtimeCoverageComplete: true,
+                missingRuntimeCoverageLabels: [],
+                downloadDeliveryVerified: true,
+                downloadDeliveryStatusLabel: "Verified on this device",
+                downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+                exportRelativePath: "exports/device-note-below-target.pdf",
+                createdAt: Date(timeIntervalSince1970: 1_718_000_060)
+            ),
+            AlphaPrivateAIDeviceComparisonProofRecord(
                 profile: deviceProofProfile,
                 runtimeCoverageComplete: true,
                 missingRuntimeCoverageLabels: [],
@@ -5292,6 +5378,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
+        XCTAssertTrue(joined.contains("Below 8 GB target"))
+        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."))
         XCTAssertTrue(joined.contains("Saved note captured:"))
         XCTAssertTrue(joined.contains("Saved system version: iOS 26.4.1"))

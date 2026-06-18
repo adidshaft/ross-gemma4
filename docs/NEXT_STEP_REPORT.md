@@ -25,6 +25,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Support details now also summarize whether CoreAI, MLX, and GGUF are active now, ready now, need setup, need repair, or are unavailable on the current iPhone before the next proof run starts
 - hidden iOS Support details can now save the current multi-runtime comparison set into `Notes & Drafts` as a local PDF note, so device QA evidence is easier to keep and share without exposing it in the main flow
 - hidden iOS Support details now also summarize saved device-comparison note coverage across the physical 8 GB and 12 GB+ proof targets, so repeated exports make it obvious which real-device comparison class is still missing
+- hidden iOS Support details now also surface any saved below-target physical iPhone proof as its own coverage line, so smaller-phone guardrail evidence is visible without changing the final 8 GB / 12 GB+ ladder gate
 - hidden iOS Support details now also turn that saved-note history into a final device-comparison readiness summary with concrete next physical-note steps, so the ladder decision is gated on saved 8 GB and 12 GB+ proof instead of memory
 - hidden iOS Support details and the saved note now also state the ladder-decision gate directly, so the product itself says whether pack-selection review is unlocked or still waiting on specific physical-device notes
 - Android debug compile and assemble now succeed in the current dirty worktree, so the remaining Android gap is narrowed to real runtime validation rather than baseline build breakage
@@ -95,6 +96,7 @@ Most recent commits that define this pause point:
 - hidden iOS device-proof profile now explicitly says whether the evidence came from a simulator or a physical device and whether it counts as below-target, 8 GB class, or 12 GB+ class evidence
 - hidden iOS saved comparison-note history now tracks whether a physical 8 GB or physical 12 GB+ device note has already been captured, and whether that saved note covered the full three-runtime comparison
 - hidden iOS saved comparison-note coverage now explicitly says whether the final device-comparison proof is ready for ladder review or which physical note still needs to be saved or rerun
+- hidden iOS saved comparison-note coverage now also shows saved below-target physical iPhone proof separately when it exists, while keeping ladder-decision readiness tied to the required 8 GB and 12 GB+ targets
 - hidden iOS ladder-decision readiness is now exported alongside the device note, so final pack judgment is explicitly held until the missing physical-note targets are complete
 - the current iOS app bundle now builds for `iphoneos`, installs onto Aman's physical iPhone, and stays up after a foreground launch from `devicectl`
 - the current iPhone now also proves a real on-device GGUF smoke pass through the cabled-device helper and `--local-model-smoke`, using the local `gemma-2-2b-it-Q4_K_M.gguf` artifact as a Quick Start debug pack on the physical phone
