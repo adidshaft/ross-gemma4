@@ -4639,6 +4639,51 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
     }
 
+    func testPrivateAIRuntimeCoverageNextStepsReturnOrderedActions() {
+        let smokeReports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 8,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "gguf sample"
+            )
+        ]
+        let comparisonReports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 7,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "coreai bundle"
+            )
+        ]
+
+        XCTAssertEqual(
+            alphaPrivateAIRuntimeCoverageNextSteps(
+                smokeReports: smokeReports,
+                comparisonReports: comparisonReports
+            ),
+            [
+                "Run sample file check on CoreAI.",
+                "Run sample file check and then longer bundle check on MLX.",
+                "Run longer bundle check on Gemma GGUF."
+            ]
+        )
+    }
+
     func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
         rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
@@ -4984,6 +5029,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
         XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))
         XCTAssertTrue(joined.contains("Sample file: Completed · Longer bundle: Completed"))
+        XCTAssertTrue(joined.contains("Next device steps"))
+        XCTAssertTrue(joined.contains("Run sample file check and then longer bundle check on CoreAI."))
+        XCTAssertTrue(joined.contains("Run sample file check on MLX."))
         XCTAssertTrue(joined.contains("Latest sample check by runtime"))
         XCTAssertTrue(joined.contains("Still needed for sample-file proof: CoreAI, MLX"))
         XCTAssertTrue(joined.contains("Saved file: gguf-smoke.pdf"))
@@ -5088,6 +5136,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNil(exportError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
             XCTAssertTrue(imported.document.extractedText?.contains("Device-proof coverage") == true)
+            XCTAssertTrue(imported.document.extractedText?.contains("Next device steps") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("GGUF sample ready") == true)
         }

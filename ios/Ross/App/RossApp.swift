@@ -2982,6 +2982,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ sample file and longer bundle",
             "te": "%@ sample file and longer bundle"
         ],
+        "private_assistant_runtime_next_steps_title": [
+            "en": "Next device steps",
+            "hi": "Next device steps",
+            "bn": "Next device steps",
+            "ta": "Next device steps",
+            "te": "Next device steps"
+        ],
+        "private_assistant_runtime_next_steps_ready": [
+            "en": "No additional device-proof runs are still missing from this note.",
+            "hi": "इस note के लिए कोई अतिरिक्त device-proof run अभी बाकी नहीं है.",
+            "bn": "এই note-এর জন্য আর কোনো additional device-proof run বাকি নেই.",
+            "ta": "இந்த note-க்கு கூடுதல் device-proof run எதுவும் இன்னும் தேவை இல்லை.",
+            "te": "ఈ note కోసం ఇంకే అదనపు device-proof run మిగలలేదు."
+        ],
+        "private_assistant_runtime_next_step_run_sample": [
+            "en": "Run sample file check on %@.",
+            "hi": "%@ पर sample file check चलाएँ.",
+            "bn": "%@-এ sample file check চালান.",
+            "ta": "%@-இல் sample file check இயக்கவும்.",
+            "te": "%@ పై sample file check నడపండి."
+        ],
+        "private_assistant_runtime_next_step_run_bundle": [
+            "en": "Run longer bundle check on %@.",
+            "hi": "%@ पर longer bundle check चलाएँ.",
+            "bn": "%@-এ longer bundle check চালান.",
+            "ta": "%@-இல் longer bundle check இயக்கவும்.",
+            "te": "%@ పై longer bundle check నడపండి."
+        ],
+        "private_assistant_runtime_next_step_run_sample_then_bundle": [
+            "en": "Run sample file check and then longer bundle check on %@.",
+            "hi": "%@ पर sample file check चलाएँ, फिर longer bundle check चलाएँ.",
+            "bn": "%@-এ sample file check চালিয়ে তারপর longer bundle check চালান.",
+            "ta": "%@-இல் sample file check இயக்கி, பிறகு longer bundle check இயக்கவும்.",
+            "te": "%@ పై sample file check నడిపి, తర్వాత longer bundle check నడపండి."
+        ],
         "private_assistant_sample_file_short_label": [
             "en": "Sample file",
             "hi": "Sample file",

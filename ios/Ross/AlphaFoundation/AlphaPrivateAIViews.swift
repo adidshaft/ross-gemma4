@@ -882,6 +882,13 @@ private struct AlphaPrivateAIRuntimeCoverageSection: View {
         return labels.joined(separator: ", ")
     }
 
+    private var nextSteps: [String] {
+        alphaPrivateAIRuntimeCoverageNextSteps(
+            smokeReports: smokeReports,
+            comparisonReports: comparisonReports
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(rossLocalized("private_assistant_runtime_coverage_title"))
@@ -911,6 +918,28 @@ private struct AlphaPrivateAIRuntimeCoverageSection: View {
                         .foregroundStyle(Color.rossInk.opacity(0.68))
                 }
                 .padding(.vertical, 2)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(rossLocalized("private_assistant_runtime_next_steps_title"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+
+                if nextSteps.isEmpty {
+                    Text(rossLocalized("private_assistant_runtime_next_steps_ready"))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(Array(nextSteps.enumerated()), id: \.offset) { _, step in
+                        Text(step)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
         }
     }
@@ -1210,6 +1239,36 @@ func alphaPrivateAIRuntimeCoverageSummary(_ status: AlphaPrivateAIRuntimeCoverag
         "\(rossLocalized("private_assistant_sample_file_short_label")): \(status.hasSampleProof ? rossLocalized("completed") : rossLocalized("not_run"))",
         "\(rossLocalized("private_assistant_longer_bundle_short_label")): \(status.hasLongerBundleProof ? rossLocalized("completed") : rossLocalized("not_run"))"
     ].joined(separator: " · ")
+}
+
+func alphaPrivateAIRuntimeCoverageNextSteps(
+    smokeReports: [AlphaLocalInferenceSmokeReport],
+    comparisonReports: [AlphaMatterBundleComparisonReport]
+) -> [String] {
+    alphaPrivateAIRuntimeCoverageStatuses(
+        smokeReports: smokeReports,
+        comparisonReports: comparisonReports
+    ).compactMap { status in
+        switch (status.hasSampleProof, status.hasLongerBundleProof) {
+        case (true, true):
+            return nil
+        case (false, false):
+            return String(
+                format: rossLocalized("private_assistant_runtime_next_step_run_sample_then_bundle"),
+                status.runtimeMode.displayLabel
+            )
+        case (false, true):
+            return String(
+                format: rossLocalized("private_assistant_runtime_next_step_run_sample"),
+                status.runtimeMode.displayLabel
+            )
+        case (true, false):
+            return String(
+                format: rossLocalized("private_assistant_runtime_next_step_run_bundle"),
+                status.runtimeMode.displayLabel
+            )
+        }
+    }
 }
 
 func alphaMatterBundleComparisonStatusLabel(_ report: AlphaMatterBundleComparisonReport) -> String {

@@ -3378,6 +3378,10 @@ func alphaMatterBundleComparisonExportBodyLines(
         smokeReports: smokeReports,
         comparisonReports: reports
     )
+    let nextCoverageSteps = alphaPrivateAIRuntimeCoverageNextSteps(
+        smokeReports: smokeReports,
+        comparisonReports: reports
+    )
     let generatedLine = String(
         format: rossLocalized("export_generated"),
         generatedAt.formatted(date: .abbreviated, time: .shortened)
@@ -3424,6 +3428,14 @@ func alphaMatterBundleComparisonExportBodyLines(
         for status in coverageStatuses {
             lines.append("- \(status.runtimeMode.displayLabel)")
             lines.append("  \(alphaPrivateAIRuntimeCoverageSummary(status))")
+        }
+
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_runtime_next_steps_title"))
+        if nextCoverageSteps.isEmpty {
+            lines.append(rossLocalized("private_assistant_runtime_next_steps_ready"))
+        } else {
+            lines.append(contentsOf: nextCoverageSteps.map { "- \($0)" })
         }
     }
 
