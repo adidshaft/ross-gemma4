@@ -199,17 +199,58 @@ pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
 
-def parse_identity(line):
+def parse_fields(line, skip_prefix=True):
     fields = {}
-    for chunk in line.split()[1:]:
+    chunks = line.split()[1:] if skip_prefix else line.split()
+    for chunk in chunks:
         if "=" not in chunk:
             continue
         key, value = chunk.split("=", 1)
         fields[key] = value
     return fields
 
+def summary_value(fields, key):
+    value = fields.get(key)
+    return value if value not in (None, "") else "nil"
+
+def print_benchmark_summary(identity, pass_fields):
+    stages = [
+        "source",
+        "general",
+        "bengali",
+        "hindi",
+        "tamil",
+        "telugu",
+    ]
+    summary = {
+        "runtime": summary_value(identity, "actual_runtime"),
+        "requested_runtime": summary_value(identity, "requested_runtime"),
+        "model_format": summary_value(identity, "model_format"),
+        "artifact_path_type": summary_value(identity, "artifact_path_type"),
+        "acceleration": summary_value(identity, "acceleration"),
+        "draft_tokens": summary_value(identity, "draft_tokens"),
+        "draft_model": summary_value(identity, "draft_model"),
+        "profile": summary_value(pass_fields, "profile"),
+        "elapsed": summary_value(pass_fields, "elapsed"),
+    }
+    for stage in stages:
+        for metric in [
+            "input_tokens",
+            "output_tokens",
+            "token_speed",
+            "first_token_ms",
+            "measured_tokens",
+        ]:
+            key = f"{stage}_{metric}"
+            if key in pass_fields:
+                summary[key] = pass_fields[key]
+
+    line = " ".join(f"{key}={value}" for key, value in summary.items())
+    print(f"ROSS_SMOKE_BENCHMARK_SUMMARY {line}")
+
 outcome = None
 identity = None
+pass_fields = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -225,9 +266,10 @@ try:
         line = raw_line.rstrip("\n")
         print(line)
         if identity_re.search(line):
-            identity = parse_identity(line)
+            identity = parse_fields(line)
         if pass_re.search(line):
             outcome = "pass"
+            pass_fields = parse_fields(line)
             process.send_signal(signal.SIGINT)
             break
         if fail_re.search(line):
@@ -252,6 +294,8 @@ if outcome == "pass":
             file=sys.stderr,
         )
         sys.exit(1)
+    if pass_fields is not None:
+        print_benchmark_summary(identity, pass_fields)
     sys.exit(0)
 
 if outcome == "fail":
