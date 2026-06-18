@@ -1989,10 +1989,15 @@ private func alphaAutomaticGGUFDraftTokens(
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> Int? {
     guard let activePack, activePack.runtimeMode == .llamaCppGguf else { return nil }
+    let modelPath = alphaAbsoluteURL(for: activePack.installPath).path
 
     let baseTokens = AlphaLlamaRuntimeProfile.defaultDraftTokens(
         for: activePack.tier,
-        modelPath: alphaAbsoluteURL(for: activePack.installPath).path,
+        modelPath: modelPath,
+        physicalMemory: physicalMemoryBytes
+    )
+    let maximumSupportedTokens = AlphaLlamaRuntimeProfile.maximumSupportedDraftTokens(
+        forModelPath: modelPath,
         physicalMemory: physicalMemoryBytes
     )
 
@@ -2007,7 +2012,7 @@ private func alphaAutomaticGGUFDraftTokens(
     }
 
     if outputSpeed >= 14, firstTokenMs <= 1_500 {
-        return min(baseTokens + 1, 8)
+        return min(baseTokens + 1, maximumSupportedTokens)
     }
 
     let minimumTokens = switch activePack.tier {

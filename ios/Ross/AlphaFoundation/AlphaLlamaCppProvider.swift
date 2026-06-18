@@ -343,6 +343,15 @@ enum AlphaLlamaRuntimeProfile {
         return max(1, min(draftTokens, 8)) <= constrainedE4BDraftTokenCeiling
     }
 
+    static func maximumSupportedDraftTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)
+            ? constrainedE4BDraftTokenCeiling
+            : 8
+    }
+
 }
 
 final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
