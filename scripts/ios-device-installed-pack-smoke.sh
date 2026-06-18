@@ -371,6 +371,13 @@ value = draft.get("draftTokens")
 print("" if value is None else value)
 PY
 )"
+selected_draft_artifact_kind="$(python3 - "$selection_json" <<'PY'
+import json
+import sys
+draft = json.loads(open(sys.argv[1]).read()).get("draftArtifact") or {}
+print(draft.get("artifactKind", ""))
+PY
+)"
 
 python3 - "$selected_runtime_raw" "$selected_artifact_kind" "$selected_relative_path" <<'PY'
 import sys
@@ -419,6 +426,69 @@ if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin"
     )
     sys.exit(1)
 PY
+
+if [[ "$require_draft_acceleration" == "1" ]]; then
+  if [[ "$selected_runtime_raw" == "apple_foundation_models" ]]; then
+    echo "Draft acceleration proof is only supported for GGUF/MLX installed packs, not apple_foundation_models." >&2
+    echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+    exit 1
+  fi
+
+  if [[ -z "$selected_draft_relative_path" ]]; then
+    echo "Draft acceleration proof requires the selected installed manifest to include draftArtifact.relativePath." >&2
+    echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+    exit 1
+  fi
+
+  python3 - "$selected_runtime_raw" "$selected_draft_artifact_kind" "$selected_draft_relative_path" "$selected_pack_id" "$selected_tier_raw" <<'PY'
+import sys
+
+runtime = (sys.argv[1] or "").strip()
+draft_artifact_kind = (sys.argv[2] or "").strip()
+draft_relative_path = (sys.argv[3] or "").strip()
+pack_id = (sys.argv[4] or "").strip()
+tier = (sys.argv[5] or "").strip()
+
+allowed_draft_kinds = {
+    "gemma_local_runtime": {"local_model_artifact", "gguf", "gguf_model"},
+    "mlx_swift_lm": {"mlx_directory"},
+}
+
+allowed = allowed_draft_kinds.get(runtime)
+if allowed is None:
+    print(
+        "Draft acceleration proof is only supported for GGUF/MLX installed packs: "
+        f"runtime={runtime} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if draft_artifact_kind not in allowed:
+    print(
+        "Selected manifest has an incompatible draft artifact kind for draft acceleration proof: "
+        f"runtime={runtime} draftArtifact.artifactKind={draft_artifact_kind or 'nil'} "
+        f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if runtime == "mlx_swift_lm" and draft_relative_path.lower().endswith((".gguf", ".bin")):
+    print(
+        "Selected MLX manifest points its draft companion at a file-like artifact instead of an MLX directory: "
+        f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if runtime == "gemma_local_runtime" and not draft_relative_path.lower().endswith(".gguf"):
+    print(
+        "Selected GGUF/MTP manifest points its draft companion at a non-GGUF artifact: "
+        f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+fi
 
 device_model_path="$container_root/Library/Application Support/RossAlpha/$selected_relative_path"
 device_draft_path=""

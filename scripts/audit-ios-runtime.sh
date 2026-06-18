@@ -127,6 +127,21 @@ if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/
     FAIL=1
 fi
 
+if ! grep -q "draftArtifact.relativePath" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke does not preflight required draft companion paths."
+    FAIL=1
+fi
+
+if ! grep -q "selected_draft_artifact_kind" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke does not preflight draft companion artifact kind."
+    FAIL=1
+fi
+
+if ! grep -q "Draft acceleration proof is only supported" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke does not reject unsupported draft-acceleration proof lanes before launch."
+    FAIL=1
+fi
+
 if ! grep -q "identity_requested" scripts/ios-device-gguf-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: GGUF device smoke does not validate requested runtime identity."
     FAIL=1
