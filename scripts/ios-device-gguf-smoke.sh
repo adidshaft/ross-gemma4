@@ -197,8 +197,19 @@ command = [
 
 pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
+identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
+
+def parse_identity(line):
+    fields = {}
+    for chunk in line.split()[1:]:
+        if "=" not in chunk:
+            continue
+        key, value = chunk.split("=", 1)
+        fields[key] = value
+    return fields
 
 outcome = None
+identity = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -213,6 +224,8 @@ try:
     for raw_line in process.stdout:
         line = raw_line.rstrip("\n")
         print(line)
+        if identity_re.search(line):
+            identity = parse_identity(line)
         if pass_re.search(line):
             outcome = "pass"
             process.send_signal(signal.SIGINT)
@@ -229,6 +242,16 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
+    if identity is None:
+        print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
+        sys.exit(1)
+    actual_runtime = identity.get("actual_runtime")
+    if actual_runtime != "gemma_local_runtime":
+        print(
+            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested=gemma_local_runtime actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     sys.exit(0)
 
 if outcome == "fail":

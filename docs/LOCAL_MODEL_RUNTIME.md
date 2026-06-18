@@ -17,6 +17,7 @@ Ross runtime metadata supports:
 - `deterministic_dev`
 - `mediapipe_llm`
 - `gemma_local_runtime`
+- `mlx_swift_lm`
 - `apple_foundation_models`
 - `litert`
 - `unavailable`
@@ -58,6 +59,17 @@ Existing compatibility:
 - iOS still has an on-device system assistant path where available.
 - Both remain compatibility paths, not the default Gemma 4-first strategy.
 
+## Runtime Proof Guardrails
+
+Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, artifact kind/path type, acceleration mode, draft model metadata, context size, GPU/offload summary, fallback status, and availability.
+
+Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity marker proves that exact lane:
+
+- MLX requires `actual_runtime=mlx_swift_lm`.
+- CoreAI/Foundation Models requires `actual_runtime=apple_foundation_models`.
+- MTP requires `acceleration=draftModelSpeculative` with non-empty draft tokens and draft model metadata.
+- Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
+
 ## Backend Catalog Modes
 
 `ROSS_MODEL_CATALOG_MODE=dev` serves tiny deterministic artifacts and remains the default.
@@ -86,11 +98,14 @@ Implemented:
 - production metadata catalog mode
 - Android/iOS tier mapping to Gemma 4 sizes and plain-language labels
 - runtime health and fallback reporting
+- iOS GGUF/llama.cpp execution has physical-device proof for the constrained Quick Start lane
+- smoke-time runtime identity reporting and guardrails for requested-vs-actual runtime validation
 
 Not yet proven:
 
 - Android native Q4 inference
-- iOS Q4 inference with a linked runtime bridge
+- MLX and CoreAI/Foundation Models generation on physical iPhone without routing through GGUF
+- MTP draft acceleration on physical iPhone
 - separate embedding model install and lifecycle
-- hardware proof of Gemma 4 tiers
+- hardware proof of every visible Gemma 4 tier
 - production model delivery for large artifacts

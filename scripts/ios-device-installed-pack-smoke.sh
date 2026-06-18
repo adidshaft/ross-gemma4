@@ -16,6 +16,9 @@ Options:
   --smoke-profile <mode>  full | quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
                           has a usable draft companion.
+  --require-draft-acceleration
+                          Fail unless the app reports active draft speculative
+                          acceleration with draft metadata. Use for MTP proof.
   --list-only             Only list installed manifest-backed packs from the device.
   --allow-device-proof-pack
                           Allow packs whose id ends with -device-proof. By default
@@ -37,6 +40,7 @@ selected_runtime=""
 stage_timeout="45"
 smoke_profile="full"
 disable_draft="0"
+require_draft_acceleration="0"
 list_only="0"
 allow_device_proof_pack="0"
 
@@ -72,6 +76,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --disable-draft)
       disable_draft="1"
+      shift 1
+      ;;
+    --require-draft-acceleration)
+      require_draft_acceleration="1"
       shift 1
       ;;
     --list-only)
@@ -372,7 +380,7 @@ if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
 fi
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" <<'PY'
 import os
 import re
 import signal
@@ -393,6 +401,7 @@ import sys
     stage_timeout,
     smoke_profile,
     disable_draft,
+    require_draft_acceleration,
 ) = sys.argv[1:]
 
 env = os.environ.copy()
@@ -415,6 +424,8 @@ if draft_model_tokens:
     env["DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_TOKENS"] = draft_model_tokens
 if disable_draft == "1":
     env["DEVICECTL_CHILD_ROSS_LOCAL_DISABLE_DRAFT_ACCELERATION"] = "1"
+if require_draft_acceleration == "1":
+    env["DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"] = "1"
 
 command = [
     "xcrun",
@@ -432,8 +443,19 @@ command = [
 
 pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
+identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
+
+def parse_identity(line):
+    fields = {}
+    for chunk in line.split()[1:]:
+        if "=" not in chunk:
+            continue
+        key, value = chunk.split("=", 1)
+        fields[key] = value
+    return fields
 
 outcome = None
+identity = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -448,6 +470,8 @@ try:
     for raw_line in process.stdout:
         line = raw_line.rstrip("\n")
         print(line)
+        if identity_re.search(line):
+            identity = parse_identity(line)
         if pass_re.search(line):
             outcome = "pass"
             process.send_signal(signal.SIGINT)
@@ -464,6 +488,27 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
+    if identity is None:
+        print("ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
+        sys.exit(1)
+    actual_runtime = identity.get("actual_runtime")
+    if actual_runtime != runtime_mode:
+        print(
+            f"ROSS_SMOKE_GUARD_FAIL reason=runtime_identity_mismatch requested={runtime_mode} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if require_draft_acceleration == "1":
+        acceleration = identity.get("acceleration")
+        draft_tokens = identity.get("draft_tokens")
+        draft_model = identity.get("draft_model")
+        if acceleration != "draftModelSpeculative" or draft_tokens in (None, "nil") or draft_model in (None, "nil"):
+            print(
+                "ROSS_SMOKE_GUARD_FAIL reason=draft_acceleration_inactive "
+                f"acceleration={acceleration} draft_tokens={draft_tokens} draft_model={draft_model}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
     sys.exit(0)
 if outcome == "fail":
     sys.exit(1)

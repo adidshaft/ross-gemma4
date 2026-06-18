@@ -174,12 +174,24 @@ func rossAssistantDownloadSmokeJob(
 enum RossLocalModelSmokeProfile: String {
     case full
     case quick
+    case mtpQuick = "mtp_quick"
+
+    var isShortGenerationProfile: Bool {
+        switch self {
+        case .quick, .mtpQuick:
+            return true
+        case .full:
+            return false
+        }
+    }
 
     static func fromEnvironment(_ environment: [String: String]) -> RossLocalModelSmokeProfile {
         let rawValue = environment["ROSS_LOCAL_MODEL_SMOKE_PROFILE"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() ?? ""
         switch rawValue {
+        case "mtp", "mtp-quick", "mtp_quick":
+            return .mtpQuick
         case "quick", "source", "source-only":
             return .quick
         default:
@@ -240,8 +252,10 @@ struct RossLocalModelSmokeView: View {
     @MainActor
     private func runSmoke() async {
         let model = AlphaRossModel()
+        let environment = ProcessInfo.processInfo.environment
         let smokeProfile = RossLocalModelSmokeProfile.fromEnvironment(ProcessInfo.processInfo.environment)
-        let runtimeEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
+        let runtimeEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment(environment)
+        let requireDraftAcceleration = RossLocalModelSmokeView.requiresDraftAcceleration(environment)
         let debugModelPath = runtimeEnvironment.modelPath?.trimmingCharacters(in: .whitespacesAndNewlines)
         RossLocalModelSmokeView.log(
             "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false)"
@@ -301,6 +315,30 @@ struct RossLocalModelSmokeView: View {
             return
         }
         let providerHealth = provider.runtimeHealth()
+        RossLocalModelSmokeView.logRuntimeIdentity(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: providerHealth,
+            requestedRuntime: runtimeEnvironment.runtimeModeOverride
+        )
+        if let requestedRuntime = runtimeEnvironment.runtimeModeOverride,
+           requestedRuntime != provider.runtimeMode {
+            status = RossLocalModelSmokeStatusCopy.failedStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(requestedRuntime.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=runtime_identity_mismatch"
+            )
+            return
+        }
+        if requireDraftAcceleration,
+           providerHealth.accelerationMode != .draftModelSpeculative ||
+            providerHealth.accelerationDraftTokens == nil ||
+            providerHealth.draftModelPathLabel == nil {
+            status = RossLocalModelSmokeStatusCopy.failedStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=draft_acceleration_required acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil")"
+            )
+            return
+        }
         guard providerHealth.available else {
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log(
@@ -335,7 +373,7 @@ struct RossLocalModelSmokeView: View {
                 )
             ],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: 192,
+            maxOutputTokens: smokeProfile == .mtpQuick ? 64 : 192,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -510,7 +548,7 @@ struct RossLocalModelSmokeView: View {
             instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
             sourcePack: [],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: 192,
+            maxOutputTokens: smokeProfile == .mtpQuick ? 64 : 192,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -546,7 +584,7 @@ struct RossLocalModelSmokeView: View {
         let sourceNativeModel = !sourceUsedLanguageFallback
         let generalNativeModel = !generalUsedLanguageFallback
 
-        if smokeProfile == .quick {
+        if smokeProfile.isShortGenerationProfile {
             if sourceBoundOutput.schemaValid,
                sourceBoundOutput.errorCategory == nil,
                generalOutput.schemaValid,
@@ -661,6 +699,77 @@ struct RossLocalModelSmokeView: View {
             fputs(line, stderr)
         }
         fflush(stderr)
+    }
+
+    nonisolated static func requiresDraftAcceleration(_ environment: [String: String]) -> Bool {
+        let rawValue = environment["ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return ["1", "true", "yes", "on"].contains(rawValue)
+    }
+
+    nonisolated static func logRuntimeIdentity(
+        activePack: AlphaInstalledModelPack,
+        provider: any AlphaLocalModelProvider,
+        providerHealth: AlphaLocalRuntimeHealth,
+        requestedRuntime: AlphaPackRuntimeMode?
+    ) {
+        let artifactURL = URL(fileURLWithPath: activePack.installPath)
+        let artifactPathType: String
+        if (try? artifactURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            artifactPathType = "directory"
+        } else if FileManager.default.fileExists(atPath: activePack.installPath) {
+            artifactPathType = "file"
+        } else if activePack.runtimeMode == .appleFoundationModels && activePack.installPath == "system-model" {
+            artifactPathType = "system"
+        } else {
+            artifactPathType = "missing"
+        }
+
+        let gpuOffloadInfo: String
+        switch provider.runtimeMode {
+        case .llamaCppGguf:
+            let gpuLayers = AlphaLlamaRuntimeProfile.gpuLayerCount(forModelPath: activePack.installPath)
+            let offloadKQV = AlphaLlamaRuntimeProfile.shouldOffloadKQV(forModelPath: activePack.installPath)
+            let opOffload = AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(forModelPath: activePack.installPath)
+            gpuOffloadInfo = "n_gpu_layers:\(gpuLayers),offload_kqv:\(offloadKQV),op_offload:\(opOffload)"
+        case .mlxSwiftLm:
+            gpuOffloadInfo = "mlx_default"
+        case .appleFoundationModels:
+            gpuOffloadInfo = "system_managed"
+        case .deterministicDev, .mediapipeLlm, .unavailable:
+            gpuOffloadInfo = "unavailable"
+        }
+
+        let fields: [(String, String)] = [
+            ("provider", String(describing: type(of: provider))),
+            ("requested_runtime", requestedRuntime?.rawValue ?? "nil"),
+            ("actual_runtime", provider.runtimeMode.rawValue),
+            ("pack_runtime", activePack.runtimeMode.rawValue),
+            ("model_format", activePack.artifactKind),
+            ("artifact_path_type", artifactPathType),
+            ("artifact_path", artifactURL.lastPathComponent.isEmpty ? activePack.installPath : artifactURL.lastPathComponent),
+            ("acceleration", providerHealth.accelerationMode?.rawValue ?? "nil"),
+            ("draft_tokens", providerHealth.accelerationDraftTokens.map(String.init) ?? "nil"),
+            ("draft_model", providerHealth.draftModelPathLabel ?? "nil"),
+            ("context_tokens", providerHealth.estimatedContextTokens.map(String.init) ?? "nil"),
+            ("gpu_offload", gpuOffloadInfo),
+            ("fallback", provider.runtimeMode == .deterministicDev ? "deterministic_dev" : "none"),
+            ("available", String(providerHealth.available)),
+            ("error", providerHealth.lastErrorCategory ?? "nil"),
+        ]
+        let line = fields
+            .map { "\($0.0)=\(stableSmokeValue($0.1))" }
+            .joined(separator: " ")
+        log("ROSS_RUNTIME_IDENTITY \(line)")
+    }
+
+    nonisolated private static func stableSmokeValue(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\n", with: "_")
+            .replacingOccurrences(of: "\r", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
     }
 
     nonisolated static func compactLogExcerpt(_ text: String) -> String {

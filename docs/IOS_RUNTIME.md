@@ -14,6 +14,9 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 ## Verified Evidence
 
 - Swift package tests cover registry parsing, artifact validation, download-state recovery, Ask routing, imported text/PDF/image behavior, and multilingual source-preserving fallback.
+- Local model smoke runs now emit `ROSS_RUNTIME_IDENTITY` before generation. Treat this as the authority for provider name, requested runtime, actual runtime, artifact kind/path type, acceleration mode, draft metadata, context size, GPU/offload summary, fallback state, and availability.
+- The cabled-device smoke helpers fail a run if a pass marker arrives without `ROSS_RUNTIME_IDENTITY`, or if the requested runtime does not match the actual runtime reported by the app. MLX/CoreAI/MTP numbers must not be recorded from a GGUF identity marker.
+- MTP proof requires `--require-draft-acceleration` plus an identity marker with `acceleration=draftModelSpeculative`, non-`nil` `draft_tokens`, and non-`nil` `draft_model`. The `mtp_quick` smoke profile exists for a short, low-output validation pass; it is not a long stress benchmark.
 - `docs/REAL_MODEL_QA_RESULTS.md` records the June 2, 2026 simulator GGUF smoke:
   - runtime: `gemma_local_runtime`
   - tier: `quick_start`
@@ -31,6 +34,8 @@ Do not claim release-ready physical iPhone inference until these are recorded:
 4. Device performance, storage use, privacy ledger entries, logs, and fallback behavior are recorded in `docs/REAL_MODEL_QA_RESULTS.md`.
 
 The MLX lane remains unproven on physical iPhone hardware. It now supports both developer-supplied local directories and ZIP-packaged MLX installs, but physical-device validation is still pending.
+
+Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI benchmark must show `actual_runtime=apple_foundation_models`. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI benchmark.
 
 Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
 - `gemma4_assistant` archives are still rejected as primary MLX targets, but they are now accepted as draft companions for speculative decoding on supported tiers.

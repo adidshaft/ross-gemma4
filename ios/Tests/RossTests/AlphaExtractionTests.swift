@@ -15736,6 +15736,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(pack.packId, "gemma-4-12b-q4")
         XCTAssertEqual(pack.tier, .caseAssociate)
         XCTAssertEqual(pack.installPath, modelURL.path)
+        XCTAssertEqual(pack.artifactKind, "local_model_artifact")
         XCTAssertEqual(pack.runtimeMode, .llamaCppGguf)
         XCTAssertTrue(pack.checksumVerified)
     }
@@ -15753,13 +15754,36 @@ final class AlphaExtractionTests: XCTestCase {
             ]),
             .quick
         )
+        XCTAssertTrue(RossLocalModelSmokeProfile.quick.isShortGenerationProfile)
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "mtp-quick"
+            ]),
+            .mtpQuick
+        )
+        XCTAssertTrue(RossLocalModelSmokeProfile.mtpQuick.isShortGenerationProfile)
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([
                 "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "full"
             ]),
             .full
         )
+        XCTAssertFalse(RossLocalModelSmokeProfile.full.isShortGenerationProfile)
         XCTAssertEqual(RossLocalModelSmokeProfile.fromEnvironment([:]), .full)
+    }
+
+    func testLocalModelSmokeParsesDraftAccelerationRequirement() {
+        XCTAssertTrue(
+            RossLocalModelSmokeView.requiresDraftAcceleration([
+                "ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION": "1"
+            ])
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.requiresDraftAcceleration([
+                "ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION": "true"
+            ])
+        )
+        XCTAssertFalse(RossLocalModelSmokeView.requiresDraftAcceleration([:]))
     }
 
     func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
