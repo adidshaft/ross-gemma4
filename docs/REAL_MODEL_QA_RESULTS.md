@@ -1,5 +1,28 @@
 # Real Model QA Results
 
+## 2026-06-18 physical iPhone GGUF smoke via cabled-device helper
+
+- Branch: `main`
+- Platform: physical iPhone (`Aman's iPhone`, `iPhone16,1`, iOS `27.0`)
+- Runtime mode: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Model SHA-256 observed locally: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
+- Smoke helper: `/Users/amanpandey/projects/ross-gemma4/scripts/ios-device-gguf-smoke.sh`
+- Smoke command:
+  - `scripts/ios-device-gguf-smoke.sh --device 00008130-000C74820130001C --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --tier quickStart --stage-timeout 45`
+- Whether model files were committed: No
+- Whether real GGUF inference ran on the physical device: Yes
+- Latest proof marker:
+  - `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=88.34s source_raw_chars=337 source_parsed_chars=321 bengali_output_chars=275 hindi_output_chars=157 tamil_output_chars=400 telugu_output_chars=185 general_output_chars=558 source_refs=1 bengali_source_refs=1 hindi_source_refs=1 tamil_source_refs=1 telugu_source_refs=1 source_native_model=true bengali_native_model=true hindi_native_model=true tamil_native_model=true telugu_native_model=true general_native_model=true`
+- Observed physical-device behavior:
+  - the helper seeded the GGUF artifact into the app container and resolved the absolute on-device model path automatically
+  - the app created a real llama.cpp context on the A17 Pro GPU and completed every smoke stage on device
+  - English source grounding, Bengali Bangla-script output, Hindi Devanagari output, Tamil output, Telugu output, and the general cautious answer all passed in the same run
+- What is still not proven:
+  - the intended `Case Associate` 12B GGUF artifact on this physical iPhone
+  - physical iPhone download/resume/verify/activate of the current multi-GB production GGUF artifacts
+  - the longer-bundle comparison loop across GGUF, MLX, and CoreAI on this device
+
 ## 2026-06-02 iOS simulator GGUF smoke
 
 - Branch: `main`

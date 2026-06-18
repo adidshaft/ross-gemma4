@@ -106,6 +106,24 @@ Manual setup smoke:
    - `false` means Ross kept the product answer safe by using the source-preserving extractive fallback.
 9. If the console only shows llama.cpp model/context setup and never prints a Ross pass/fail marker, record the run as stalled and terminate the app; do not claim native model proof from that run.
 
+Cabled physical iPhone helper:
+
+- For a cabled iPhone plus a local GGUF file, you can use `/Users/amanpandey/projects/ross-gemma4/scripts/ios-device-gguf-smoke.sh` instead of reconstructing the container path by hand.
+- Example:
+
+```sh
+cd /Users/amanpandey/projects/ross-gemma4
+scripts/ios-device-gguf-smoke.sh \
+  --device 00008130-000C74820130001C \
+  --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf \
+  --tier quickStart \
+  --stage-timeout 45
+```
+
+- The helper seeds the GGUF plus a manifest into `Library/Application Support/RossAlpha/model-packs/<tier>/`, resolves the absolute device-side model path with a probe copy, then launches Ross with `--local-model-smoke` and the required `DEVICECTL_CHILD_ROSS_*` environment variables.
+- A June 18, 2026 run on Aman's physical iPhone (`iPhone16,1`, iOS `27.0`) passed this flow with the 2B GGUF artifact and emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start`.
+- This helper proves the physical GGUF runtime path itself. It does not replace the still-needed `Case Associate` 12B proof on device.
+
 The current `--local-model-smoke` pass requires all of these from the real provider:
 
 - English source-grounded answer about Article 417 citation verification.

@@ -40,6 +40,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS saved device-proof coverage and the exported runtime comparison note now also show the saved system version for each target, so later review can tell which iOS build produced the current proof artifact without reopening the PDF
 - hidden iOS saved device-proof coverage and the exported runtime comparison note now also show the saved device state for each target, including free storage, low-power mode, and thermal state, so later comparison review can spot constrained-device evidence without reopening the PDF
 - the current iOS Debug build now also compiles, installs, and foreground-launches on Aman's physical iPhone (`iPhone16,1` on iOS `27.0`), so the next iPhone step is runtime proof rather than device bring-up
+- the repo now also includes a cabled-device GGUF smoke helper at `scripts/ios-device-gguf-smoke.sh`, so physical iPhone GGUF reruns no longer depend on reconstructing the app-container path by hand
 - Android Technical details smoke reporting now also stamps device model, Android version, free storage, low-power mode, and thermal state, so the eventual physical-device MediaPipe proof carries the same basic device context without hand-written notes
 
 ## Visible Pack Mapping
@@ -95,6 +96,7 @@ Most recent commits that define this pause point:
 - hidden iOS saved comparison-note coverage now explicitly says whether the final device-comparison proof is ready for ladder review or which physical note still needs to be saved or rerun
 - hidden iOS ladder-decision readiness is now exported alongside the device note, so final pack judgment is explicitly held until the missing physical-note targets are complete
 - the current iOS app bundle now builds for `iphoneos`, installs onto Aman's physical iPhone, and stays up after a foreground launch from `devicectl`
+- the current iPhone now also proves a real on-device GGUF smoke pass through the cabled-device helper and `--local-model-smoke`, using the local `gemma-2-2b-it-Q4_K_M.gguf` artifact as a Quick Start debug pack on the physical phone
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
@@ -108,6 +110,7 @@ Most recent commits that define this pause point:
 - focused iOS usability tests now also prove the saved proof export includes the saved system version for each physical target, so later reviewers can tell which iOS build produced the latest counted proof artifact
 - focused iOS usability tests now also prove the saved proof export includes the saved device state for each physical target, so later reviewers can spot low-storage or throttled-device evidence without reopening the saved note
 - focused Android unit tests now also prove the local smoke report still captures a device proof profile even when the real runtime is unavailable, so later physical-device smoke evidence can include model, Android version, and device-state context
+- a physical iPhone GGUF smoke now also passes through the cabled-device helper with `source_native_model=true`, `bengali_native_model=true`, `hindi_native_model=true`, `tamil_native_model=true`, `telugu_native_model=true`, and `general_native_model=true`
 
 Most recent verification commands:
 
@@ -124,13 +127,14 @@ Most recent verification commands:
 - `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=00008130-000C74820130001C' -derivedDataPath ios/build-device build`
 - `xcrun devicectl device install app --device '00008130-000C74820130001C' ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
 - `xcrun devicectl device process launch --device '00008130-000C74820130001C' --terminate-existing com.ross.ios`
+- `scripts/ios-device-gguf-smoke.sh --device 00008130-000C74820130001C --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --tier quickStart --stage-timeout 45`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
   Run from `/Users/amanpandey/projects/ross-gemma4/backend`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
 
 ## What Is Still Not Proven
 
-- physical iPhone proof for the full GGUF and MLX setup lifecycle on representative 8 GB and 12 GB devices beyond the now-verified build/install/launch baseline
+- physical iPhone proof for the intended `Case Associate` 12B GGUF artifact and the full GGUF / MLX setup lifecycle on representative 8 GB and 12 GB devices beyond the now-verified Quick Start GGUF smoke baseline
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
 - real end-to-end client download and consumption proof for production multi-GB artifacts on device
 - Android native runtime validation beyond the recent retrieval and budget improvements
@@ -146,8 +150,8 @@ Most recent verification commands:
 
 Resume with a focused real-device validation pass instead of more code changes:
 
-1. continue on Aman's current iPhone from the now-working build/install/launch baseline and verify Case Associate using the current GGUF lane
-2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
+1. continue on Aman's current iPhone from the now-proven cabled GGUF smoke baseline and rerun the same helper flow with the actual `Case Associate` 12B GGUF artifact, not the temporary 2B Quick Start debug artifact
+2. after the intended 12B GGUF artifact is proven on device, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
 3. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
 4. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
 5. only then return to Android real-device runtime validation and deeper runtime work there
