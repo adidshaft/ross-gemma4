@@ -11,6 +11,10 @@ METRICS = [
 ]
 
 
+class MissingBenchmarkMatrixError(ValueError):
+    """Raised when a pass marker lacks the benchmark matrix marker."""
+
+
 def parse_fields(line, skip_prefix=True):
     fields = {}
     chunks = line.split()[1:] if skip_prefix else line.split()
@@ -28,6 +32,9 @@ def summary_value(fields, key):
 
 
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
+    if not matrix_fields:
+        raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
+
     summary = {
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": summary_value(identity, "requested_runtime"),

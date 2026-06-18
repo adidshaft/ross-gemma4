@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import unittest
 
-from ross_smoke_summary import benchmark_summary_line, parse_fields
+from ross_smoke_summary import (
+    MissingBenchmarkMatrixError,
+    benchmark_summary_line,
+    parse_fields,
+)
 
 
 class RossSmokeSummaryTests(unittest.TestCase):
@@ -37,11 +41,15 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("bengali_token_speed=8.84", summary)
         self.assertIn("general_token_speed=8.57", summary)
 
-    def test_empty_fields_are_reported_as_nil(self):
-        summary = benchmark_summary_line({}, {}, {})
+    def test_missing_benchmark_matrix_is_rejected(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix"):
+            benchmark_summary_line({}, {}, {})
+
+    def test_empty_identity_and_pass_fields_are_reported_as_nil(self):
+        summary = benchmark_summary_line({}, {}, {"profile": "quick", "stages": "source:document_qa"})
 
         self.assertIn("runtime=nil", summary)
-        self.assertIn("matrix_stages=nil", summary)
+        self.assertIn("matrix_stages=source:document_qa", summary)
 
 
 if __name__ == "__main__":

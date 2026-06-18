@@ -439,7 +439,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, sys.argv[-1])
-from ross_smoke_summary import benchmark_summary_line, parse_fields
+from ross_smoke_summary import MissingBenchmarkMatrixError, benchmark_summary_line, parse_fields
 
 (
     device_id,
@@ -577,10 +577,11 @@ finally:
 if outcome == "pass":
     validate_identity_guard(identity, require_identity=True)
     if pass_fields is not None:
-        if matrix_fields is None:
+        try:
+            print_benchmark_summary(identity, pass_fields, matrix_fields)
+        except MissingBenchmarkMatrixError:
             print("ROSS_SMOKE_GUARD_FAIL reason=missing_benchmark_matrix", file=sys.stderr)
             sys.exit(1)
-        print_benchmark_summary(identity, pass_fields, matrix_fields)
     sys.exit(0)
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
