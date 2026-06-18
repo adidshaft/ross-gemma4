@@ -3688,6 +3688,9 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("")
         lines.append(rossLocalized("private_assistant_device_comparison_coverage_title"))
         lines.append(rossLocalized("private_assistant_device_comparison_coverage_note"))
+        if let belowTargetGuardrailNote = alphaPrivateAIDeviceComparisonBelowTargetGuardrailNote(deviceComparisonProofRecords) {
+            lines.append(belowTargetGuardrailNote)
+        }
         let missingTargetLabels = alphaPrivateAIDeviceComparisonMissingTargetLabels(deviceComparisonProofRecords)
         if missingTargetLabels.isEmpty {
             lines.append(rossLocalized("private_assistant_device_comparison_coverage_ready"))

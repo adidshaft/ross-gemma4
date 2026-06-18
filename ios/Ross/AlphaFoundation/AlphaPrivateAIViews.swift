@@ -1022,6 +1022,10 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
         return labels.joined(separator: ", ")
     }
 
+    private var belowTargetGuardrailNote: String? {
+        alphaPrivateAIDeviceComparisonBelowTargetGuardrailNote(records)
+    }
+
     private var nextSteps: [String] {
         alphaPrivateAIDeviceComparisonNextSteps(records)
     }
@@ -1040,6 +1044,13 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let belowTargetGuardrailNote {
+                Text(belowTargetGuardrailNote)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let missingTargetLabels {
                 Text(String(format: rossLocalized("private_assistant_device_comparison_coverage_missing"), missingTargetLabels))
@@ -1740,6 +1751,18 @@ func alphaPrivateAIDeviceComparisonSavedRuntimeBlocker(
 ) -> String? {
     let trimmed = record.runtimeBlockerLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? nil : trimmed
+}
+
+func alphaPrivateAIDeviceComparisonBelowTargetGuardrailNote(
+    _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
+) -> String? {
+    let hasSavedBelowTargetProof = records.contains { record in
+        record.profile.captureSource == .physicalIPhone &&
+            record.profile.representativeClass == .belowTarget
+    }
+    return hasSavedBelowTargetProof
+        ? rossLocalized("private_assistant_device_comparison_below_target_guardrail_note")
+        : nil
 }
 
 func alphaPrivateAIDeviceComparisonRuntimeBlocker(

@@ -4794,6 +4794,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             alphaPrivateAIDeviceComparisonDecisionReadinessSummary([savedBelowTargetRecord, saved8GBRecord]),
             "Hold the final pack decision until these physical notes are complete: 12 GB+ class."
         )
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonBelowTargetGuardrailNote([savedBelowTargetRecord, saved8GBRecord]),
+            "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes."
+        )
     }
 
     func testPrivateAIDeviceComparisonProofRecordBuildsBelowTargetRuntimeBlockerSummary() {
@@ -5452,6 +5456,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Last checked: Jun 13, 2024 at 1:46 PM"))
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
+        XCTAssertTrue(joined.contains("Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
         XCTAssertTrue(joined.contains("Below 8 GB target"))
         XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone16,1."))

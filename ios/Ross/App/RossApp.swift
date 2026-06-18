@@ -3087,6 +3087,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Only saved physical iPhone comparison notes count toward these targets.",
             "te": "Only saved physical iPhone comparison notes count toward these targets."
         ],
+        "private_assistant_device_comparison_below_target_guardrail_note": [
+            "en": "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes.",
+            "hi": "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes.",
+            "bn": "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes.",
+            "ta": "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes.",
+            "te": "Saved below-target proof helps confirm the smaller-iPhone guardrail, but it does not replace the required 8 GB and 12 GB+ comparison notes."
+        ],
         "private_assistant_device_comparison_coverage_ready": [
             "en": "Saved physical comparison notes now cover both device targets.",
             "hi": "Saved physical comparison notes now cover both device targets.",
