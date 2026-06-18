@@ -971,6 +971,10 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
         alphaPrivateAIDeviceComparisonNextSteps(records)
     }
 
+    private var decisionReadinessSummary: String {
+        alphaPrivateAIDeviceComparisonDecisionReadinessSummary(records)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(rossLocalized("private_assistant_device_comparison_coverage_title"))
@@ -1028,6 +1032,19 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(rossLocalized("private_assistant_ladder_decision_readiness_title"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+
+                Text(decisionReadinessSummary)
+                    .font(.caption2)
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -1527,6 +1544,19 @@ func alphaPrivateAIDeviceComparisonNextSteps(
             )
         }
     }
+}
+
+func alphaPrivateAIDeviceComparisonDecisionReadinessSummary(
+    _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
+) -> String {
+    let missingTargetLabels = alphaPrivateAIDeviceComparisonMissingTargetLabels(records)
+    if missingTargetLabels.isEmpty {
+        return rossLocalized("private_assistant_ladder_decision_ready")
+    }
+    return String(
+        format: rossLocalized("private_assistant_ladder_decision_waiting"),
+        missingTargetLabels.joined(separator: ", ")
+    )
 }
 
 func alphaPrivateAIRuntimeCoverageStatuses(

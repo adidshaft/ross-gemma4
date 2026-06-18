@@ -3651,6 +3651,10 @@ func alphaMatterBundleComparisonExportBodyLines(
         } else {
             lines.append(contentsOf: nextSteps.map { "- \($0)" })
         }
+
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_ladder_decision_readiness_title"))
+        lines.append(alphaPrivateAIDeviceComparisonDecisionReadinessSummary(deviceComparisonProofRecords))
     }
 
     if !laneReadinessStatuses.isEmpty {

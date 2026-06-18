@@ -3157,6 +3157,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Re-run and save the full %@ comparison note on %@.",
             "te": "Re-run and save the full %@ comparison note on %@."
         ],
+        "private_assistant_ladder_decision_readiness_title": [
+            "en": "Ladder decision readiness",
+            "hi": "Ladder decision readiness",
+            "bn": "Ladder decision readiness",
+            "ta": "Ladder decision readiness",
+            "te": "Ladder decision readiness"
+        ],
+        "private_assistant_ladder_decision_ready": [
+            "en": "Saved physical comparison notes are ready for the final pack decision review.",
+            "hi": "Saved physical comparison notes are ready for the final pack decision review.",
+            "bn": "Saved physical comparison notes are ready for the final pack decision review.",
+            "ta": "Saved physical comparison notes are ready for the final pack decision review.",
+            "te": "Saved physical comparison notes are ready for the final pack decision review."
+        ],
+        "private_assistant_ladder_decision_waiting": [
+            "en": "Hold the final pack decision until these physical notes are complete: %@.",
+            "hi": "Hold the final pack decision until these physical notes are complete: %@.",
+            "bn": "Hold the final pack decision until these physical notes are complete: %@.",
+            "ta": "Hold the final pack decision until these physical notes are complete: %@.",
+            "te": "Hold the final pack decision until these physical notes are complete: %@."
+        ],
         "private_assistant_device_capture_source_label": [
             "en": "Capture source",
             "hi": "Capture source",
