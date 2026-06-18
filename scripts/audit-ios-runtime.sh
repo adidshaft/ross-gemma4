@@ -60,6 +60,21 @@ if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotEx
     FAIL=1
 fi
 
+if ! grep -q 'key: "tokens_processed"' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
+    echo "❌ FAIL: answer details sheet does not expose processed-token metrics."
+    FAIL=1
+fi
+
+if ! grep -q 'key: "token_speed"' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
+    echo "❌ FAIL: answer details sheet does not expose token-speed metrics."
+    FAIL=1
+fi
+
+if ! grep -q 'Label(rossLocalized("answer_details"), systemImage: "info.circle")' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
+    echo "❌ FAIL: answer details metrics are not available from the hidden info/context-menu action."
+    FAIL=1
+fi
+
 for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
     if ! grep -q "missing_benchmark_matrix" "$smoke_script" 2>/dev/null; then
         echo "❌ FAIL: $smoke_script does not require benchmark matrix before benchmark summary."
