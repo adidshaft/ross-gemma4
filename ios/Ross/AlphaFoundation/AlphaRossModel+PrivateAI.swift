@@ -3866,11 +3866,21 @@ extension AlphaRossModel {
                 checksumVerified: true,
                 isActive: true
             )
+            if ProcessInfo.processInfo.environment["ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER"] != nil {
+                print(
+                    "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE runtime_validation_start tier=\(tier.rawValue) runtime=\(installed.runtimeMode.rawValue) pack=\(installed.packId) install_path=\(installed.installPath)"
+                )
+            }
             guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(installed) else {
                 throw NSError(
                     domain: "RossAlphaPack",
                     code: 4,
                     userInfo: [NSLocalizedDescriptionKey: alphaAssistantExistingSetupRepairDetail]
+                )
+            }
+            if ProcessInfo.processInfo.environment["ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER"] != nil {
+                print(
+                    "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE runtime_validation_done tier=\(tier.rawValue) runtime=\(installed.runtimeMode.rawValue) pack=\(installed.packId)"
                 )
             }
 

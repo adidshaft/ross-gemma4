@@ -221,6 +221,15 @@ func alphaModelArtifactByteCount(at url: URL, fileManager: FileManager = .defaul
     return totalBytes
 }
 
+private func alphaAssistantDownloadSmokeEnabled() -> Bool {
+    ProcessInfo.processInfo.environment["ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER"] != nil
+}
+
+private func alphaAssistantDownloadSmokeTrace(_ detail: String) {
+    guard alphaAssistantDownloadSmokeEnabled() else { return }
+    print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE \(detail)")
+}
+
 private struct AlphaModelArtifactVerificationDetails {
     let checksum: String
     let bytes: Int64
@@ -234,7 +243,10 @@ private func alphaModelArtifactVerificationDetails(
     var isDirectory: ObjCBool = false
     guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return nil }
     guard isDirectory.boolValue else {
-        guard let checksum = alphaModelSHA256Hex(forFileAt: url) else { return nil }
+        guard let checksum = alphaModelSHA256Hex(
+            forFileAt: url,
+            smokeProgressLabel: url.lastPathComponent
+        ) else { return nil }
         return AlphaModelArtifactVerificationDetails(
             checksum: checksum,
             bytes: alphaModelArtifactByteCount(at: url, fileManager: fileManager),
@@ -257,9 +269,18 @@ private func alphaModelArtifactVerificationDetails(
             return nil
         }
         guard values?.isRegularFile == true else { continue }
-        guard let checksum = alphaModelSHA256Hex(forFileAt: fileURL) else { return nil }
         let relativePath = fileURL.path.replacingOccurrences(of: url.path + "/", with: "")
+        alphaAssistantDownloadSmokeTrace(
+            "verify_file_start root=\(url.lastPathComponent) file=\(relativePath)"
+        )
+        guard let checksum = alphaModelSHA256Hex(
+            forFileAt: fileURL,
+            smokeProgressLabel: "\(url.lastPathComponent)/\(relativePath)"
+        ) else { return nil }
         entries.append((relativePath, checksum, Int64(values?.fileSize ?? 0)))
+        alphaAssistantDownloadSmokeTrace(
+            "verify_file_done root=\(url.lastPathComponent) file=\(relativePath) bytes=\(Int64(values?.fileSize ?? 0)) checksum=\(checksum)"
+        )
     }
 
     guard !entries.isEmpty else { return nil }
@@ -366,21 +387,48 @@ func alphaPackagedMLXArchiveArtifact(
     return fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".zip")
 }
 
-func alphaModelSHA256Hex(forFileAt url: URL) -> String? {
+func alphaModelSHA256Hex(
+    forFileAt url: URL,
+    smokeProgressLabel: String? = nil
+) -> String? {
     guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
     defer { try? handle.close() }
 
     var hasher = SHA256()
+    let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+    let totalBytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+    var hashedBytes: Int64 = 0
+    var nextProgressReportBytes: Int64 = 512 * 1_024 * 1_024
+    if let smokeProgressLabel {
+        alphaAssistantDownloadSmokeTrace(
+            "hash_start file=\(smokeProgressLabel) total_bytes=\(totalBytes)"
+        )
+    }
     do {
         while true {
-            let data = try handle.read(upToCount: 1024 * 1024)
+            let data = try autoreleasepool {
+                try handle.read(upToCount: 1024 * 1024)
+            }
             guard let data, !data.isEmpty else { break }
             hasher.update(data: data)
+            hashedBytes += Int64(data.count)
+            if let smokeProgressLabel, totalBytes > 0, hashedBytes >= nextProgressReportBytes {
+                alphaAssistantDownloadSmokeTrace(
+                    "hash_progress file=\(smokeProgressLabel) bytes_hashed=\(hashedBytes) total_bytes=\(totalBytes)"
+                )
+                nextProgressReportBytes += 512 * 1_024 * 1_024
+            }
         }
     } catch {
         return nil
     }
-    return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    if let smokeProgressLabel {
+        alphaAssistantDownloadSmokeTrace(
+            "hash_done file=\(smokeProgressLabel) bytes_hashed=\(hashedBytes) total_bytes=\(totalBytes) checksum=\(checksum)"
+        )
+    }
+    return checksum
 }
 
 struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
@@ -944,6 +992,9 @@ actor AlphaRossStore {
         artifactKind: String,
         runtimeMode: AlphaPackRuntimeMode
     ) throws -> (installSourceURL: URL, verification: (checksum: String, bytes: Int64)) {
+        alphaAssistantDownloadSmokeTrace(
+            "verify_artifact_start file=\(fileName) kind=\(artifactKind) runtime=\(runtimeMode.rawValue) path=\(downloadedFileURL.lastPathComponent) expected_bytes=\(expectedBytes.map(String.init) ?? "nil")"
+        )
         var downloadedIsDirectory: ObjCBool = false
         let downloadedExists = fileManager.fileExists(
             atPath: downloadedFileURL.path,
@@ -1037,6 +1088,9 @@ actor AlphaRossStore {
                     userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
                 )
             }
+            alphaAssistantDownloadSmokeTrace(
+                "verify_artifact_done file=\(fileName) kind=\(artifactKind) runtime=\(runtimeMode.rawValue) bytes=\(extractedVerification.bytes) checksum=\(extractedVerification.checksum)"
+            )
             return (installSourceURL, extractedVerification)
         }
 
@@ -1099,6 +1153,9 @@ actor AlphaRossStore {
             }
             throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
         }
+        alphaAssistantDownloadSmokeTrace(
+            "verify_artifact_done file=\(fileName) kind=\(artifactKind) runtime=\(runtimeMode.rawValue) bytes=\(directVerification.bytes) checksum=\(directVerification.checksum)"
+        )
         return (downloadedFileURL, directVerification)
     }
 
@@ -1107,12 +1164,25 @@ actor AlphaRossStore {
         originalDownloadedURL: URL?,
         to artifactURL: URL
     ) throws {
+        alphaAssistantDownloadSmokeTrace(
+            "install_artifact_start source=\(installSourceURL.lastPathComponent) destination=\(artifactURL.lastPathComponent)"
+        )
         do {
             try removeExistingItemIfNeeded(at: artifactURL)
             try fileManager.moveItem(at: installSourceURL, to: artifactURL)
+            alphaAssistantDownloadSmokeTrace(
+                "install_artifact_move_success destination=\(artifactURL.lastPathComponent)"
+            )
         } catch {
+            let nsError = error as NSError
+            alphaAssistantDownloadSmokeTrace(
+                "install_artifact_move_failed destination=\(artifactURL.lastPathComponent) domain=\(nsError.domain) code=\(nsError.code) detail=\(nsError.localizedDescription)"
+            )
             try removeExistingItemIfNeeded(at: artifactURL)
             try fileManager.copyItem(at: installSourceURL, to: artifactURL)
+            alphaAssistantDownloadSmokeTrace(
+                "install_artifact_copy_success destination=\(artifactURL.lastPathComponent)"
+            )
         }
 
         if installSourceURL.standardizedFileURL != artifactURL.standardizedFileURL {
@@ -1123,6 +1193,9 @@ actor AlphaRossStore {
             originalDownloadedURL.standardizedFileURL != installSourceURL.standardizedFileURL {
             try? fileManager.removeItem(at: originalDownloadedURL)
         }
+        alphaAssistantDownloadSmokeTrace(
+            "install_artifact_done destination=\(artifactURL.lastPathComponent)"
+        )
     }
 
     private func resolvedInstalledArtifactURL(
@@ -1224,6 +1297,9 @@ actor AlphaRossStore {
         developmentOnly: Bool,
         draftArtifact: AlphaInstalledAssistantDraftArtifact? = nil
     ) throws {
+        alphaAssistantDownloadSmokeTrace(
+            "manifest_write_start tier=\(tier.rawValue) pack=\(packId) file=\(fileName)"
+        )
         let manifest = AlphaModelArtifactManifest(
             packId: packId,
             tier: tier,
@@ -1240,6 +1316,9 @@ actor AlphaRossStore {
         let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager)
         let data = try JSONEncoder.ross.encode(manifest)
         try data.write(to: manifestURL, options: .atomic)
+        alphaAssistantDownloadSmokeTrace(
+            "manifest_write_done tier=\(tier.rawValue) pack=\(packId) manifest=\(manifestURL.lastPathComponent)"
+        )
     }
 
     func createPDFExport(title: String, kind: String, caseId: UUID?, bodyLines: [String]) throws -> AlphaExportedReport {

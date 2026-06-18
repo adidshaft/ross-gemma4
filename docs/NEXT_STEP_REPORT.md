@@ -138,9 +138,10 @@ Most recent commits that define this pause point:
 - the first terminal physical-device failure after that full transfer was a real checksum-verification stop in Ross, and the smoke-only technical line exposed the underlying app error directly as `domain=RossAlphaPack code=2 detail=Checksum verification failed.`
 - the bundled direct-MLX checksum pins for `gemma-4-E4B-it-qat-4bit`, `gemma-4-E4B-it-qat-assistant-6bit`, `gemma-4-12B-it-qat-4bit`, and `gemma-4-12B-it-qat-assistant-4bit` have now been updated to match the current Hugging Face repository-tree digests rather than the earlier stale values
 - that checksum fix surfaced the next real bug in the client flow: Ross was still sweeping `tmp/ross-pending-*` artifacts during multi-part assistant setup, which deleted the already-downloaded main MLX directory when the draft companion download started
-- the temp-sweep preservation fix is now in place and covered by focused tests, and the latest physical-device smoke moved past the old checksum wall into `ROSS_ASSISTANT_DOWNLOAD_SMOKE_PROGRESS state=verifying bytes=6927877785 total=6927877785`
-- the current blocking state on Aman's phone is now later in the pipeline than before: Ross reaches `state=verifying`, then the app process is terminated with `signal 9` before a manifest-backed production pack is written into `Library/Application Support/RossAlpha/model-packs/quick_start`
-- after that latest run, the phone still has no non-seeded manifest-backed production pack proof yet, but the app container now retains the downloaded main MLX directory under `tmp/ross-pending-quick_start-gemma-4-E4B-it-qat-4bit`, which is strong evidence that verification/install is the remaining live gap rather than transport
+- the temp-sweep preservation fix is now in place and covered by focused tests, and the current smoke-only tracing plus SHA-256 `autoreleasepool` fix moved the latest physical-device run all the way through both multi-GB MLX shard hashes instead of dying mid-verify
+- the earlier physical-device `signal 9` kill during verification now appears resolved on Aman's phone: the latest `quickStart` MLX smoke fully hashed `model-00001-of-00002.safetensors` (`4249502053` bytes) and `model-00002-of-00002.safetensors` (`2548805689` bytes) before Ross returned a normal app-level failure
+- the current blocking state on Aman's phone is now a deterministic direct-MLX directory checksum mismatch after full verification, not a process termination: expected `45a390a93c9e6d6aac01018da2befe453b3b121477495c7a1967581c680a4063`, actual `2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c`, with matching total bytes `6830817013`
+- after that latest run, the phone still has no non-seeded manifest-backed production pack proof yet and `scripts/ios-device-installed-pack-smoke.sh --list-only` still reports only the seeded `-device-proof` manifests, which confirms the failure remains before install / manifest write rather than in runtime consumption
 
 Most recent verification commands:
 
@@ -177,13 +178,18 @@ Most recent verification commands:
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
   Run from `/Users/amanpandey/projects/ross-gemma4/backend`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testAssistantDownloadTechnicalFailureSummaryIncludesNSErrorDetails|testAssistantSmokeVerificationSummaryIncludesDirectoryDigestDetails|testSweepTemporaryAssistantDownloadsPreservesExcludedArtifacts)'`
+- `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
+- `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
+- `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --wait-seconds 600`
+- `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --list-only`
 
 ## What Is Still Not Proven
 
 - successful physical iPhone proof for the intended `Case Associate` 12B GGUF artifact on a 12 GB+ target, now that the current 7 GB-class A17 Pro phone has a recorded memory-mapping failure for that exact pack
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
-- real end-to-end client download and consumption proof for production multi-GB artifacts on device, even though the current iPhone now proves full production MLX transfer and entry into the on-device verification phase
-- a successful completion of the real `quickStart` MLX production download on Aman's current phone, plus a follow-up installed-pack smoke without `--allow-device-proof-pack`
+- real end-to-end client download and consumption proof for production multi-GB artifacts on device, even though the current iPhone now proves full production MLX transfer plus full on-device verification of the direct MLX repository contents
+- a successful completion of the real `quickStart` MLX production download on Aman's current phone, which is now specifically blocked by a deterministic post-download directory checksum mismatch before install, plus a follow-up installed-pack smoke without `--allow-device-proof-pack`
 - Android native runtime validation beyond the recent retrieval and budget improvements
 
 ## Why This Is A Good Pause Point
@@ -191,20 +197,23 @@ Most recent verification commands:
 - model selection is no longer in a churn state
 - the latest verified iOS llama runner bump is already in
 - large-file and context handling moved forward without opening a larger migration
+- the last verify-time crash-class blocker on Aman's phone has been reduced to a deterministic app-level checksum failure with concrete expected vs actual digests
 - the next remaining work is mostly validation and final product judgment, not urgent architecture repair
 
 ## Exact Resume Step
 
 Resume with a focused real-device validation pass instead of more code changes:
 
-1. resume from the latest physical-device checkpoint rather than from checksum debugging: the current phone now proves full `quickStart` MLX transfer, corrected direct-MLX checksum pins, and a preserved main artifact that reaches `state=verifying` before the app is terminated with `signal 9`
-2. inspect the termination reason around that verify/install transition on Aman's phone, starting with device logs or crash / jetsam evidence and the surviving `tmp/ross-pending-quick_start-gemma-4-E4B-it-qat-4bit` directory in the app container
-3. immediately after the next verify/install run, use `scripts/ios-device-installed-pack-smoke.sh --list-only` to confirm whether the phone now holds a real manifest-backed production pack rather than only seeded `-device-proof` packs
-4. if a real production manifest appears, rerun the installed-pack helper without `--allow-device-proof-pack` so the final device proof includes actual runtime consumption from app-private storage
-5. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
-6. use the new below-target behavior as the current shipping guardrail: on smaller iPhones, `Case Associate` should now steer toward MLX and no longer advertise the 12B GGUF lane as ready
-7. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder without the MLX fallback path
-8. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
-9. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
-10. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-11. only then return to Android real-device runtime validation and deeper runtime work there
+1. resume from the latest physical-device checkpoint rather than from transport or jetsam debugging: the current phone now proves full `quickStart` MLX transfer, preserved main/draft temp artifacts, and a complete verify pass over both large safetensor shards without another `signal 9`
+2. focus the next investigation on the direct-MLX directory checksum contract itself: Ross now reports expected `45a390a93c9e6d6aac01018da2befe453b3b121477495c7a1967581c680a4063` versus actual `2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c` after a full `6830817013`-byte verify, so the next task is to reconcile how that aggregate directory digest is generated versus how the release-ready pin was produced
+3. use the captured smoke verification summary as the canonical evidence for that checksum investigation, because it now includes the per-file manifest rows and both large-file hashes that fed the failing aggregate digest
+4. after reconciling the checksum contract or updating the pin, rerun `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --wait-seconds 600`
+5. immediately after that rerun, use `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --list-only` to confirm whether the phone now holds a real manifest-backed production pack rather than only seeded `-device-proof` packs
+6. if a real production manifest appears, rerun the installed-pack helper without `--allow-device-proof-pack` so the final device proof includes actual runtime consumption from app-private storage
+7. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
+8. use the new below-target behavior as the current shipping guardrail: on smaller iPhones, `Case Associate` should now steer toward MLX and no longer advertise the 12B GGUF lane as ready
+9. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder without the MLX fallback path
+10. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
+11. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
+12. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+13. only then return to Android real-device runtime validation and deeper runtime work there
