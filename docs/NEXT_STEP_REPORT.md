@@ -2,6 +2,22 @@
 
 This is the current safe handoff point for the Ross Gemma 4 runtime and product-quality pass as of June 18, 2026.
 
+## New Safe Stop
+
+- Ross now carries smoke-only MLX memory telemetry around provider setup and generation, which narrowed the prior device kill to the first MLX container load on Aman’s iPhone
+- Quick Start MLX is now treated as unsupported on iPhone below `12 GB` in the product-facing support gates, runtime selection flow, installed-runtime activation checks, and MLX runtime resolution
+- focused iOS tests covering the new guard now pass, including:
+  - Quick Start MLX hidden from below-12 GB iPhone setup options
+  - installed Quick Start MLX no longer stays preferred on below-12 GB iPhones
+  - Quick Start MLX runtime health now returns `insufficient_device_memory` before model load on below-12 GB iPhones
+- after rebuilding and reinstalling on Aman’s cabled iPhone (`3803F5B6-1666-56D3-A71A-62F131F6CE3B`), the same no-draft installed-pack smoke no longer ends with `signal 9`
+- current device result from:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 30 --disable-draft`
+  - now ends with `source_error=insufficient_device_memory` and `general_error=insufficient_device_memory`
+  - the app stays alive long enough to report the failure instead of being jetsammed during MLX container load
+- one inconsistency remains for the next pass:
+  - the smoke still logs `ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=mlx_swift_lm available=true` and reaches `provider_ready` before the stage-level `insufficient_device_memory` failure, so the reporting path is not yet fully aligned with the new device-support guard
+
 ## Latest MLX Runtime Checkpoint
 
 - Ross now carries a runtime-only shared-KV shim in `AlphaMLXLocalProvider`, so Gemma 4 QAT packs that omit shared-layer `k_proj` / `v_proj` / `k_norm` tensors can still load without mutating the installed pack directory
@@ -11,6 +27,9 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - first blocker removed: missing shared-KV tensor key `language_model.model.layers.24.self_attn.v_proj.weight`
   - second blocker removed: mismatched `language_model.model.per_layer_model_projection.weight` shape (`actual [10752, 320]`, `expected [10752, 2560]`)
 - the current real-device blocker is now later in execution: the real manifest-backed production Quick Start MLX pack (`gemma-4-e4b-mlx`) reaches `provider_ready` and begins the source-grounded smoke stage, then the app is terminated by `signal 9`
+- that crash path has now been converted into a safe refusal on the same phone:
+  - the same installed-pack smoke now finishes with `insufficient_device_memory` instead of `signal 9`
+  - this is the current preferred pause point because the product no longer walks into the jetsam path on the physical device
 - that new blocker reproduced twice on the same phone with the same installed production pack:
   - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 15`
   - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 30`
@@ -34,10 +53,11 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 Resume from the new physical-device checkpoint above, not from the older Gemma 4 loader mismatches.
 
 1. treat the shared-KV missing-key bug and the `per_layer_model_projection` shape bug as cleared checkpoints for the current repo state
-2. treat the old launch-time watchdog as a mitigated checkpoint unless a newer crash log disproves it; the important remaining blocker is the later source-stage kill after `provider_ready`
-3. focus the next investigation on why the real app is being killed during source-stage MLX generation on Aman's iPhone after `provider_ready`, because draft acceleration is no longer the differentiator
-4. collect the next fresh crash or jetsam artifact after the runtime-health patch if possible, to confirm whether the remaining failure is now purely the per-process memory limit path
-5. only after that should the next pass decide whether the remaining issue belongs in Ross runtime policy, MLX generation settings, prompt/source budgeting, or another upstream runtime bug
+2. treat the old launch-time watchdog and the later MLX `signal 9` path on Aman’s phone as mitigated for the current product flow, because the app now refuses the unsupported lane instead of crashing
+3. focus the next pass on alignment rather than emergency stability:
+   - make the smoke/runtime-health reporting path agree with the new guard so `available=true` / `provider_ready` no longer appear before the `insufficient_device_memory` refusal
+4. decide whether Quick Start on this device class should remain GGUF-only or whether a later MLX fallback/profile experiment is still worth pursuing behind a deliberate debug-only path
+5. only after the reporting path is clean should the next pass revisit any deeper MLX memory experiments on physical hardware
 
 ## Current Stable State
 

@@ -1349,6 +1349,26 @@ func alphaAssistantTierSupportsMLXRuntime(_ tier: AlphaCapabilityTier) -> Bool {
     }
 }
 
+private let alphaAssistantQuickStartMLXMinimumPhoneMemoryBytes: UInt64 = 12 * 1_073_741_824
+
+func alphaAssistantMLXRuntimeSupportedOnCurrentDevice(
+    tier: AlphaCapabilityTier,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
+) -> Bool {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    guard alphaAssistantTierSupportsMLXRuntime(normalizedTier) else {
+        return false
+    }
+    guard isPhoneFormFactor else {
+        return true
+    }
+    if normalizedTier == .quickStart {
+        return physicalMemoryBytes >= alphaAssistantQuickStartMLXMinimumPhoneMemoryBytes
+    }
+    return true
+}
+
 private func alphaShouldPreserveInstalledGGUFOnCapablePhone(
     tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode?,
@@ -1477,9 +1497,9 @@ func alphaPreferredAssistantRuntimeMode(
             }
             return runtime
         case .avoidSlow(.mlxSwiftLm):
-            return runtimeSupported(.llamaCppGguf) ? .llamaCppGguf : (supportsMLXRuntime ? .mlxSwiftLm : .llamaCppGguf)
+            return runtimeSupported(.llamaCppGguf) ? .llamaCppGguf : (runtimeSupported(.mlxSwiftLm) ? .mlxSwiftLm : .llamaCppGguf)
         case .avoidSlow(.llamaCppGguf):
-            if supportsMLXRuntime && baselineTier != .quickStart {
+            if runtimeSupported(.mlxSwiftLm) && baselineTier != .quickStart {
                 return .mlxSwiftLm
             }
         default:
@@ -1496,15 +1516,15 @@ func alphaPreferredAssistantRuntimeMode(
         return .llamaCppGguf
     }
 
-    if existingRuntimeMode == .mlxSwiftLm && supportsMLXRuntime {
+    if existingRuntimeMode == .mlxSwiftLm && runtimeSupported(.mlxSwiftLm) {
         return .mlxSwiftLm
     }
 
-    if !runtimeSupported(.llamaCppGguf) && supportsMLXRuntime {
+    if !runtimeSupported(.llamaCppGguf) && runtimeSupported(.mlxSwiftLm) {
         return .mlxSwiftLm
     }
 
-    return baselineTier == .quickStart || !supportsMLXRuntime ? .llamaCppGguf : .mlxSwiftLm
+    return baselineTier == .quickStart || !runtimeSupported(.mlxSwiftLm) ? .llamaCppGguf : .mlxSwiftLm
 }
 
 func alphaAssistantRuntimeChoiceLabel(

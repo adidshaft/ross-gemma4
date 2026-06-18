@@ -2643,6 +2643,15 @@ extension AlphaRossModel {
         for tier: AlphaCapabilityTier,
         runtimeMode: AlphaPackRuntimeMode
     ) -> Bool {
+        let systemAssistantAvailable = systemAssistantReadyForActivation(for: tier)
+        guard alphaAssistantRuntimeSupportedOnCurrentDevice(
+            runtimeMode: runtimeMode,
+            tier: tier,
+            systemAssistantAvailable: systemAssistantAvailable
+        ) else {
+            return false
+        }
+
         if let installed = persisted.installedPacks.first(where: {
             AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) &&
                 $0.runtimeMode == runtimeMode
@@ -2650,8 +2659,7 @@ extension AlphaRossModel {
             return installedPackPassesRuntimeValidation(installed)
         }
 
-        return runtimeMode == .appleFoundationModels &&
-            systemAssistantReadyForActivation(for: tier)
+        return runtimeMode == .appleFoundationModels && systemAssistantAvailable
     }
 
     func activateAssistantRuntimeIfAvailable(

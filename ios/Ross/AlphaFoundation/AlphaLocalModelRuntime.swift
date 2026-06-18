@@ -3123,6 +3123,22 @@ enum AlphaLocalModelRuntime {
                 draftModelTokens: debug.draftModelTokens
             )
         case .mlxSwiftLm:
+            guard alphaAssistantMLXRuntimeSupportedOnCurrentDevice(
+                tier: tier,
+                isPhoneFormFactor: AlphaMLXLocalProvider.phoneFormFactorProvider(),
+                physicalMemoryBytes: AlphaMLXLocalProvider.physicalMemoryBytesProvider()
+            ) else {
+                return AlphaUnavailableRealLocalModelProvider(
+                    capabilityTier: tier,
+                    runtimeMode: .mlxSwiftLm,
+                    modelPathLabel: modelPathLabel,
+                    checksumVerified: checksumVerified,
+                    statusMessage: alphaRuntimeHealthStatus(.llamaNeedsMoreMemory),
+                    plannedTasks: Set(AlphaLocalModelTask.allCases),
+                    errorCategory: "insufficient_device_memory",
+                    explicitOptInEnabled: true
+                )
+            }
             return AlphaMLXLocalProvider(
                 capabilityTier: tier,
                 modelPathLabel: modelPathLabel,

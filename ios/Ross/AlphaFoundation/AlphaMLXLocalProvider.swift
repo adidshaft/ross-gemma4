@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#endif
 #if canImport(MLXLLM) && canImport(MLXLMCommon) && canImport(HuggingFace) && canImport(Tokenizers)
 import HuggingFace
 import MLX
@@ -26,6 +29,30 @@ private func alphaLocalModelSmokeTechnicalFailure(_ stage: String, mode: String,
     print(
         "ROSS_LOCAL_MODEL_SMOKE_TECHNICAL_FAILURE stage=\(stage) mode=\(mode) domain=\(nsError.domain) code=\(nsError.code) detail=\(message)"
     )
+}
+
+private func alphaLocalModelSmokeMemoryLog(_ stage: String) {
+    guard alphaLocalModelSmokeEnabled() else { return }
+    #if canImport(Darwin)
+    var count = mach_msg_type_number_t(
+        MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
+    )
+    var info = task_vm_info_data_t()
+    let result = withUnsafeMutablePointer(to: &info) { pointer in
+        pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), rebound, &count)
+        }
+    }
+    guard result == KERN_SUCCESS else {
+        print("ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) status=unavailable kern=\(result)")
+        return
+    }
+    let residentMb = Int(info.resident_size / 1_048_576)
+    let footprintMb = Int(info.phys_footprint / 1_048_576)
+    print("ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) resident_mb=\(residentMb) phys_footprint_mb=\(footprintMb)")
+    #else
+    print("ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) status=unsupported")
+    #endif
 }
 
 private struct AlphaGemma4SharedKVShimConfig {
@@ -867,7 +894,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     nonisolated(unsafe) static var streamGenerator:
         @Sendable (URL, URL?, Int?, String, String?, GenerateParameters, (@Sendable (String) -> Void)?) async throws -> AlphaMLXGenerationSnapshot = {
             directory, draftDirectory, draftTokens, prompt, instructions, parameters, onChunk in
+            alphaLocalModelSmokeMemoryLog("mlx_before_container")
             let container = try await AlphaMLXModelContainerCache.shared.container(for: directory)
+            alphaLocalModelSmokeMemoryLog("mlx_after_container")
             let effectivePrompt: String
             if let instructions, !instructions.isEmpty {
                 effectivePrompt = "\(instructions)\n\n\(prompt)"
@@ -875,13 +904,17 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 effectivePrompt = prompt
             }
             let inputBox = AlphaUnsafeSendableBox(try await container.prepare(input: UserInput(prompt: effectivePrompt)))
+            alphaLocalModelSmokeMemoryLog("mlx_after_prepare")
             let promptTokenCount = inputBox.value.text.tokens.size
             if let draftDirectory {
+                alphaLocalModelSmokeMemoryLog("mlx_before_draft_container")
                 let draftContainer = try await AlphaMLXModelContainerCache.shared.container(for: draftDirectory)
+                alphaLocalModelSmokeMemoryLog("mlx_after_draft_container")
                 let draftModelBox = await draftContainer.perform { draftContext in
                     AlphaUnsafeSendableBox(draftContext.model)
                 }
                 return try await container.perform { context in
+                    alphaLocalModelSmokeMemoryLog("mlx_before_generate_draft")
                     var generated = ""
                     var completionInfo: GenerateCompletionInfo?
                     let stream = try generate(
@@ -899,6 +932,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                             completionInfo = info
                         }
                     }
+                    alphaLocalModelSmokeMemoryLog("mlx_after_generate_draft")
                     return AlphaMLXGenerationSnapshot(
                         text: generated,
                         promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
@@ -909,6 +943,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 }
             } else {
                 return try await container.perform { context in
+                    alphaLocalModelSmokeMemoryLog("mlx_before_generate_standard")
                     var generated = ""
                     var completionInfo: GenerateCompletionInfo?
                     let stream = try generate(
@@ -924,6 +959,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                             completionInfo = info
                         }
                     }
+                    alphaLocalModelSmokeMemoryLog("mlx_after_generate_standard")
                     return AlphaMLXGenerationSnapshot(
                         text: generated,
                         promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
@@ -934,6 +970,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 }
             }
         }
+
+    nonisolated(unsafe) static var physicalMemoryBytesProvider: () -> UInt64 = {
+        ProcessInfo.processInfo.physicalMemory
+    }
+
+    nonisolated(unsafe) static var phoneFormFactorProvider: () -> Bool = {
+        alphaAssistantUsesPhoneFormFactor()
+    }
 
     func isAvailable() -> Bool {
         runtimeAvailability().available
@@ -1235,6 +1279,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
             return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
+        }
+        let physicalMemoryBytes = Self.physicalMemoryBytesProvider()
+        guard alphaAssistantMLXRuntimeSupportedOnCurrentDevice(
+            tier: capabilityTier,
+            isPhoneFormFactor: Self.phoneFormFactorProvider(),
+            physicalMemoryBytes: physicalMemoryBytes
+        ) else {
+            return (false, "insufficient_device_memory", alphaRuntimeHealthStatus(.llamaNeedsMoreMemory))
         }
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
         var isDirectory: ObjCBool = false
@@ -1619,6 +1671,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         self.checksumVerified = checksumVerified
         self.draftModelPath = draftModelPath
         self.draftModelTokens = draftModelTokens
+    }
+
+    nonisolated(unsafe) static var physicalMemoryBytesProvider: () -> UInt64 = {
+        ProcessInfo.processInfo.physicalMemory
+    }
+
+    nonisolated(unsafe) static var phoneFormFactorProvider: () -> Bool = {
+        alphaAssistantUsesPhoneFormFactor()
     }
 
     func isAvailable() -> Bool { false }

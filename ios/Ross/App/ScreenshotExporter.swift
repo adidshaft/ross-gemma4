@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+#if canImport(Darwin)
+import Darwin
+#endif
 
 #if canImport(AppKit)
 import AppKit
@@ -38,6 +41,28 @@ enum RossAssistantDownloadSmokeStatusCopy {
     static let runningStatus = "Checking assistant download flow..."
     static let failedStatus = "Assistant download flow failed."
     static let passedStatus = "Assistant download flow passed."
+}
+
+private func rossLocalModelSmokeMemoryUsageLine(stage: String) -> String {
+    #if canImport(Darwin)
+    var count = mach_msg_type_number_t(
+        MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
+    )
+    var info = task_vm_info_data_t()
+    let result = withUnsafeMutablePointer(to: &info) { pointer in
+        pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), rebound, &count)
+        }
+    }
+    guard result == KERN_SUCCESS else {
+        return "ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) status=unavailable kern=\(result)"
+    }
+    let residentMb = Int(info.resident_size / 1_048_576)
+    let footprintMb = Int(info.phys_footprint / 1_048_576)
+    return "ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) resident_mb=\(residentMb) phys_footprint_mb=\(footprintMb)"
+    #else
+    return "ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=\(stage) status=unsupported"
+    #endif
 }
 
 struct RossAssistantDownloadSmokeConfig: Equatable {
@@ -221,6 +246,7 @@ struct RossLocalModelSmokeView: View {
         RossLocalModelSmokeView.log(
             "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false)"
         )
+        RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "launch"))
         let activePack: AlphaInstalledModelPack?
         if let debugPack = debugLocalModelSmokePack(environment: runtimeEnvironment) {
             activePack = debugPack
@@ -241,6 +267,7 @@ struct RossLocalModelSmokeView: View {
         RossLocalModelSmokeView.log(
             "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(activePack.runtimeMode.rawValue) available=true model=\(URL(fileURLWithPath: activePack.installPath).lastPathComponent) checksum=\(activePack.checksumVerified)"
         )
+        RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "active_pack"))
 
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE resolve_provider")
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
@@ -266,6 +293,7 @@ struct RossLocalModelSmokeView: View {
         RossLocalModelSmokeView.log(
             "ROSS_LOCAL_MODEL_SMOKE_RUNTIME context_tokens=\(providerHealth.estimatedContextTokens.map(String.init) ?? "nil") max_input_chars=\(providerHealth.maxInputChars.map(String.init) ?? "nil") acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil")"
         )
+        RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "provider_ready"))
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PROFILE mode=\(smokeProfile.rawValue)")
 
         let sourceRef = AlphaSourceRef(
@@ -640,6 +668,7 @@ struct RossLocalModelSmokeView: View {
         timeoutSeconds: TimeInterval
     ) async -> AlphaLocalModelOutput {
         let startedAt = Date.now
+        RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_start"))
         let timeoutOutput = AlphaLocalModelOutput(
             rawText: "",
             parsedJson: nil,
@@ -657,6 +686,7 @@ struct RossLocalModelSmokeView: View {
             Task {
                 let output = await providerTask.value
                 let durationMs = max(Int(Date.now.timeIntervalSince(startedAt) * 1_000), 0)
+                RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_done"))
                 RossLocalModelSmokeView.log(
                     "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(stage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil")"
                 )
@@ -667,6 +697,7 @@ struct RossLocalModelSmokeView: View {
                 try? await Task.sleep(nanoseconds: nanoseconds)
                 if gate.resumeIfNeeded(continuation, output: timeoutOutput) {
                     providerTask.cancel()
+                    RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_timeout"))
                     RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT stage=\(stage) timeout=\(Int(timeoutSeconds))s")
                 }
             }

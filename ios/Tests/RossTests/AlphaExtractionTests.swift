@@ -7508,6 +7508,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .appleFoundationModels)
     }
 
+    func testPreferredAssistantRuntimeModeDoesNotPreserveInstalledMLXForQuickStartBelow12GBPhoneFloor() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .quickStart,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824,
+            freeStorageGB: 12,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
     func testPreferredAssistantRuntimeModeKeepsGGUFForSeniorTierOnCapablePhone() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .seniorDraftingSupport,
@@ -12193,6 +12206,21 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(options.map(\.runtimeMode), [.mlxSwiftLm])
         XCTAssertEqual(options.first?.detailLabel, "~10 tok/s · 20,480 tokens · Companion")
+    }
+
+    func testAssistantVariantOptionsHideUnsupportedQuickStartMLXOnBelow12GBPhone() {
+        let options = alphaAssistantVariantOptions(
+            for: .quickStart,
+            installedPacks: [],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.llamaCppGguf])
+        XCTAssertNotNil(options.first?.detailLabel)
     }
 
     func testAssistantVariantOptionsHideInstalledUnsupportedCaseAssociateGGUFOnBelow12GBPhone() {
@@ -17549,6 +17577,27 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAssistantRuntimeSupportedOnCurrentDeviceRejectsQuickStartMLXOnBelow12GBPhone() {
+        XCTAssertFalse(
+            alphaAssistantRuntimeSupportedOnCurrentDevice(
+                runtimeMode: .mlxSwiftLm,
+                tier: .quickStart,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 8 * 1_073_741_824,
+                systemAssistantAvailable: false
+            )
+        )
+        XCTAssertTrue(
+            alphaAssistantRuntimeSupportedOnCurrentDevice(
+                runtimeMode: .mlxSwiftLm,
+                tier: .quickStart,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                systemAssistantAvailable: false
+            )
+        )
+    }
+
     func testFoundationPlannedTasksIncludeAskIssueAndPublicLawShaping() {
         let expected: Set<AlphaLocalModelTask> = [
             .documentClassification,
@@ -17948,6 +17997,37 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+    }
+
+    func testRuntimeHealthMarksQuickStartMLXUnavailableOnBelow12GBPhoneMemory() {
+        let originalPhysicalMemoryProvider = AlphaMLXLocalProvider.physicalMemoryBytesProvider
+        let originalPhoneFormFactorProvider = AlphaMLXLocalProvider.phoneFormFactorProvider
+        defer { AlphaMLXLocalProvider.physicalMemoryBytesProvider = originalPhysicalMemoryProvider }
+        defer { AlphaMLXLocalProvider.phoneFormFactorProvider = originalPhoneFormFactorProvider }
+        AlphaMLXLocalProvider.physicalMemoryBytesProvider = {
+            8 * 1_073_741_824
+        }
+        AlphaMLXLocalProvider.phoneFormFactorProvider = {
+            true
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: "/tmp/ross-mlx-quickstart",
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "insufficient_device_memory")
+        XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_llama_needs_more_memory"))
     }
 
     func testResolveProviderReturnsExperimentalMLXProviderForDebugDirectory() throws {

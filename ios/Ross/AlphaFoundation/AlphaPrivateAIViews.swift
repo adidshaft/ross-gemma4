@@ -1582,7 +1582,11 @@ func alphaAssistantRuntimeSupportedOnCurrentDevice(
     case .appleFoundationModels:
         return systemAssistantAvailable
     case .mlxSwiftLm:
-        return alphaAssistantTierSupportsMLXRuntime(normalizedTier)
+        return alphaAssistantMLXRuntimeSupportedOnCurrentDevice(
+            tier: normalizedTier,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes
+        )
     case .llamaCppGguf:
         guard isPhoneFormFactor else { return true }
         let artifact = alphaAssistantModelArtifact(for: normalizedTier)
