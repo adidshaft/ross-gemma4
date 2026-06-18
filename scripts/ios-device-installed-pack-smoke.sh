@@ -392,6 +392,23 @@ if allowed is not None and artifact_kind not in allowed:
     )
     sys.exit(1)
 
+if runtime == "apple_foundation_models":
+    uses_system_sentinel = relative_path == "system-model" or relative_path.startswith("system://")
+    if artifact_kind == "system_model" and not uses_system_sentinel:
+        print(
+            "Selected CoreAI/CoreML manifest uses artifactKind=system_model only with system-model/system:// paths: "
+            f"relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if artifact_kind != "system_model" and uses_system_sentinel:
+        print(
+            "Selected CoreAI/CoreML adapter manifest points at the system model sentinel: "
+            f"artifactKind={artifact_kind} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin")):
     print(
         "Selected MLX manifest points at a file-like model artifact instead of an MLX directory: "

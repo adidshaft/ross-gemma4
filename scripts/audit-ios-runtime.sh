@@ -100,6 +100,11 @@ if ! grep -q 'artifactKind=system_model only with model path system-model' scrip
     FAIL=1
 fi
 
+if ! grep -q 'artifactKind=system_model only with system-model/system:// paths' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack CoreAI system-model path preflight missing."
+    FAIL=1
+fi
+
 if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1
