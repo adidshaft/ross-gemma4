@@ -453,6 +453,13 @@ if runtime == "apple_foundation_models":
             file=sys.stderr,
         )
         sys.exit(1)
+    if artifact_kind != "system_model" and artifact_bytes <= 0:
+        print(
+            "Selected CoreAI/CoreML adapter manifest reports an empty artifact for device smoke: "
+            f"artifactKind={artifact_kind} bytes={artifact_bytes} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin")):
     print(

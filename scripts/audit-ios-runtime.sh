@@ -247,6 +247,11 @@ if ! grep -q 'artifactKind=system_model only with system-model/system:// paths' 
     FAIL=1
 fi
 
+if ! grep -q "Selected CoreAI/CoreML adapter manifest reports an empty artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack CoreAI adapter smoke does not reject empty adapter artifacts before launch."
+    FAIL=1
+fi
+
 if ! grep -q "Selected GGUF manifest reports an implausibly small artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack GGUF smoke does not reject implausibly small primary artifacts before launch."
     FAIL=1
