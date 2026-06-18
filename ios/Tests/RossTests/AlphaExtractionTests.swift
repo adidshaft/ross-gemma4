@@ -6777,13 +6777,13 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertNil(health?.draftModelPathLabel)
-        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(health?.accelerationDraftTokens, 6)
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_rejected")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
-            "Standard generation"
+            "Standard generation (draft head ready: \(draftURL.lastPathComponent))"
         )
     }
 
@@ -6848,8 +6848,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertNil(health?.draftModelPathLabel)
-        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(health?.accelerationDraftTokens, 6)
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_failed")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_failed")
     }
@@ -7325,8 +7325,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         let health = provider.runtimeHealth()
         XCTAssertEqual(health.accelerationMode, .standard)
-        XCTAssertNil(health.accelerationDraftTokens)
-        XCTAssertNil(health.draftModelPathLabel)
+        XCTAssertEqual(health.accelerationDraftTokens, 4)
+        XCTAssertEqual(health.draftModelPathLabel, draftURL.lastPathComponent)
         XCTAssertEqual(health.draftAccelerationStatus, "draft_token_policy_blocked")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNil(output.accelerationDraftTokens)
@@ -16387,6 +16387,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=true"))
         XCTAssertTrue(line.contains("error=nil"))
+    }
+
+    func testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutClaimingAcceleration() throws {
+        let modelURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross identity rejected gguf \(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "quick-gguf-mtp-rejected",
+            installPath: modelURL.path,
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: modelURL.lastPathComponent,
+            modelPath: modelURL.path,
+            checksumVerified: true
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: modelURL.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 22_000,
+            estimatedContextTokens: 4_096,
+            accelerationMode: .standard,
+            accelerationDraftTokens: 2,
+            draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
+            draftModelPathType: "file",
+            draftAccelerationStatus: "validator_rejected",
+            lastErrorCategory: "draft_validator_rejected",
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: health,
+            requestedRuntime: .llamaCppGguf
+        )
+
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_tokens=2"))
+        XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
+        XCTAssertTrue(line.contains("draft_model_path_type=file"))
+        XCTAssertTrue(line.contains("draft_status=validator_rejected"))
+        XCTAssertTrue(line.contains("error=draft_validator_rejected"))
     }
 
     func testRuntimeIdentityLineIncludesMLXDirectoryFields() throws {

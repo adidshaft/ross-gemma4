@@ -461,7 +461,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         let availability = runtimeAvailability()
         let draftValidation = validatedDraftMetadata(runtimeAvailable: availability.available)
         let accelerationMode: AlphaLocalRuntimeAccelerationMode =
-            availability.available && draftValidation.metadata != nil
+            availability.available && draftValidation.status == "active"
             ? .draftModelSpeculative
             : .standard
         let draftErrorCategory = Self.draftAccelerationErrorCategory(
@@ -986,7 +986,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let draftPath = draftStatus.draftPath,
             let stagedDraft = draftStatus.metadata
         else {
-            return (nil, draftStatus.status)
+            return (draftStatus.metadata, draftStatus.status)
         }
 
         do {
@@ -998,9 +998,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             )
             return supportsDraftAcceleration
                 ? (stagedDraft, "active")
-                : (nil, "validator_rejected")
+                : (stagedDraft, "validator_rejected")
         } catch {
-            return (nil, "validator_failed")
+            return (stagedDraft, "validator_failed")
         }
     }
 
