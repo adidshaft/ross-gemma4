@@ -352,15 +352,39 @@ struct RossLocalModelSmokeView: View {
             "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(activePack.runtimeMode.rawValue) available=\(activePackHealth?.available == true) model=\(URL(fileURLWithPath: activePack.installPath).lastPathComponent) checksum=\(activePack.checksumVerified) error=\(activePackHealth?.lastErrorCategory ?? "nil")"
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "active_pack"))
+        let smokeFallbackExecutor: @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput = { _ in
+            AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: ["Smoke fallback should not run."],
+                sourceRefs: [],
+                errorCategory: "smoke_fallback_used"
+            )
+        }
         guard activePackHealth?.available == true else {
             if let activePackHealth {
-                RossLocalModelSmokeView.logRuntimeIdentity(
+                if let preflightProvider = AlphaLocalModelRuntime.resolveProvider(
                     activePack: activePack,
-                    providerName: RossLocalModelSmokeView.preflightProviderName(for: activePack.runtimeMode),
-                    actualRuntime: activePack.runtimeMode,
-                    providerHealth: activePackHealth,
-                    requestedRuntime: runtimeEnvironment.runtimeModeOverride
-                )
+                    requestedTier: activePack.tier,
+                    runtimeEnvironment: runtimeEnvironment,
+                    executor: smokeFallbackExecutor
+                ) {
+                    RossLocalModelSmokeView.logRuntimeIdentity(
+                        activePack: activePack,
+                        provider: preflightProvider,
+                        providerHealth: activePackHealth,
+                        requestedRuntime: runtimeEnvironment.runtimeModeOverride
+                    )
+                } else {
+                    RossLocalModelSmokeView.logRuntimeIdentity(
+                        activePack: activePack,
+                        providerName: RossLocalModelSmokeView.preflightProviderName(for: activePack.runtimeMode),
+                        actualRuntime: activePack.runtimeMode,
+                        providerHealth: activePackHealth,
+                        requestedRuntime: runtimeEnvironment.runtimeModeOverride
+                    )
+                }
             }
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log(
@@ -373,16 +397,8 @@ struct RossLocalModelSmokeView: View {
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
             requestedTier: activePack.tier,
-            executor: { _ in
-                AlphaLocalModelOutput(
-                    rawText: "",
-                    parsedJson: nil,
-                    schemaValid: false,
-                    warnings: ["Smoke fallback should not run."],
-                    sourceRefs: [],
-                    errorCategory: "smoke_fallback_used"
-                )
-            }
+            runtimeEnvironment: runtimeEnvironment,
+            executor: smokeFallbackExecutor
         ), provider.runtimeMode != .deterministicDev else {
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(activePack.runtimeMode.rawValue)")

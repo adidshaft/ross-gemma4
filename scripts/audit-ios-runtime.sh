@@ -45,6 +45,11 @@ if ! grep -q "ROSS_RUNTIME_IDENTITY" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
+if ! grep -q "preflightProvider = AlphaLocalModelRuntime.resolveProvider" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: unavailable smoke preflight does not log the actual provider identity."
+    FAIL=1
+fi
+
 if ! grep -q "draft_status" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: draft status missing from runtime identity marker."
     FAIL=1

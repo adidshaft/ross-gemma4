@@ -16658,6 +16658,44 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 
+    func testRuntimeIdentityLineUsesActualUnavailableCoreAIProviderName() throws {
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .appleFoundationModels,
+            packId: "system-coreai-unavailable",
+            installPath: "system-model",
+            checksum: String(repeating: "f", count: 64),
+            artifactKind: "system_model",
+            developmentOnly: false
+        )
+        let provider = AlphaUnavailableRealLocalModelProvider(
+            capabilityTier: .quickStart,
+            runtimeMode: .appleFoundationModels,
+            modelPathLabel: "system-model",
+            checksumVerified: true,
+            statusMessage: "Unavailable",
+            plannedTasks: alphaFoundationModelPlannedTasks,
+            errorCategory: "unsupported_runtime_on_platform",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: provider.runtimeHealth(),
+            requestedRuntime: .appleFoundationModels
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaUnavailableRealLocalModelProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("actual_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("artifact_path_type=system"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_status=not_supported"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
+    }
+
     func testRuntimeIdentityLineTreatsCoreAISystemURLAsSystemArtifact() throws {
         let activePack = installedPack(
             .quickStart,
