@@ -4819,7 +4819,42 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord]),
             [
-                "Re-run and save the full 8 GB class comparison note on iPhone17,2.",
+                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to add a verified download delivery check.",
+                "Save a full physical iPhone comparison note on a 12 GB+-class device."
+            ]
+        )
+    }
+
+    func testPrivateAIDeviceComparisonNextStepsExplainMissingRuntimeAndDelivery() {
+        let saved8GBRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .physicalIPhone,
+                deviceModelLabel: "iPhone17,2",
+                systemVersionLabel: "iOS 26.4.1",
+                memoryGB: 8,
+                representativeClass: .class8GB,
+                freeStorageGB: 28,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: false,
+            missingRuntimeCoverageLabels: ["CoreAI longer bundle"],
+            downloadDeliveryVerified: false,
+            downloadDeliveryStatusLabel: "Ready for on-device verification",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            exportRelativePath: "exports/device-note-8gb.pdf"
+        )
+
+        let statuses = alphaPrivateAIDeviceComparisonProofStatuses([saved8GBRecord])
+
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
+            "Saved note exists on iPhone17,2, but it still misses CoreAI longer bundle and a verified download delivery check."
+        )
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord]),
+            [
+                "Re-run and save the full 8 GB class comparison note on iPhone17,2 to cover CoreAI longer bundle and add a verified download delivery check.",
                 "Save a full physical iPhone comparison note on a 12 GB+-class device."
             ]
         )

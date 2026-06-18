@@ -3192,6 +3192,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Re-run and save the full %@ comparison note on %@.",
             "te": "Re-run and save the full %@ comparison note on %@."
         ],
+        "private_assistant_device_comparison_next_step_rerun_missing_runtime": [
+            "en": "Re-run and save the full %@ comparison note on %@ to cover %@.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to cover %@.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to cover %@.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to cover %@.",
+            "te": "Re-run and save the full %@ comparison note on %@ to cover %@."
+        ],
+        "private_assistant_device_comparison_next_step_rerun_missing_runtime_and_delivery": [
+            "en": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check.",
+            "te": "Re-run and save the full %@ comparison note on %@ to cover %@ and add a verified download delivery check."
+        ],
+        "private_assistant_device_comparison_next_step_rerun_missing_delivery": [
+            "en": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
+            "hi": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
+            "bn": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
+            "ta": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check.",
+            "te": "Re-run and save the full %@ comparison note on %@ to add a verified download delivery check."
+        ],
         "private_assistant_ladder_decision_readiness_title": [
             "en": "Ladder decision readiness",
             "hi": "Ladder decision readiness",

@@ -1619,6 +1619,44 @@ func alphaPrivateAIDeviceComparisonMissingTargetLabels(
     }
 }
 
+func alphaPrivateAIDeviceComparisonRerunStep(
+    target: AlphaPrivateAIDeviceComparisonProofTarget,
+    latestSavedRecord: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String {
+    let missingLabels = latestSavedRecord.missingRuntimeCoverageLabels.joined(separator: ", ")
+    if !missingLabels.isEmpty && !latestSavedRecord.downloadDeliveryVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_runtime_and_delivery"),
+            target.localizedLabel,
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
+    if !missingLabels.isEmpty {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_runtime"),
+            target.localizedLabel,
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
+    if !latestSavedRecord.downloadDeliveryVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_next_step_rerun_missing_delivery"),
+            target.localizedLabel,
+            latestSavedRecord.profile.deviceModelLabel
+        )
+    }
+
+    return String(
+        format: rossLocalized("private_assistant_device_comparison_next_step_rerun"),
+        target.localizedLabel,
+        latestSavedRecord.profile.deviceModelLabel
+    )
+}
+
 func alphaPrivateAIDeviceComparisonNextSteps(
     _ records: [AlphaPrivateAIDeviceComparisonProofRecord]
 ) -> [String] {
@@ -1629,20 +1667,18 @@ func alphaPrivateAIDeviceComparisonNextSteps(
                 return rossLocalized("private_assistant_device_comparison_next_step_save_8gb")
             }
             guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
-            return String(
-                format: rossLocalized("private_assistant_device_comparison_next_step_rerun"),
-                status.target.localizedLabel,
-                latestSavedRecord.profile.deviceModelLabel
+            return alphaPrivateAIDeviceComparisonRerunStep(
+                target: status.target,
+                latestSavedRecord: latestSavedRecord
             )
         case .class12GBOrHigher:
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_12gb")
             }
             guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
-            return String(
-                format: rossLocalized("private_assistant_device_comparison_next_step_rerun"),
-                status.target.localizedLabel,
-                latestSavedRecord.profile.deviceModelLabel
+            return alphaPrivateAIDeviceComparisonRerunStep(
+                target: status.target,
+                latestSavedRecord: latestSavedRecord
             )
         }
     }
