@@ -51,7 +51,17 @@ The latest verified local inference checkpoint is the iOS Quick Start GGUF lane 
 
 ## Physical iPhone Benchmark
 
-Latest physical-device run: **Aman's iPhone, iPhone 15 Pro / iPhone16,1 / iOS 27.0 / 7 GB RAM**. The current checkout built for device, installed successfully, and ran real local GGUF smoke tests through `com.ross.ios`.
+Latest physical-device run: **Aman's iPhone, iPhone 15 Pro / iPhone16,1 / iOS 27.0 / 7 GB RAM**. The current checkout built for device, installed successfully, ran real local GGUF smoke tests through `com.ross.ios`, and attempted MLX/CoreAI smoke paths. Full evidence is in [`benchmarks/physical-iphone-2026-06-19/README.md`](benchmarks/physical-iphone-2026-06-19/README.md).
+
+Runtime coverage from this device run:
+
+| Runtime path | Status | Evidence |
+| --- | --- | --- |
+| GGUF / `llama.cpp` / `llama.swift` | Benchmarked and passing | E4B Quick Start and 2B baseline generated local source-grounded and general answers. |
+| MTP draft acceleration | Artifact detected, not active | E4B pack included `mtp-gemma-4-E4B-it.gguf`, but runtime health reported `acceleration=standard`, `draft_tokens=nil`, and `draft_model=nil`. |
+| MLX / `mlx_swift_lm` | Requested, not benchmarked | The smoke request entered `runtime=mlx_swift_lm`, but the installed state resolved through GGUF files and loader logs. No MLX artifact-backed generation result was produced. |
+| CoreAI / Foundation Models | Requested, not benchmarked | The smoke request entered `runtime=apple_foundation_models`, but the installed state resolved through GGUF files and loader logs. No CoreAI artifact-backed generation result was produced. |
+| Gemma 4 12B GGUF | Blocked safely | The app refused generation with `insufficient_device_memory` on this 7 GB device class. |
 
 | Pack | Profile | Result | Document/query coverage | Runtime |
 | --- | --- | --- | --- | --- |

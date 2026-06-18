@@ -1,0 +1,62 @@
+# Extracted benchmark log: e4b-full.log
+# Source tmp log: /tmp/ross-iphone-e4b-full-smoke-20260619-005450.log
+# Full noisy loader traces intentionally excluded; retained structured markers and relevant runtime/failure lines.
+
+Installed manifest-backed model packs:
+  [1] tier=caseAssociate pack=gemma-4-12b-it-UD-Q4_K_XL-device-proof runtime=gemma_local_runtime file=gemma-4-12b-it-UD-Q4_K_XL.gguf size=7.37 GB seeded-device-proof
+  [2] tier=quickStart pack=gemma-2-2b-it-Q4_K_M-device-proof runtime=gemma_local_runtime file=gemma-2-2b-it-Q4_K_M.gguf size=1.71 GB seeded-device-proof
+  [3] tier=quick_start pack=gemma-4-e4b-q4 runtime=gemma_local_runtime file=gemma-4-E4B-it-UD-Q4_K_XL.gguf size=5.13 GB draft=mtp-gemma-4-E4B-it.gguf
+Selected pack: gemma-4-e4b-q4 (quick_start / gemma_local_runtime)
+Using installed pack path: /private/var/mobile/Containers/Data/Application/A580F864-3D8F-4526-831B-DD98EEAA9AA8/Library/Application Support/RossAlpha/model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf
+Using installed draft path: /private/var/mobile/Containers/Data/Application/A580F864-3D8F-4526-831B-DD98EEAA9AA8/Library/Application Support/RossAlpha/model-packs/quick_start/mtp-gemma-4-E4B-it.gguf
+ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=true runtime=gemma_local_runtime tier=quick_start pack_id=gemma-4-e4b-q4 model_path_present=true model_path_exists=true draft_disabled=false draft_path_present=true
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=launch resident_mb=36 phys_footprint_mb=10
+ROSS_LOCAL_MODEL_SMOKE_STAGE using_debug_pack
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  5726.63 MB
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=gemma_local_runtime available=true model=gemma-4-E4B-it-UD-Q4_K_XL.gguf checksum=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=active_pack resident_mb=3020 phys_footprint_mb=362
+ROSS_LOCAL_MODEL_SMOKE_STAGE resolve_provider
+ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=gemma_local_runtime
+ROSS_LOCAL_MODEL_SMOKE_RUNTIME context_tokens=4096 max_input_chars=22000 acceleration=standard draft_tokens=nil draft_model=nil
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=provider_ready resident_mb=3021 phys_footprint_mb=362
+ROSS_LOCAL_MODEL_SMOKE_PROFILE mode=full
+ROSS_LOCAL_MODEL_SMOKE_STAGE source timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=source_start resident_mb=3021 phys_footprint_mb=362
+attempting local completion: prompt_chars=847, max_new_tokens=192
+ n_len = 399, n_ctx = 4096, prompt_tokens = 207, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=source_done resident_mb=3233 phys_footprint_mb=484
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=13044 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE general timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=general_start resident_mb=3233 phys_footprint_mb=484
+attempting local completion: prompt_chars=777, max_new_tokens=192
+ n_len = 382, n_ctx = 4096, prompt_tokens = 190, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=general_done resident_mb=3170 phys_footprint_mb=483
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=8075 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE bengali timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=bengali_start resident_mb=3170 phys_footprint_mb=483
+attempting local completion: prompt_chars=879, max_new_tokens=192
+ n_len = 432, n_ctx = 4096, prompt_tokens = 240, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=bengali_done resident_mb=3203 phys_footprint_mb=486
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=bengali duration_ms=12513 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE hindi timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=hindi_start resident_mb=3203 phys_footprint_mb=486
+attempting local completion: prompt_chars=890, max_new_tokens=192
+ n_len = 438, n_ctx = 4096, prompt_tokens = 246, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=hindi_done resident_mb=3172 phys_footprint_mb=486
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=hindi duration_ms=14769 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE tamil timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=tamil_start resident_mb=3173 phys_footprint_mb=486
+attempting local completion: prompt_chars=903, max_new_tokens=192
+ n_len = 445, n_ctx = 4096, prompt_tokens = 253, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=tamil_done resident_mb=3099 phys_footprint_mb=486
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=tamil duration_ms=15392 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE telugu timeout=180s
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=telugu_start resident_mb=3099 phys_footprint_mb=486
+attempting local completion: prompt_chars=876, max_new_tokens=192
+ n_len = 473, n_ctx = 4096, prompt_tokens = 281, max_new_tokens = 192
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=telugu_done resident_mb=3202 phys_footprint_mb=486
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=telugu duration_ms=20367 schema_valid=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start profile=full elapsed=21.12s source_raw_chars=220 source_parsed_chars=0 bengali_output_chars=159 hindi_output_chars=168 tamil_output_chars=152 telugu_output_chars=130 general_output_chars=124 source_refs=1 bengali_source_refs=1 hindi_source_refs=1 tamil_source_refs=1 telugu_source_refs=1 source_native_model=true bengali_native_model=true hindi_native_model=true tamil_native_model=true telugu_native_model=true general_native_model=true

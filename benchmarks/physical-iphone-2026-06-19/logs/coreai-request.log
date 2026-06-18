@@ -1,0 +1,75 @@
+# Extracted benchmark log: coreai-request.log
+# Source tmp log: /tmp/ross-iphone-coreai-download-smoke-20260619-011528.log
+# Full noisy loader traces intentionally excluded; retained structured markers and relevant runtime/failure lines.
+
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_STAGE load_model_state tier=quick_start runtime=apple_foundation_models mobile_allowed=true force_refresh=false wait_seconds=180
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=gemma-4-E4B-it-UD-Q4_K_XL.gguf total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=536870912 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=1073741824 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=1610612736 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=2147483648 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=2684354560 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=3221225472 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=3758096384 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=4294967296 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_progress file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=4831838208 total_bytes=5126304928
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=gemma-4-E4B-it-UD-Q4_K_XL.gguf bytes_hashed=5126304928 total_bytes=5126304928 checksum=30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  5726.63 MB
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+load_tensors:   CPU_Mapped model buffer size =  4873.73 MiB
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_STAGE loaded_model_state
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+llama_model_load: error loading model: mmap failed: Cannot allocate memory
+Could not load model at /var/mobile/Containers/Data/Application/2C1C15A5-F5DA-4BCC-943E-D746885BE4AA/Library/Application Support/RossAlpha/model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0
+llama_model_load: error loading model: mmap failed: Cannot allocate memory
+Could not load model at /var/mobile/Containers/Data/Application/2C1C15A5-F5DA-4BCC-943E-D746885BE4AA/Library/Application Support/RossAlpha/model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_start file=mtp-gemma-4-E4B-it.gguf total_bytes=98653248
+ROSS_ASSISTANT_DOWNLOAD_SMOKE_TRACE hash_done file=mtp-gemma-4-E4B-it.gguf bytes_hashed=98653248 total_bytes=98653248 checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376
+System physical memory: 7 GB
+Using n_gpu_layers = 0

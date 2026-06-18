@@ -1,0 +1,156 @@
+# Physical iPhone Runtime Benchmarks - 2026-06-19
+
+This report records the physical-device benchmark evidence captured on Aman's attached iPhone. It is intentionally conservative: only runs that actually produced generation through a runtime are marked as benchmarks.
+
+## Device And App
+
+| Field | Value |
+| --- | --- |
+| Device | Aman's iPhone |
+| Model | iPhone 15 Pro |
+| Hardware identifier | iPhone16,1 |
+| iOS | 27.0 |
+| RAM reported by tooling | 7 GB |
+| App bundle | `com.ross.ios` |
+| Install path | Current checkout built for device and installed over cable |
+
+## Runtime Coverage
+
+| Runtime path | Status | Evidence |
+| --- | --- | --- |
+| GGUF / `llama.cpp` / `llama.swift` | Benchmarked and passing | E4B Quick Start and 2B baseline generated local source-grounded and general answers. |
+| MTP draft acceleration | Artifact detected, not active | E4B pack included `mtp-gemma-4-E4B-it.gguf`, but runtime health reported `acceleration=standard`, `draft_tokens=nil`, and `draft_model=nil`. |
+| MLX / `mlx_swift_lm` | Requested, not benchmarked | The smoke request entered `runtime=mlx_swift_lm`, but the installed state resolved through GGUF files and loader logs. No MLX artifact-backed generation result was produced. |
+| CoreAI / Foundation Models | Requested, not benchmarked | The smoke request entered `runtime=apple_foundation_models`, but the installed state resolved through GGUF files and loader logs. No CoreAI artifact-backed generation result was produced. |
+| Gemma 4 12B GGUF | Blocked safely | The app refused generation with `insufficient_device_memory` on this 7 GB device class. |
+
+## Installed Packs Observed
+
+| Tier | Pack | Runtime | Artifact | Size | Notes |
+| --- | --- | --- | --- | ---: | --- |
+| Quick Start | `gemma-4-e4b-q4` | `gemma_local_runtime` | `gemma-4-E4B-it-UD-Q4_K_XL.gguf` | 5.13 GB | Includes draft artifact `mtp-gemma-4-E4B-it.gguf`. |
+| Quick Start baseline | `gemma-2-2b-it-Q4_K_M-device-proof` | `gemma_local_runtime` | `gemma-2-2b-it-Q4_K_M.gguf` | 1.71 GB | Seeded proof pack. |
+| Case Associate | `gemma-4-12b-it-UD-Q4_K_XL-device-proof` | `gemma_local_runtime` | `gemma-4-12b-it-UD-Q4_K_XL.gguf` | 7.37 GB | Seeded proof pack, blocked by memory guard. |
+
+## Commands Used
+
+The app was built and installed with automatic signing for the attached device:
+
+```bash
+xcodebuild \
+  -project ios/Ross.xcodeproj \
+  -scheme Ross \
+  -configuration Debug \
+  -destination 'platform=iOS,id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' \
+  -derivedDataPath ios/build-device \
+  DEVELOPMENT_TEAM=JP4HU7X6G7 \
+  CODE_SIGN_STYLE=Automatic \
+  CODE_SIGN_IDENTITY='Apple Development' \
+  build
+
+xcrun devicectl device install app \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  ios/build-device/Build/Products/Debug-iphoneos/Ross.app
+```
+
+The benchmark and runtime smoke commands were:
+
+```bash
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --tier quick_start \
+  --runtime gguf \
+  --smoke-profile quick \
+  --stage-timeout 120
+
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --tier quick_start \
+  --runtime gguf \
+  --smoke-profile full \
+  --stage-timeout 180
+
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --pack-id gemma-2-2b-it-Q4_K_M-device-proof \
+  --allow-device-proof-pack \
+  --smoke-profile quick \
+  --stage-timeout 120
+
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --pack-id gemma-4-12b-it-UD-Q4_K_XL-device-proof \
+  --allow-device-proof-pack \
+  --smoke-profile quick \
+  --stage-timeout 60
+
+scripts/ios-device-assistant-download-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --tier quickStart \
+  --runtime coreai \
+  --mobile-allowed \
+  --wait-seconds 180
+
+scripts/ios-device-assistant-download-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --tier quickStart \
+  --runtime mlx \
+  --mobile-allowed \
+  --wait-seconds 90
+```
+
+The MLX and CoreAI requests were stopped after they resolved into the existing GGUF-installed state instead of producing MLX/CoreAI artifact-backed generation results.
+
+## Generation Results
+
+| Pack | Profile | Result | Document/query coverage | Runtime |
+| --- | --- | --- | --- | --- |
+| Gemma 4 E4B Quick Start, 5.13 GB | quick | PASS | Source-grounded document query plus general query. | `gemma_local_runtime` |
+| Gemma 4 E4B Quick Start, 5.13 GB | full | PASS | Source, general, Bengali, Hindi, Tamil, and Telugu queries. | `gemma_local_runtime` |
+| Gemma 2 2B baseline, 1.71 GB | quick | PASS | Source-grounded document query plus general query. | Seeded proof pack |
+| Gemma 4 12B Case Associate, 7.37 GB | quick | BLOCKED | Generation did not run because the device failed the memory guard. | `insufficient_device_memory` |
+
+## Visible Speed Numbers
+
+| Run | Stage | Tokens processed | Duration | Token speed |
+| --- | --- | ---: | ---: | ---: |
+| E4B current app | Source document query | 399 scheduled tokens | 11.91s | 16.12 output tok/s, 33.49 total tok/s |
+| E4B current app | General query | 382 scheduled tokens | 8.76s | 21.92 output tok/s, 43.62 total tok/s |
+| E4B full | Source document query | 399 scheduled tokens | 13.04s | 14.72 output tok/s, 30.59 total tok/s |
+| E4B full | General query | 382 scheduled tokens | 8.08s | 23.78 output tok/s, 47.31 total tok/s |
+| E4B full | Bengali | 432 scheduled tokens | 12.51s | 15.34 output tok/s, 34.52 total tok/s |
+| E4B full | Hindi | 438 scheduled tokens | 14.77s | 13.00 output tok/s, 29.66 total tok/s |
+| E4B full | Tamil | 445 scheduled tokens | 15.39s | 12.47 output tok/s, 28.91 total tok/s |
+| E4B full | Telugu | 473 scheduled tokens | 20.37s | 9.43 output tok/s, 23.22 total tok/s |
+| 2B baseline | Source document query | 399 scheduled tokens | 6.28s | 30.56 output tok/s, 63.51 total tok/s |
+| 2B baseline | General query | 382 scheduled tokens | 10.58s | 18.15 output tok/s, 36.11 total tok/s |
+
+The smoke path did not emit exact final decoded token counts. `output tok/s` is calculated as `max_new_tokens / stage duration`; `tokens processed` is `prompt_tokens + max_new_tokens`.
+
+## Memory And Runtime Notes
+
+| Metric | E4B Quick Start |
+| --- | ---: |
+| Context window used | 4,096 tokens |
+| Max input chars | 22,000 |
+| GPU layers | 0 |
+| CPU mapped model buffer | 4,873.73 MiB |
+| App resident memory after provider ready | ~3.15 GB |
+| Peak observed resident memory | ~3.95 GB |
+| Device recommended working set | 5,726.63 MB |
+| Draft acceleration | Not active: `acceleration=standard`, `draft_tokens=nil` |
+
+The E4B lane works on this iPhone 15 Pro-class device, but it is already a large memory footprint. The 12B lane should remain gated off for this 7 GB RAM class unless a future runtime path proves a safer memory profile.
+
+## Evidence Logs
+
+Compact logs are stored in this folder:
+
+| Log | Purpose |
+| --- | --- |
+| [`logs/e4b-current-quick.log`](logs/e4b-current-quick.log) | E4B Quick Start source and general query pass. |
+| [`logs/e4b-full.log`](logs/e4b-full.log) | E4B multilingual full smoke pass. |
+| [`logs/2b-baseline-quick.log`](logs/2b-baseline-quick.log) | Gemma 2 2B baseline quick pass. |
+| [`logs/12b-quick.log`](logs/12b-quick.log) | 12B memory-guard block. |
+| [`logs/coreai-request.log`](logs/coreai-request.log) | CoreAI request evidence showing fallback into GGUF-installed state. |
+| [`logs/mlx-request.log`](logs/mlx-request.log) | MLX request evidence showing fallback into GGUF-installed state. |

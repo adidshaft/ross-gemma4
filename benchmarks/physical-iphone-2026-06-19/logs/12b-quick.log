@@ -1,0 +1,16 @@
+# Extracted benchmark log: 12b-quick.log
+# Source tmp log: /tmp/ross-iphone-12b-quick-smoke-20260619-005733.log
+# Full noisy loader traces intentionally excluded; retained structured markers and relevant runtime/failure lines.
+
+Installed manifest-backed model packs:
+  [1] tier=caseAssociate pack=gemma-4-12b-it-UD-Q4_K_XL-device-proof runtime=gemma_local_runtime file=gemma-4-12b-it-UD-Q4_K_XL.gguf size=7.37 GB seeded-device-proof
+  [2] tier=quickStart pack=gemma-2-2b-it-Q4_K_M-device-proof runtime=gemma_local_runtime file=gemma-2-2b-it-Q4_K_M.gguf size=1.71 GB seeded-device-proof
+  [3] tier=quick_start pack=gemma-4-e4b-q4 runtime=gemma_local_runtime file=gemma-4-E4B-it-UD-Q4_K_XL.gguf size=5.13 GB draft=mtp-gemma-4-E4B-it.gguf
+Selected pack: gemma-4-12b-it-UD-Q4_K_XL-device-proof (caseAssociate / gemma_local_runtime)
+Using installed pack path: /private/var/mobile/Containers/Data/Application/A580F864-3D8F-4526-831B-DD98EEAA9AA8/Library/Application Support/RossAlpha/model-packs/caseAssociate/gemma-4-12b-it-UD-Q4_K_XL.gguf
+ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=true runtime=gemma_local_runtime tier=case_associate pack_id=gemma-4-12b-it-UD-Q4_K_XL-device-proof model_path_present=true model_path_exists=true draft_disabled=false draft_path_present=false
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=launch resident_mb=36 phys_footprint_mb=10
+ROSS_LOCAL_MODEL_SMOKE_STAGE using_debug_pack
+ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=gemma_local_runtime available=false model=gemma-4-12b-it-UD-Q4_K_XL.gguf checksum=true error=insufficient_device_memory
+ROSS_LOCAL_MODEL_SMOKE_MEMORY stage=active_pack resident_mb=36 phys_footprint_mb=10
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime tier=case_associate profile=quick stage=active_pack error=insufficient_device_memory
