@@ -16102,6 +16102,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(RossLocalModelSmokeProfile.fromEnvironment([:]), .full)
     }
 
+    func testLocalModelSmokeProfileExposesBenchmarkMatrix() {
+        let fullStages = RossLocalModelSmokeProfile.full.benchmarkMatrixStages
+
+        XCTAssertEqual(fullStages.count, 6)
+        XCTAssertTrue(fullStages.contains("source:document_qa:en:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("bengali:document_qa:bn:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("hindi:document_qa:hi:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("tamil:document_qa:ta:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("telugu:document_qa:te:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("general:open_query:en:no_source_refs:max_tokens=192"))
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.quick.benchmarkMatrixStages,
+            [
+                "source:document_qa:en:source_refs_required:max_tokens=192",
+                "general:open_query:en:no_source_refs:max_tokens=192"
+            ]
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixStages,
+            [
+                "source:document_qa:en:source_refs_required:max_tokens=64",
+                "general:open_query:en:no_source_refs:max_tokens=64"
+            ]
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeProfile.full.benchmarkMatrixLogLine
+                .contains("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full stages=source:document_qa")
+        )
+    }
+
     func testLocalModelSmokeParsesDraftAccelerationRequirement() {
         XCTAssertTrue(
             RossLocalModelSmokeView.requiresDraftAcceleration([

@@ -186,6 +186,29 @@ enum RossLocalModelSmokeProfile: String {
         }
     }
 
+    var benchmarkMatrixStages: [String] {
+        let shortMaxTokens = self == .mtpQuick ? 64 : 192
+        let shortStages = [
+            "source:document_qa:en:source_refs_required:max_tokens=\(shortMaxTokens)",
+            "general:open_query:en:no_source_refs:max_tokens=\(shortMaxTokens)"
+        ]
+        guard self == .full else {
+            return shortStages
+        }
+        return [
+            "source:document_qa:en:source_refs_required:max_tokens=192",
+            "bengali:document_qa:bn:source_refs_required:max_tokens=192",
+            "hindi:document_qa:hi:source_refs_required:max_tokens=192",
+            "tamil:document_qa:ta:source_refs_required:max_tokens=192",
+            "telugu:document_qa:te:source_refs_required:max_tokens=192",
+            "general:open_query:en:no_source_refs:max_tokens=192"
+        ]
+    }
+
+    var benchmarkMatrixLogLine: String {
+        "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=\(rawValue) stages=\(benchmarkMatrixStages.joined(separator: ","))"
+    }
+
     static func fromEnvironment(_ environment: [String: String]) -> RossLocalModelSmokeProfile {
         let rawValue = environment["ROSS_LOCAL_MODEL_SMOKE_PROFILE"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -366,6 +389,7 @@ struct RossLocalModelSmokeView: View {
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "provider_ready"))
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PROFILE mode=\(smokeProfile.rawValue)")
+        RossLocalModelSmokeView.log(smokeProfile.benchmarkMatrixLogLine)
 
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

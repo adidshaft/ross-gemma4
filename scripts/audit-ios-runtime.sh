@@ -50,6 +50,11 @@ if ! grep -q "draft_status" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; t
     FAIL=1
 fi
 
+if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke benchmark matrix marker missing."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke runtime identity guard missing."
     FAIL=1
