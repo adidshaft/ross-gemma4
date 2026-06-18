@@ -597,6 +597,7 @@ from ross_smoke_summary import (
     failure_summary_line,
     parse_fields,
     runtime_identity_artifact_error,
+    runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
 )
 
@@ -680,6 +681,16 @@ def validate_identity_guard(identity, *, require_identity):
         sys.exit(1)
 
     if require_identity:
+        availability_error = runtime_identity_availability_error(identity)
+        if availability_error:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                f"reason=runtime_identity_unavailable requested={runtime_mode} "
+                f"{availability_error}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
         artifact_error = runtime_identity_artifact_error(identity, runtime_mode)
         if artifact_error:
             print(

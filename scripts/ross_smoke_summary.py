@@ -65,6 +65,18 @@ def runtime_identity_artifact_error(identity, expected_runtime):
     return None
 
 
+def runtime_identity_availability_error(identity):
+    available = identity.get("available")
+    if available not in ("true", "nil", None):
+        return f"available={summary_value(identity, 'available')}"
+
+    fallback = identity.get("fallback")
+    if fallback not in ("none", "nil", None):
+        return f"fallback={summary_value(identity, 'fallback')}"
+
+    return None
+
+
 def runtime_identity_draft_artifact_error(identity, expected_runtime):
     if identity.get("acceleration") != "draftModelSpeculative":
         return None
@@ -97,17 +109,31 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     for required_key in ("profile", "cases", "stages"):
         if not matrix_fields.get(required_key):
             raise MissingBenchmarkMatrixError(f"missing_benchmark_matrix_{required_key}")
+    if not pass_fields.get("profile"):
+        raise MissingBenchmarkMatrixError("missing_benchmark_pass_profile")
+    if pass_fields.get("profile") != matrix_fields.get("profile"):
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_profile_mismatch pass_profile={summary_value(pass_fields, 'profile')} "
+            f"matrix_profile={summary_value(matrix_fields, 'profile')}"
+        )
 
     summary = {
+        "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": summary_value(identity, "requested_runtime"),
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),
+        "artifact_path": summary_value(identity, "artifact_path"),
         "acceleration": summary_value(identity, "acceleration"),
         "draft_tokens": summary_value(identity, "draft_tokens"),
         "draft_model": summary_value(identity, "draft_model"),
         "draft_model_path_type": summary_value(identity, "draft_model_path_type"),
         "draft_status": summary_value(identity, "draft_status"),
+        "context_tokens": summary_value(identity, "context_tokens"),
+        "gpu_offload": summary_value(identity, "gpu_offload"),
+        "fallback": summary_value(identity, "fallback"),
+        "available": summary_value(identity, "available"),
+        "identity_error": summary_value(identity, "error"),
         "profile": summary_value(pass_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields, "profile"),
         "matrix_cases": summary_value(matrix_fields, "cases"),
@@ -131,15 +157,22 @@ def benchmark_summary_line(identity, pass_fields, matrix_fields):
 
 def failure_summary_fields(identity, fail_fields, matrix_fields=None):
     summary = {
+        "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": summary_value(identity, "requested_runtime"),
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),
+        "artifact_path": summary_value(identity, "artifact_path"),
         "acceleration": summary_value(identity, "acceleration"),
         "draft_tokens": summary_value(identity, "draft_tokens"),
         "draft_model": summary_value(identity, "draft_model"),
         "draft_model_path_type": summary_value(identity, "draft_model_path_type"),
         "draft_status": summary_value(identity, "draft_status"),
+        "context_tokens": summary_value(identity, "context_tokens"),
+        "gpu_offload": summary_value(identity, "gpu_offload"),
+        "fallback": summary_value(identity, "fallback"),
+        "available": summary_value(identity, "available"),
+        "identity_error": summary_value(identity, "error"),
         "profile": summary_value(fail_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields or {}, "profile"),
         "matrix_cases": summary_value(matrix_fields or {}, "cases"),

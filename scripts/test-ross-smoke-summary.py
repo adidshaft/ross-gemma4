@@ -7,6 +7,7 @@ from ross_smoke_summary import (
     failure_summary_line,
     parse_fields,
     runtime_identity_artifact_error,
+    runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
 )
 
@@ -16,8 +17,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
-            "model_format=gguf artifact_path_type=file acceleration=standard "
-            "draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured"
+            "model_format=gguf artifact_path_type=file artifact_path=gemma-2b.gguf "
+            "acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil "
+            "draft_status=no_draft_configured context_tokens=4096 gpu_offload=n_gpu_layers:0 "
+            "fallback=none available=true error=nil"
         )
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
@@ -39,6 +42,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         summary = benchmark_summary_line(identity, pass_fields, matrix)
 
         self.assertIn("runtime=gemma_local_runtime", summary)
+        self.assertIn("provider=AlphaLlamaCppProvider", summary)
+        self.assertIn("artifact_path=gemma-2b.gguf", summary)
+        self.assertIn("fallback=none", summary)
+        self.assertIn("available=true", summary)
         self.assertIn("matrix_profile=full", summary)
         self.assertIn(
             "matrix_cases=english_source_bound_document_qa,bengali_source_bound_document_qa,english_open_no_document_query",
@@ -63,10 +70,34 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix_cases"):
             benchmark_summary_line({}, {}, incomplete_matrix)
 
+    def test_mismatched_benchmark_profile_is_rejected(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_profile_mismatch"):
+            benchmark_summary_line(
+                {},
+                {"profile": "quick"},
+                {
+                    "profile": "full",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa",
+                },
+            )
+
+    def test_missing_pass_profile_is_rejected(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_pass_profile"):
+            benchmark_summary_line(
+                {},
+                {},
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa",
+                },
+            )
+
     def test_empty_identity_and_pass_fields_are_reported_as_nil(self):
         summary = benchmark_summary_line(
             {},
-            {},
+            {"profile": "quick"},
             {
                 "profile": "quick",
                 "cases": "english_source_bound_document_qa",
@@ -118,6 +149,25 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "apple_foundation_models",
             ),
             "adapter_path_type=system",
+        )
+
+    def test_runtime_identity_availability_rules_reject_fallback_numbers(self):
+        self.assertIsNone(
+            runtime_identity_availability_error(
+                {"available": "true", "fallback": "none"}
+            )
+        )
+        self.assertEqual(
+            runtime_identity_availability_error(
+                {"available": "false", "fallback": "none"}
+            ),
+            "available=false",
+        )
+        self.assertEqual(
+            runtime_identity_availability_error(
+                {"available": "true", "fallback": "deterministic_dev"}
+            ),
+            "fallback=deterministic_dev",
         )
 
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
