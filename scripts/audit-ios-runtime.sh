@@ -142,6 +142,31 @@ if ! grep -q "runtime_identity_mismatch" scripts/ios-device-installed-pack-smoke
     FAIL=1
 fi
 
+if ! grep -q "preferredRuntimeMode != nil" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null; then
+    echo "❌ FAIL: Ask runtime resolver does not fail closed for explicit preferred runtime requests."
+    FAIL=1
+fi
+
+if ! grep -q "testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not cover explicit MLX requests avoiding GGUF fallback."
+    FAIL=1
+fi
+
+if ! grep -q "testExplicitCoreMLRuntimeRequestDoesNotFallBackToGGUFProvider" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not cover explicit CoreAI/CoreML requests avoiding GGUF fallback."
+    FAIL=1
+fi
+
+if ! grep -q "PassingLlamaContext" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: fallback tests do not stub GGUF context creation for placeholder fixtures."
+    FAIL=1
+fi
+
+if ! grep -q "testCanRunRealLocalAskFallsBackFromUnavailableSystemAssistantToRecoveredDownload" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not cover automatic Ask fallback from unavailable CoreAI to recovered GGUF."
+    FAIL=1
+fi
+
 if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
     FAIL=1
