@@ -16268,6 +16268,61 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(selected?.bytesDownloaded, 6_830_837_519)
     }
 
+    func testAssistantDownloadSmokeJobDoesNotFallbackAcrossExplicitRuntime() {
+        let config = RossAssistantDownloadSmokeConfig(
+            tier: .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            mobileAllowed: true,
+            forceRefreshInstalledPack: false,
+            waitSeconds: 300
+        )
+        let ggufJob = AlphaModelDownloadJob(
+            sessionId: "gguf-session",
+            packId: "gemma-4-e4b-q4",
+            tier: .quickStart,
+            state: .installed,
+            networkPolicy: .mobileAllowed,
+            bytesDownloaded: 5_126_304_928,
+            totalBytes: 5_126_304_928,
+            checksumSha256: "gguf",
+            runtimeMode: .llamaCppGguf,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_120)
+        )
+
+        let selected = rossAssistantDownloadSmokeJob(
+            from: [ggufJob],
+            config: config
+        )
+
+        XCTAssertNil(selected)
+    }
+
+    func testAssistantDownloadSmokeInstalledPackRequiresExplicitRuntimeMatch() {
+        let config = RossAssistantDownloadSmokeConfig(
+            tier: .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            mobileAllowed: true,
+            forceRefreshInstalledPack: false,
+            waitSeconds: 300
+        )
+        let ggufPack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-e4b-q4",
+            artifactKind: "local_model_artifact"
+        )
+        let mlxPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-mlx",
+            artifactKind: "mlx_directory"
+        )
+
+        XCTAssertFalse(rossAssistantDownloadSmokeInstalledPackMatches(ggufPack, config: config))
+        XCTAssertTrue(rossAssistantDownloadSmokeInstalledPackMatches(mlxPack, config: config))
+    }
+
     @MainActor
     func testAssistantDownloadTechnicalFailureSummaryIncludesNSErrorDetails() {
         let model = AlphaRossModel(previewState: .empty())

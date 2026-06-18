@@ -153,12 +153,23 @@ func rossAssistantDownloadSmokeJob(
     if let exactMatch = mostRecentMatch(in: matchingRuntime) {
         return exactMatch
     }
+    if config.runtimeMode != nil {
+        return nil
+    }
 
     return mostRecentMatch(
         in: jobs.filter {
             AlphaCapabilityTier.assistantSelectionsMatch($0.tier, config.tier)
         }
     )
+}
+
+func rossAssistantDownloadSmokeInstalledPackMatches(
+    _ installedPack: AlphaInstalledModelPack,
+    config: RossAssistantDownloadSmokeConfig
+) -> Bool {
+    AlphaCapabilityTier.assistantSelectionsMatch(installedPack.tier, config.tier) &&
+        (config.runtimeMode == nil || installedPack.runtimeMode == config.runtimeMode)
 }
 
 enum RossLocalModelSmokeProfile: String {
@@ -1075,10 +1086,20 @@ struct RossAssistantDownloadSmokeView: View {
         _ = await downloadTask.result
 
         if job.state == .installed,
-           let installedPack = model.installedPack(for: config.tier) {
+           let installedPack = model.installedPack(for: config.tier),
+           rossAssistantDownloadSmokeInstalledPackMatches(installedPack, config: config) {
             status = RossAssistantDownloadSmokeStatusCopy.passedStatus
             RossLocalModelSmokeView.log(
                 "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) runtime=\(installedPack.runtimeMode.rawValue) pack=\(installedPack.packId) install_path=\(installedPack.installPath) checksum=\(installedPack.checksumVerified)"
+            )
+            return
+        }
+
+        if job.state == .installed {
+            status = RossAssistantDownloadSmokeStatusCopy.failedStatus
+            let installedPack = model.installedPack(for: config.tier)
+            RossLocalModelSmokeView.log(
+                "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) state=installed pack=\(job.packId) runtime=\(job.runtimeMode.rawValue) reason=installed_runtime_mismatch requested_runtime=\(config.runtimeMode?.rawValue ?? "auto") installed_runtime=\(installedPack?.runtimeMode.rawValue ?? "nil") installed_pack=\(installedPack?.packId ?? "nil")"
             )
             return
         }
