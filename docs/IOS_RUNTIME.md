@@ -37,6 +37,14 @@ The MLX lane remains unproven on physical iPhone hardware. It now supports both 
 
 Any MLX benchmark must show `actual_runtime=mlx_swift_lm` in `ROSS_RUNTIME_IDENTITY`. Any Apple built-in/CoreAI benchmark must show `actual_runtime=apple_foundation_models`. If either lane reports `actual_runtime=gemma_local_runtime`, the run is a GGUF fallback or routing error, not a valid MLX/CoreAI benchmark.
 
+Clear unavailable categories for benchmark triage:
+
+- `missing_mlx_artifact`: the requested MLX lane did not receive a usable MLX directory path, including the case where a GGUF file was supplied to `--runtime mlx`.
+- `invalid_mlx_artifact`: the requested MLX directory exists but lacks the required MLX runtime files.
+- `invalid_mlx_draft_artifact`: the primary MLX directory is usable, but the configured draft companion is not.
+- `missing_coreai_artifact`: a configured CoreAI/Foundation adapter path was required but could not be opened.
+- `unsupported_runtime_on_platform`: the Apple built-in/CoreAI runtime is unavailable on the current OS, device, or build.
+
 Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
 - `gemma4_assistant` archives are still rejected as primary MLX targets, but they are now accepted as draft companions for speculative decoding on supported tiers.
 - Gemma 4 26B-A4B MLX archives are rejected because the current upstream loader still does not support the MoE routing keys.

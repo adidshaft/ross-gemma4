@@ -18354,7 +18354,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
     func testRuntimeHealthMarksIncompleteConfiguredMLXDirectoryUnavailable() throws {
@@ -18379,7 +18379,32 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "runtime_validation_failed")
+        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_artifact")
+    }
+
+    func testRuntimeHealthMarksConfiguredGGUFFileAsMissingMLXArtifact() throws {
+        let modelURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-wrong-mlx-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-not-mlx".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: modelURL.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "gguf"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
     }
 
     func testRuntimeHealthMarksUnsupportedGemma4AssistantMLXArchiveUnavailable() throws {
@@ -18412,6 +18437,17 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testRuntimeHealthMarksUnsupportedGemma4MoEMLXArchiveUnavailable() throws {
+        let originalPhysicalMemoryProvider = AlphaMLXLocalProvider.physicalMemoryBytesProvider
+        let originalPhoneFormFactorProvider = AlphaMLXLocalProvider.phoneFormFactorProvider
+        defer { AlphaMLXLocalProvider.physicalMemoryBytesProvider = originalPhysicalMemoryProvider }
+        defer { AlphaMLXLocalProvider.phoneFormFactorProvider = originalPhoneFormFactorProvider }
+        AlphaMLXLocalProvider.physicalMemoryBytesProvider = {
+            18 * 1_073_741_824
+        }
+        AlphaMLXLocalProvider.phoneFormFactorProvider = {
+            true
+        }
+
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-26b-a4b-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -18421,7 +18457,7 @@ final class AlphaExtractionTests: XCTestCase {
         try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
         try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
 
-        let pack = installedPack(.seniorDraftingSupport, runtimeMode: .mlxSwiftLm)
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
         let health = AlphaLocalModelRuntime.runtimeHealth(
             activePack: pack,
             requestedTier: pack.tier,

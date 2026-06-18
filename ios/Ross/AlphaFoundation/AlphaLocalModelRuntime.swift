@@ -2896,14 +2896,17 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             }
             switch model.availability {
             case .available:
-                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime")
+                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime_on_platform")
             case .unavailable:
-                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime")
+                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime_on_platform")
             @unknown default:
-                return (false, alphaRuntimeHealthStatus(.foundationUnknown), "unsupported_runtime")
+                return (false, alphaRuntimeHealthStatus(.foundationUnknown), "unsupported_runtime_on_platform")
             }
         } catch {
-            return (false, alphaRuntimeHealthStatus(.foundationCouldNotOpen), "runtime_dependency_unavailable")
+            if modelPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+                return (false, alphaRuntimeHealthStatus(.foundationCouldNotOpen), "missing_coreai_artifact")
+            }
+            return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime_on_platform")
         }
     }
 }
@@ -3165,7 +3168,7 @@ enum AlphaLocalModelRuntime {
                 checksumVerified: checksumVerified,
                 statusMessage: alphaRuntimeHealthStatus(.foundationUnavailable),
                 plannedTasks: alphaFoundationModelPlannedTasks,
-                errorCategory: "unsupported_runtime",
+                errorCategory: "unsupported_runtime_on_platform",
                 explicitOptInEnabled: debug.enableRealInference
             )
         default:

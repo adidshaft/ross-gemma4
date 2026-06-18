@@ -1278,7 +1278,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
-            return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
+            return (false, "missing_mlx_artifact", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
         let physicalMemoryBytes = Self.physicalMemoryBytesProvider()
         guard alphaAssistantMLXRuntimeSupportedOnCurrentDevice(
@@ -1291,10 +1291,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: directoryURL.path, isDirectory: &isDirectory), isDirectory.boolValue else {
-            return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
+            return (false, "missing_mlx_artifact", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
         guard Self.localModelDirectoryLooksUsable(directoryURL) else {
-            return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
+            return (false, "invalid_mlx_artifact", alphaRuntimeHealthStatus(.llamaNeedsRepair))
         }
 
         switch Self.archiveCompatibility(for: directoryURL) {
@@ -1306,7 +1306,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
         if let configuredDraftDirectoryURL = configuredDraftDirectoryURL() {
             guard Self.localModelDirectoryLooksUsable(configuredDraftDirectoryURL) else {
-                return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
+                return (false, "invalid_mlx_draft_artifact", alphaRuntimeHealthStatus(.llamaNeedsRepair))
             }
         }
         return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
