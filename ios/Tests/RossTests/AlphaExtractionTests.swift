@@ -12426,6 +12426,49 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-it.gguf")
     }
 
+    func testAssistantDownloadDeliveryVerificationSummaryUsesSignedSessionAndVerifiedLedgerEntry() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-case-associate-gguf",
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            segmentSizeBytes: 7_381_382_048,
+            segmentCount: 1,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            rangeUnit: "bytes",
+            resumeStrategy: "range_request_segments",
+            verified: true,
+            releaseReady: true
+        )
+        let ledgerEntries = [
+            AlphaPrivacyLedgerEntry(
+                timestamp: Date(timeIntervalSince1970: 1_718_000_000),
+                title: "Assistant download verified",
+                detail: "Ross checked the download before starting.",
+                purpose: .model_download,
+                payloadClass: .no_case_data,
+                endpointLabel: "model-provider://private-assistant-download",
+                success: true
+            )
+        ]
+
+        let summary = alphaAssistantDownloadDeliveryVerificationSummary(
+            descriptor,
+            ledgerEntries: ledgerEntries
+        )
+
+        XCTAssertEqual(summary.fileName, "gemma-4-12b-it-UD-Q4_K_XL.gguf")
+        XCTAssertEqual(summary.sourceLabel, "Signed session")
+        XCTAssertEqual(summary.contractLabel, "bytes · 1 segment · range_request_segments")
+        XCTAssertEqual(summary.statusLabel, "Verified on this device")
+        XCTAssertNotNil(summary.lastCheckedLabel)
+    }
+
     func testAssistantDownloadDescriptorPrefersCompatibleMLXArchiveSessionArtifact() {
         let session = AlphaBackendDownloadSessionPayload(
             sessionId: "sess-supported-mlx",

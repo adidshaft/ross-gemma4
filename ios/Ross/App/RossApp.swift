@@ -3332,6 +3332,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant runtime comparison note",
             "te": "Private assistant runtime comparison note"
         ],
+        "private_assistant_download_delivery_title": [
+            "en": "Download delivery verification",
+            "hi": "Download delivery verification",
+            "bn": "Download delivery verification",
+            "ta": "Download delivery verification",
+            "te": "Download delivery verification"
+        ],
+        "private_assistant_download_delivery_contract_label": [
+            "en": "Delivery contract",
+            "hi": "Delivery contract",
+            "bn": "Delivery contract",
+            "ta": "Delivery contract",
+            "te": "Delivery contract"
+        ],
+        "private_assistant_download_delivery_status_label": [
+            "en": "Verification status",
+            "hi": "Verification status",
+            "bn": "Verification status",
+            "ta": "Verification status",
+            "te": "Verification status"
+        ],
+        "private_assistant_download_delivery_last_checked_label": [
+            "en": "Last checked",
+            "hi": "Last checked",
+            "bn": "Last checked",
+            "ta": "Last checked",
+            "te": "Last checked"
+        ],
+        "private_assistant_download_delivery_source_signed": [
+            "en": "Signed session",
+            "hi": "Signed session",
+            "bn": "Signed session",
+            "ta": "Signed session",
+            "te": "Signed session"
+        ],
+        "private_assistant_download_delivery_source_bundled": [
+            "en": "Bundled fallback",
+            "hi": "Bundled fallback",
+            "bn": "Bundled fallback",
+            "ta": "Bundled fallback",
+            "te": "Bundled fallback"
+        ],
+        "private_assistant_download_delivery_contract_single_segment": [
+            "en": "%@ · %d segment · %@",
+            "hi": "%@ · %d segment · %@",
+            "bn": "%@ · %d segment · %@",
+            "ta": "%@ · %d segment · %@",
+            "te": "%@ · %d segment · %@"
+        ],
+        "private_assistant_download_delivery_status_verified": [
+            "en": "Verified on this device",
+            "hi": "Verified on this device",
+            "bn": "Verified on this device",
+            "ta": "Verified on this device",
+            "te": "Verified on this device"
+        ],
+        "private_assistant_download_delivery_status_ready": [
+            "en": "Ready for on-device verification",
+            "hi": "Ready for on-device verification",
+            "bn": "Ready for on-device verification",
+            "ta": "Ready for on-device verification",
+            "te": "Ready for on-device verification"
+        ],
+        "private_assistant_download_delivery_status_failed": [
+            "en": "Needs download verification retry",
+            "hi": "Needs download verification retry",
+            "bn": "Needs download verification retry",
+            "ta": "Needs download verification retry",
+            "te": "Needs download verification retry"
+        ],
         "save_private_assistant_runtime_comparison_note": [
             "en": "Save runtime comparison note",
             "hi": "Runtime comparison note सेव करें",

@@ -3023,6 +3023,17 @@ extension AlphaRossModel {
                 canActivateAssistantRuntimeImmediately(for: tier, runtimeMode: runtimeMode)
             }
         )
+        let deliveryPreferredRuntimeMode: AlphaPackRuntimeMode = if activePack?.runtimeMode == .mlxSwiftLm {
+            .mlxSwiftLm
+        } else {
+            .llamaCppGguf
+        }
+        let downloadDeliverySummary = alphaAssistantPreferredDeliveryVerificationSummary(
+            for: tier,
+            preferredRuntimeMode: deliveryPreferredRuntimeMode,
+            cachedDownloads: persisted.cachedAssistantDownloads,
+            ledgerEntries: persisted.ledgerEntries
+        )
 
         matterBundleComparisonExportRunning = true
         matterBundleComparisonExportErrorMessage = nil
@@ -3038,7 +3049,8 @@ extension AlphaRossModel {
                         smokeReports: localInferenceSmokeReports,
                         deviceProofProfile: deviceProofProfile,
                         laneReadinessStatuses: laneReadinessStatuses,
-                        deviceComparisonProofRecords: [provisionalDeviceComparisonProofRecord] + privateAIDeviceComparisonProofRecords
+                        deviceComparisonProofRecords: [provisionalDeviceComparisonProofRecord] + privateAIDeviceComparisonProofRecords,
+                        downloadDeliverySummary: downloadDeliverySummary
                     )
                 )
                 persisted.exports.insert(report, at: 0)
@@ -3562,6 +3574,7 @@ func alphaMatterBundleComparisonExportBodyLines(
     deviceProofProfile: AlphaPrivateAIDeviceProofProfile? = nil,
     laneReadinessStatuses: [AlphaPrivateAIRuntimeLaneReadinessStatus] = [],
     deviceComparisonProofRecords: [AlphaPrivateAIDeviceComparisonProofRecord] = [],
+    downloadDeliverySummary: AlphaAssistantDownloadDeliveryVerificationSummary? = nil,
     generatedAt: Date = .now
 ) -> [String] {
     let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
@@ -3621,6 +3634,18 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("  \(rossLocalized("private_assistant_device_storage_label")): \(deviceProofProfile.freeStorageGB) GB")
         lines.append("  \(rossLocalized("private_assistant_device_low_power_label")): \(deviceProofProfile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))")
         lines.append("  \(rossLocalized("private_assistant_device_thermal_label")): \(deviceProofProfile.thermalCondition)")
+    }
+
+    if let downloadDeliverySummary {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_download_delivery_title"))
+        lines.append("  \(rossLocalized("assistant_model")): \(downloadDeliverySummary.fileName)")
+        lines.append("  \(rossLocalized("assistant_model_source")): \(downloadDeliverySummary.sourceLabel)")
+        lines.append("  \(rossLocalized("private_assistant_download_delivery_contract_label")): \(downloadDeliverySummary.contractLabel)")
+        lines.append("  \(rossLocalized("private_assistant_download_delivery_status_label")): \(downloadDeliverySummary.statusLabel)")
+        if let lastCheckedLabel = downloadDeliverySummary.lastCheckedLabel {
+            lines.append("  \(rossLocalized("private_assistant_download_delivery_last_checked_label")): \(lastCheckedLabel)")
+        }
     }
 
     if !deviceComparisonProofRecords.isEmpty {

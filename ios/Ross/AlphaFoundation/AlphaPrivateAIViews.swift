@@ -480,6 +480,21 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         model.activePack?.tier ?? model.persisted.settings.activeTier ?? model.selectedTier
     }
 
+    private var downloadDeliverySummary: AlphaAssistantDownloadDeliveryVerificationSummary? {
+        guard let comparisonTier else { return nil }
+        let preferredRuntimeMode: AlphaPackRuntimeMode = if model.activePack?.runtimeMode == .mlxSwiftLm {
+            .mlxSwiftLm
+        } else {
+            .llamaCppGguf
+        }
+        return alphaAssistantPreferredDeliveryVerificationSummary(
+            for: comparisonTier,
+            preferredRuntimeMode: preferredRuntimeMode,
+            cachedDownloads: model.persisted.cachedAssistantDownloads,
+            ledgerEntries: model.persisted.ledgerEntries
+        )
+    }
+
     private var comparisonRuntimeOptions: [AlphaAssistantVariantOption] {
         guard let comparisonTier else { return [] }
         return alphaAssistantComparisonRuntimeOptions(
@@ -591,6 +606,11 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
 
             Divider()
             AlphaPrivateAIDeviceProofProfileSection(profile: deviceProofProfile)
+
+            if let downloadDeliverySummary {
+                Divider()
+                AlphaAssistantDownloadDeliverySummarySection(summary: downloadDeliverySummary)
+            }
 
             Button(model.localInferenceSmokeRunning ? rossLocalized("checking_private_assistant_sample_file") : rossLocalized("check_private_assistant_with_sample_file")) {
                 model.runLocalInferenceSmoke()
@@ -925,6 +945,41 @@ private struct AlphaPrivateAIDeviceProofProfileSection: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaAssistantDownloadDeliverySummarySection: View {
+    let summary: AlphaAssistantDownloadDeliveryVerificationSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_download_delivery_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            AlphaSettingsValueRow(
+                label: rossLocalized("assistant_model"),
+                value: summary.fileName
+            )
+            AlphaSettingsValueRow(
+                label: rossLocalized("assistant_model_source"),
+                value: summary.sourceLabel
+            )
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_download_delivery_contract_label"),
+                value: summary.contractLabel
+            )
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_download_delivery_status_label"),
+                value: summary.statusLabel
+            )
+            if let lastCheckedLabel = summary.lastCheckedLabel {
+                AlphaSettingsValueRow(
+                    label: rossLocalized("private_assistant_download_delivery_last_checked_label"),
+                    value: lastCheckedLabel
+                )
+            }
         }
     }
 }

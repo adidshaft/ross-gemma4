@@ -1803,6 +1803,83 @@ func alphaAssistantDownloadDescriptor(
     )
 }
 
+struct AlphaAssistantDownloadDeliveryVerificationSummary: Hashable, Sendable {
+    let fileName: String
+    let sourceLabel: String
+    let contractLabel: String
+    let statusLabel: String
+    let lastCheckedLabel: String?
+}
+
+func alphaAssistantDownloadDeliveryVerificationSummary(
+    _ descriptor: AlphaAssistantDownloadDescriptor,
+    ledgerEntries: [AlphaPrivacyLedgerEntry]
+) -> AlphaAssistantDownloadDeliveryVerificationSummary {
+    let latestRelevantEntry = ledgerEntries.first {
+        switch $0.title {
+        case "Assistant download verified", "Assistant verified", "Assistant restored", "Assistant download failed":
+            return true
+        default:
+            return false
+        }
+    }
+
+    let sourceLabel = if descriptor.sessionId != nil {
+        rossLocalized("private_assistant_download_delivery_source_signed")
+    } else {
+        rossLocalized("private_assistant_download_delivery_source_bundled")
+    }
+
+    let trimmedRangeUnit = descriptor.rangeUnit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let rangeUnit = trimmedRangeUnit.isEmpty ? "bytes" : trimmedRangeUnit
+    let segmentCount = descriptor.segmentCount ?? 1
+    let trimmedResumeStrategy = descriptor.resumeStrategy?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let resumeStrategy = trimmedResumeStrategy.isEmpty ? "range_request_segments" : trimmedResumeStrategy
+    let contractLabel = String(
+        format: rossLocalized("private_assistant_download_delivery_contract_single_segment"),
+        rangeUnit,
+        segmentCount,
+        resumeStrategy
+    )
+
+    let statusLabel: String
+    switch latestRelevantEntry?.title {
+    case "Assistant download verified", "Assistant verified", "Assistant restored":
+        statusLabel = rossLocalized("private_assistant_download_delivery_status_verified")
+    case "Assistant download failed":
+        statusLabel = rossLocalized("private_assistant_download_delivery_status_failed")
+    default:
+        statusLabel = rossLocalized("private_assistant_download_delivery_status_ready")
+    }
+
+    let lastCheckedLabel = latestRelevantEntry?.timestamp.formatted(date: .abbreviated, time: .shortened)
+
+    return AlphaAssistantDownloadDeliveryVerificationSummary(
+        fileName: descriptor.fileName,
+        sourceLabel: sourceLabel,
+        contractLabel: contractLabel,
+        statusLabel: statusLabel,
+        lastCheckedLabel: lastCheckedLabel
+    )
+}
+
+func alphaAssistantPreferredDeliveryVerificationSummary(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]?,
+    ledgerEntries: [AlphaPrivacyLedgerEntry]
+) -> AlphaAssistantDownloadDeliveryVerificationSummary {
+    let descriptor = alphaPreferredAssistantDownloadFallback(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode,
+        cachedDownloads: cachedDownloads
+    )
+    return alphaAssistantDownloadDeliveryVerificationSummary(
+        descriptor,
+        ledgerEntries: ledgerEntries
+    )
+}
+
 extension AlphaRossModel {
     func preferredSelectedAssistantTier(
         fallbackSelectedTier: AlphaCapabilityTier? = nil

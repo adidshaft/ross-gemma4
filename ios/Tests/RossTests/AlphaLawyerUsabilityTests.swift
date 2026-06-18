@@ -5175,6 +5175,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 exportRelativePath: "exports/device-note-8gb.pdf"
             )
         ]
+        let downloadDeliverySummary = AlphaAssistantDownloadDeliveryVerificationSummary(
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            sourceLabel: "Signed session",
+            contractLabel: "bytes · 1 segment · range_request_segments",
+            statusLabel: "Verified on this device",
+            lastCheckedLabel: "Jun 13, 2024 at 1:46 PM"
+        )
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
             reports: reports,
@@ -5182,6 +5189,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             deviceProofProfile: deviceProofProfile,
             laneReadinessStatuses: laneReadinessStatuses,
             deviceComparisonProofRecords: deviceComparisonProofRecords,
+            downloadDeliverySummary: downloadDeliverySummary,
             generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
         )
         let joined = lines.joined(separator: "\n")
@@ -5193,6 +5201,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("System version: iOS 26.4.1"))
         XCTAssertTrue(joined.contains("Memory: 8 GB"))
         XCTAssertTrue(joined.contains("Representative class: 8 GB class"))
+        XCTAssertTrue(joined.contains("Download delivery verification"))
+        XCTAssertTrue(joined.contains("Model: gemma-4-12b-it-UD-Q4_K_XL.gguf"))
+        XCTAssertTrue(joined.contains("Model source: Signed session"))
+        XCTAssertTrue(joined.contains("Delivery contract: bytes · 1 segment · range_request_segments"))
+        XCTAssertTrue(joined.contains("Verification status: Verified on this device"))
+        XCTAssertTrue(joined.contains("Last checked: Jun 13, 2024 at 1:46 PM"))
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
