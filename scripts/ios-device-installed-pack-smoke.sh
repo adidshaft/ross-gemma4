@@ -18,7 +18,7 @@ Options:
                           has a usable draft companion.
   --require-draft-acceleration
                           Fail unless the app reports active draft speculative
-                          acceleration with draft metadata. Use for MTP proof.
+                          acceleration with draft_status=active and draft metadata. Use for MTP proof.
   --list-only             Only list installed manifest-backed packs from the device.
   --allow-device-proof-pack
                           Allow packs whose id ends with -device-proof. By default

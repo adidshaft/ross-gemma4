@@ -23,7 +23,7 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 - Assistant-download smokes also fail closed for explicit runtime requests: the selected terminal job and installed pack must match the requested runtime, and the shell helper rejects unknown runtime labels or pass markers whose runtime field differs from the requested lane. This prevents an MLX/CoreAI download smoke from passing from a previously installed GGUF pack.
 - Failed smoke runs remain failed, but the helpers now also validate any identity marker emitted before failure. This catches mislabeled failed MLX/CoreAI/MTP attempts during triage instead of leaving the mismatch hidden inside noisy logs.
 - `scripts/ios-device-installed-pack-smoke.sh` also preflights the selected manifest before launching the app: MLX requires `artifactKind=mlx_directory`, GGUF requires a GGUF/local-model artifact kind, and Apple Foundation/CoreAI requires a system/foundation/CoreAI/CoreML adapter kind. This prevents an impossible manifest/runtime pair from consuming a device benchmark slot.
-- MTP proof requires `--require-draft-acceleration` plus an identity marker with `acceleration=draftModelSpeculative`, non-`nil` `draft_tokens`, and non-`nil` `draft_model`. The `mtp_quick` smoke profile exists for a short, low-output validation pass; it is not a long stress benchmark.
+- MTP proof requires `--require-draft-acceleration` plus an identity marker with `acceleration=draftModelSpeculative`, `draft_status=active`, non-`nil` `draft_tokens`, and non-`nil` `draft_model`. The `mtp_quick` smoke profile exists for a short, low-output validation pass; it is not a long stress benchmark.
 - GGUF identity markers now include `draft_status` so standard-generation MTP attempts are diagnosable instead of ambiguous. Expected values include `active`, `no_draft_configured`, `draft_file_unavailable`, `draft_token_policy_blocked`, `validator_rejected`, `validator_failed`, and `runtime_unavailable`.
 - Simulator MTP proof also requires `--draft-model`; the helper now fails before launch if `--require-draft-acceleration` is requested without a draft artifact path. As of June 19, 2026, the local repo scan only found the main simulator GGUF and the 12B GGUF artifact, not a usable draft GGUF, so no new simulator MTP acceleration number is claimed from this checkpoint.
 - `docs/REAL_MODEL_QA_RESULTS.md` records the June 2, 2026 simulator GGUF smoke:
@@ -60,12 +60,15 @@ Clear unavailable categories for benchmark triage:
 - `unsupported_runtime_on_platform`: the Apple built-in/CoreAI runtime is unavailable on the current OS, device, or build.
 - `coreai_generation_failed`: the Apple built-in/CoreAI provider was selected and available, but a generation call failed before returning a usable answer.
 
-Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
+Ross now fails closed on malformed or known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
+- MLX install verification requires a directory with `config.json`, tokenizer metadata, and safetensors weights or an index before writing an installed-pack manifest.
 - `gemma4_assistant` archives are still rejected as primary MLX targets, but they are now accepted as draft companions for speculative decoding on supported tiers.
 - Gemma 4 26B-A4B MLX archives are rejected because the current upstream loader still does not support the MoE routing keys.
 - Known Gemma 4 31B dense MLX archives are also treated as unsupported because the current stack can still crash on first generation.
 
 If `ROSS_LOCAL_DRAFT_MODEL_PATH` points at an unsupported draft archive, Ross now drops back to standard MLX generation instead of poisoning the whole runtime.
+
+CoreAI/CoreML adapter artifacts are file-backed Foundation Models adapters, not the same thing as the built-in `system_model` sentinel. Persistence keeps zero-byte `system://` shortcut behavior limited to true system packs; CoreML/Foundation adapter packs must keep their installed artifact identity and fail as `missing_coreai_artifact` if the adapter cannot be opened.
 
 ## Build Notes
 

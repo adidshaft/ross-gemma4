@@ -27,7 +27,11 @@ Artifact metadata supports:
 - `tiny_dev_artifact`
 - `local_model_artifact`
 - `local_embedding_model`
+- `mlx_directory`
 - `system_model`
+- `foundation_adapter`
+- `coreai_adapter`
+- `coreml_model`
 - `external_debug_model`
 
 ## Provider Behavior

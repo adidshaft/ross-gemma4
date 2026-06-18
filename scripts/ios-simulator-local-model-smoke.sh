@@ -21,7 +21,7 @@ Options:
   --draft-tokens <count>  Draft token count to request.
   --disable-draft         Force standard acceleration.
   --require-draft-acceleration
-                          Fail unless identity reports draftModelSpeculative with draft metadata.
+                          Fail unless identity reports draftModelSpeculative with active draft_status and draft metadata.
 
 This helper runs only on Simulator. It does not seed or use a physical iPhone.
 It exits 0 only when the app emits ROSS_LOCAL_MODEL_SMOKE_PASS and the
