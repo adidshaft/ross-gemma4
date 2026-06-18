@@ -2940,6 +2940,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "மூன்று runtime lane-களுக்கும் recent sample-file evidence இப்போது உள்ளது.",
             "te": "మూడు runtime lane‌లకూ recent sample-file evidence ఇప్పుడు ఉంది."
         ],
+        "private_assistant_runtime_coverage_title": [
+            "en": "Device-proof coverage",
+            "hi": "Device-proof coverage",
+            "bn": "Device-proof coverage",
+            "ta": "Device-proof coverage",
+            "te": "Device-proof coverage"
+        ],
+        "private_assistant_runtime_coverage_missing": [
+            "en": "Still needed before the device note is complete: %@",
+            "hi": "Device note complete होने से पहले अभी भी चाहिए: %@",
+            "bn": "Device note complete হওয়ার আগে এখনও দরকার: %@",
+            "ta": "Device note complete ஆகும் முன் இன்னும் தேவை: %@",
+            "te": "Device note complete కావడానికి ముందు ఇంకా కావాలి: %@"
+        ],
+        "private_assistant_runtime_coverage_ready": [
+            "en": "Each runtime lane now has both sample-file and longer-bundle evidence.",
+            "hi": "हर runtime lane के पास अब sample-file और longer-bundle evidence दोनों हैं.",
+            "bn": "প্রতিটি runtime lane-এর কাছে এখন sample-file এবং longer-bundle evidence দুটোই আছে.",
+            "ta": "ஒவ்வொரு runtime lane-க்கும் இப்போது sample-file மற்றும் longer-bundle evidence இரண்டும் உள்ளன.",
+            "te": "ప్రతి runtime lane‌కి ఇప్పుడు sample-file మరియు longer-bundle evidence రెండూ ఉన్నాయి."
+        ],
+        "private_assistant_runtime_coverage_missing_sample": [
+            "en": "%@ sample file",
+            "hi": "%@ sample file",
+            "bn": "%@ sample file",
+            "ta": "%@ sample file",
+            "te": "%@ sample file"
+        ],
+        "private_assistant_runtime_coverage_missing_bundle": [
+            "en": "%@ longer bundle",
+            "hi": "%@ longer bundle",
+            "bn": "%@ longer bundle",
+            "ta": "%@ longer bundle",
+            "te": "%@ longer bundle"
+        ],
+        "private_assistant_runtime_coverage_missing_both": [
+            "en": "%@ sample file and longer bundle",
+            "hi": "%@ sample file and longer bundle",
+            "bn": "%@ sample file and longer bundle",
+            "ta": "%@ sample file and longer bundle",
+            "te": "%@ sample file and longer bundle"
+        ],
+        "private_assistant_sample_file_short_label": [
+            "en": "Sample file",
+            "hi": "Sample file",
+            "bn": "Sample file",
+            "ta": "Sample file",
+            "te": "Sample file"
+        ],
+        "private_assistant_longer_bundle_short_label": [
+            "en": "Longer bundle",
+            "hi": "Longer bundle",
+            "bn": "Longer bundle",
+            "ta": "Longer bundle",
+            "te": "Longer bundle"
+        ],
         "private_assistant_runtime_summary_missing": [
             "en": "Still needed for this comparison: %@",
             "hi": "इस comparison के लिए अभी भी चाहिए: %@",

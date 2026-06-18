@@ -19,6 +19,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS longer-bundle comparison history now also retains runtime-choice, execution-path, and acceleration detail for each run
 - hidden iOS Support details now summarize the latest longer-bundle result per runtime and call out which of GGUF / MLX / CoreAI still need a run
 - hidden iOS Support details now surface a small comparison readout from the latest per-runtime runs, including current leaders on first response, token speed, and visible coverage
+- hidden iOS Support details now also show a single per-runtime device-proof coverage summary, combining whether each lane already has sample-file evidence, longer-bundle evidence, or both
 - hidden iOS Support details can now save the current multi-runtime comparison set into `Notes & Drafts` as a local PDF note, so device QA evidence is easier to keep and share without exposing it in the main flow
 
 ## Visible Pack Mapping
@@ -59,6 +60,7 @@ Most recent commits that define this pause point:
 - hidden iOS longer-bundle comparison runs now capture why that runtime was selected and whether draft acceleration was active
 - hidden iOS Support details now make it obvious whether the current comparison set already covers all three runtime lanes
 - hidden iOS Support details now reduce manual comparison work by surfacing current leaders from the latest three-lane evidence set
+- hidden iOS Support details now make it obvious which runtime lanes still lack sample-file proof, longer-bundle proof, or both before the device note is considered complete
 - hidden iOS Support details can now export the current comparison evidence set straight into `Notes & Drafts` for later device-proof handoff, including the latest per-runtime sample-file readiness snapshot
 
 Most recent verification commands:

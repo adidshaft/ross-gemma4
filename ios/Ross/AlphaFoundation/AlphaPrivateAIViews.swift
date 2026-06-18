@@ -681,6 +681,14 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 }
             }
 
+            if !model.localInferenceSmokeReports.isEmpty || !model.matterBundleComparisonReports.isEmpty {
+                Divider()
+                AlphaPrivateAIRuntimeCoverageSection(
+                    smokeReports: model.localInferenceSmokeReports,
+                    comparisonReports: model.matterBundleComparisonReports
+                )
+            }
+
             Divider()
 
             Button(model.matterBundleComparisonRunning ? rossLocalized("checking_private_assistant_longer_bundle") : rossLocalized("check_private_assistant_with_longer_bundle")) {
@@ -850,6 +858,60 @@ private struct AlphaMatterBundleComparisonReportCard: View {
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.68))
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaPrivateAIRuntimeCoverageSection: View {
+    let smokeReports: [AlphaLocalInferenceSmokeReport]
+    let comparisonReports: [AlphaMatterBundleComparisonReport]
+
+    private var statuses: [AlphaPrivateAIRuntimeCoverageStatus] {
+        alphaPrivateAIRuntimeCoverageStatuses(
+            smokeReports: smokeReports,
+            comparisonReports: comparisonReports
+        )
+    }
+
+    private var missingLabels: String? {
+        let labels = alphaPrivateAIRuntimeCoverageMissingLabels(
+            smokeReports: smokeReports,
+            comparisonReports: comparisonReports
+        )
+        guard !labels.isEmpty else { return nil }
+        return labels.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_runtime_coverage_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            if let missingLabels {
+                Text(String(format: rossLocalized("private_assistant_runtime_coverage_missing"), missingLabels))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(rossLocalized("private_assistant_runtime_coverage_ready"))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.60))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(Array(statuses.enumerated()), id: \.offset) { _, status in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(status.runtimeMode.displayLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(alphaPrivateAIRuntimeCoverageSummary(status))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .padding(.vertical, 2)
+            }
         }
     }
 }
@@ -1078,6 +1140,76 @@ func alphaLocalInferenceSmokeMissingRuntimeLabels(_ reports: [AlphaLocalInferenc
     return requiredModes
         .filter { !presentModes.contains($0) }
         .map(\.displayLabel)
+}
+
+struct AlphaPrivateAIRuntimeCoverageStatus: Hashable {
+    let runtimeMode: AlphaPackRuntimeMode
+    let latestSmokeReport: AlphaLocalInferenceSmokeReport?
+    let latestComparisonReport: AlphaMatterBundleComparisonReport?
+
+    var hasSampleProof: Bool { latestSmokeReport != nil }
+    var hasLongerBundleProof: Bool { latestComparisonReport != nil }
+}
+
+func alphaPrivateAIRuntimeCoverageStatuses(
+    smokeReports: [AlphaLocalInferenceSmokeReport],
+    comparisonReports: [AlphaMatterBundleComparisonReport]
+) -> [AlphaPrivateAIRuntimeCoverageStatus] {
+    let latestSmokeByRuntime = Dictionary(
+        uniqueKeysWithValues: alphaLocalInferenceSmokeLatestReportsByRuntime(smokeReports).compactMap { report in
+            AlphaPackRuntimeMode(rawValue: report.runtimeUsed).map { ($0, report) }
+        }
+    )
+    let latestComparisonByRuntime = Dictionary(
+        uniqueKeysWithValues: alphaMatterBundleLatestReportsByRuntime(comparisonReports).compactMap { report in
+            AlphaPackRuntimeMode(rawValue: report.runtimeUsed).map { ($0, report) }
+        }
+    )
+    let orderedModes: [AlphaPackRuntimeMode] = [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf]
+    return orderedModes.map { runtimeMode in
+        AlphaPrivateAIRuntimeCoverageStatus(
+            runtimeMode: runtimeMode,
+            latestSmokeReport: latestSmokeByRuntime[runtimeMode],
+            latestComparisonReport: latestComparisonByRuntime[runtimeMode]
+        )
+    }
+}
+
+func alphaPrivateAIRuntimeCoverageMissingLabels(
+    smokeReports: [AlphaLocalInferenceSmokeReport],
+    comparisonReports: [AlphaMatterBundleComparisonReport]
+) -> [String] {
+    alphaPrivateAIRuntimeCoverageStatuses(
+        smokeReports: smokeReports,
+        comparisonReports: comparisonReports
+    ).compactMap { status in
+        switch (status.hasSampleProof, status.hasLongerBundleProof) {
+        case (true, true):
+            return nil
+        case (false, false):
+            return String(
+                format: rossLocalized("private_assistant_runtime_coverage_missing_both"),
+                status.runtimeMode.displayLabel
+            )
+        case (false, true):
+            return String(
+                format: rossLocalized("private_assistant_runtime_coverage_missing_sample"),
+                status.runtimeMode.displayLabel
+            )
+        case (true, false):
+            return String(
+                format: rossLocalized("private_assistant_runtime_coverage_missing_bundle"),
+                status.runtimeMode.displayLabel
+            )
+        }
+    }
+}
+
+func alphaPrivateAIRuntimeCoverageSummary(_ status: AlphaPrivateAIRuntimeCoverageStatus) -> String {
+    [
+        "\(rossLocalized("private_assistant_sample_file_short_label")): \(status.hasSampleProof ? rossLocalized("completed") : rossLocalized("not_run"))",
+        "\(rossLocalized("private_assistant_longer_bundle_short_label")): \(status.hasLongerBundleProof ? rossLocalized("completed") : rossLocalized("not_run"))"
+    ].joined(separator: " · ")
 }
 
 func alphaMatterBundleComparisonStatusLabel(_ report: AlphaMatterBundleComparisonReport) -> String {

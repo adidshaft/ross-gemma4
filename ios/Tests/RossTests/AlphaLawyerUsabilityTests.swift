@@ -4532,6 +4532,113 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(alphaLocalInferenceSmokeMissingRuntimeLabels(reports), ["CoreAI", "MLX"])
     }
 
+    func testPrivateAIRuntimeCoverageStatusesCombineSampleAndBundleProofInDisplayOrder() {
+        let smokeReports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 8,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "gguf sample"
+            )
+        ]
+        let comparisonReports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 7,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "coreai bundle"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 9,
+                sourceRefsReturned: 3,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "gguf bundle"
+            )
+        ]
+
+        let statuses = alphaPrivateAIRuntimeCoverageStatuses(
+            smokeReports: smokeReports,
+            comparisonReports: comparisonReports
+        )
+
+        XCTAssertEqual(statuses.map(\.runtimeMode), [.appleFoundationModels, .mlxSwiftLm, .llamaCppGguf])
+        XCTAssertEqual(statuses[0].hasSampleProof, false)
+        XCTAssertEqual(statuses[0].hasLongerBundleProof, true)
+        XCTAssertEqual(statuses[1].hasSampleProof, false)
+        XCTAssertEqual(statuses[1].hasLongerBundleProof, false)
+        XCTAssertEqual(statuses[2].hasSampleProof, true)
+        XCTAssertEqual(statuses[2].hasLongerBundleProof, true)
+    }
+
+    func testPrivateAIRuntimeCoverageMissingLabelsDescribeMissingProofPerLane() {
+        let smokeReports = [
+            AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                fieldsFound: 8,
+                fieldsVerified: 7,
+                fieldsNeedingReview: 1,
+                unsupportedAccepted: 0,
+                message: "gguf sample"
+            )
+        ]
+        let comparisonReports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 7,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                message: "coreai bundle"
+            )
+        ]
+
+        XCTAssertEqual(
+            alphaPrivateAIRuntimeCoverageMissingLabels(
+                smokeReports: smokeReports,
+                comparisonReports: comparisonReports
+            ),
+            [
+                "CoreAI sample file",
+                "MLX sample file and longer bundle",
+                "Gemma GGUF longer bundle"
+            ]
+        )
+    }
+
     func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
         rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
@@ -4873,6 +4980,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let joined = lines.joined(separator: "\n")
 
         XCTAssertTrue(joined.contains("Private assistant runtime comparison note"))
+        XCTAssertTrue(joined.contains("Device-proof coverage"))
+        XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
+        XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))
+        XCTAssertTrue(joined.contains("Sample file: Completed · Longer bundle: Completed"))
         XCTAssertTrue(joined.contains("Latest sample check by runtime"))
         XCTAssertTrue(joined.contains("Still needed for sample-file proof: CoreAI, MLX"))
         XCTAssertTrue(joined.contains("Saved file: gguf-smoke.pdf"))
@@ -4976,6 +5087,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(ledgerTitle, "Local export generated")
             XCTAssertNil(exportError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
+            XCTAssertTrue(imported.document.extractedText?.contains("Device-proof coverage") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("GGUF sample ready") == true)
         }

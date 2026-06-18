@@ -3370,6 +3370,14 @@ func alphaMatterBundleComparisonExportBodyLines(
     let decisionHints = alphaMatterBundleDecisionHints(reports)
     let latestSmokeReports = alphaLocalInferenceSmokeLatestReportsByRuntime(smokeReports)
     let missingSmokeRuntimeLabels = alphaLocalInferenceSmokeMissingRuntimeLabels(smokeReports)
+    let coverageStatuses = alphaPrivateAIRuntimeCoverageStatuses(
+        smokeReports: smokeReports,
+        comparisonReports: reports
+    )
+    let missingCoverageLabels = alphaPrivateAIRuntimeCoverageMissingLabels(
+        smokeReports: smokeReports,
+        comparisonReports: reports
+    )
     let generatedLine = String(
         format: rossLocalized("export_generated"),
         generatedAt.formatted(date: .abbreviated, time: .shortened)
@@ -3397,6 +3405,26 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("")
         lines.append(rossLocalized("private_assistant_runtime_summary_readout"))
         lines.append(contentsOf: decisionHints.map { "- \($0)" })
+    }
+
+    if !coverageStatuses.isEmpty {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_runtime_coverage_title"))
+        if missingCoverageLabels.isEmpty {
+            lines.append(rossLocalized("private_assistant_runtime_coverage_ready"))
+        } else {
+            lines.append(
+                String(
+                    format: rossLocalized("private_assistant_runtime_coverage_missing"),
+                    missingCoverageLabels.joined(separator: ", ")
+                )
+            )
+        }
+
+        for status in coverageStatuses {
+            lines.append("- \(status.runtimeMode.displayLabel)")
+            lines.append("  \(alphaPrivateAIRuntimeCoverageSummary(status))")
+        }
     }
 
     if !latestSmokeReports.isEmpty {
