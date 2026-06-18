@@ -67,7 +67,7 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .e4b:
             if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
-                return 8_192
+                return 4_096
             }
             if physicalMemory >= 12_000_000_000 {
                 return 24_576
@@ -104,10 +104,13 @@ enum AlphaLlamaRuntimeProfile {
             return 40
         case .e4b:
             // Real device proof on 7 GB-class A17 Pro phones showed the aggressive
-            // all-GPU E4B profile crashing during Metal allocation, so keep this
-            // lane on a smaller offload budget there.
+            // all-GPU E4B profile crashing during Metal allocation, and the later
+            // patched-scheduler proof plus the 12-layer / 4096-token follow-up
+            // still ran out of GPU memory during decode. Keep this lane on the
+            // smallest residency budget until a stable physical-device proof says
+            // otherwise.
             if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
-                return 20
+                return 0
             }
             if physicalMemory < 8_000_000_000 {
                 return 32
@@ -327,6 +330,13 @@ enum AlphaLlamaRuntimeProfile {
         return max(1, min(suggestedTokens, 8))
     }
 
+    static func supportsDraftAcceleration(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Bool {
+        !usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)
+    }
+
 }
 
 final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
@@ -467,7 +477,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     private static let cacheLock = NSLock()
 
     private func contextCacheKey(path: String) -> String {
-        let draftKey = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let draftKey = effectiveDraftModelPath() ?? ""
         let tokenKey = effectiveDraftTokenCount().map(String.init) ?? ""
         return [path, draftKey, tokenKey].joined(separator: "|")
     }
@@ -483,10 +493,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
         AlphaLlamaCppProvider.cachedContext = nil
 
+        let draftPath = effectiveDraftModelPath()
         let draftTokens = effectiveDraftTokenCount()
         let newContext = try AlphaLlamaCppProvider.contextFactory(
             path,
-            draftModelPath,
+            draftPath,
             draftTokens
         )
         AlphaLlamaCppProvider.cachedContext = newContext
@@ -834,7 +845,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func stagedDraftMetadata() -> (tokens: Int?, label: String?)? {
-        guard let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let draftPath = effectiveDraftModelPath(),
               draftPath.isEmpty == false else {
             return nil
         }
@@ -869,10 +880,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func effectiveDraftTokenCount() -> Int? {
-        guard
-            let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
-            draftPath.isEmpty == false
-        else {
+        guard let _ = effectiveDraftModelPath() else {
             return nil
         }
         if let draftModelTokens {
@@ -884,11 +892,25 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         )
     }
 
+    private func effectiveDraftModelPath() -> String? {
+        guard
+            let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+            draftPath.isEmpty == false,
+            AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
+                forModelPath: modelPath,
+                physicalMemory: Self.physicalMemoryBytesProvider()
+            )
+        else {
+            return nil
+        }
+        return draftPath
+    }
+
     private func validatedDraftMetadata(runtimeAvailable: Bool) -> (tokens: Int?, label: String?)? {
         guard
             runtimeAvailable,
             let modelPath,
-            let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let draftPath = effectiveDraftModelPath(),
             let stagedDraft = stagedDraftMetadata()
         else {
             return nil

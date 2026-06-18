@@ -31,6 +31,46 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --mobile-allowed --force-refresh --wait-seconds 90`
   - before the checksum-pin fix, the same `auto` smoke selected `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` and failed immediately with `The assistant download listing changed before setup could start.`
   - after the checksum-pin fix, the same smoke still auto-selects `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` but now gets through preflight and into a real GGUF transfer, reaching `bytes=3098452346 total=5224958176` before timing out on the artificial `90 s` harness budget
+- latest June 18, 2026 GGUF follow-up checkpoint, which supersedes the older constrained-lane blocker bullets below:
+  - the upstream llama.cpp scheduler assertion is now cleared on device when Ross is built against the locally swapped patched `llama.swift` / `llama.cpp` Apple xcframework that carries the upstream split-input fix
+  - with that local patched runtime in place, reducing the constrained E4B lane only from `n_ctx = 8192` to `4096` while keeping `n_gpu_layers = 12` removed the old assertion but still failed during real decode with repeated Metal `Insufficient Memory` command-buffer errors
+  - the highest-signal next lever was therefore GPU residency, not more context trimming, and the constrained Quick Start GGUF E4B lane is now tuned in code to:
+    - `n_gpu_layers = 0`
+    - `n_ctx = 4096`
+    - `n_batch = 512`
+    - `n_ubatch = 128`
+    - `offload_kqv = false`
+    - `op_offload = false`
+  - draft acceleration is now also suppressed entirely for that constrained E4B lane, because the earlier draft-enabled CPU-only rerun still crashed in the tiny MTP companion path with a native malloc/free failure even though the main model path was already stable
+  - focused iOS tests now cover both parts of that policy:
+    - the 7 GB-class constrained E4B runtime profile expectations
+    - GGUF provider suppression of draft acceleration for constrained Quick Start E4B
+  - after rebuilding and reinstalling on Aman’s cabled iPhone with that profile and the same locally swapped patched runtime, the real manifest-backed production Quick Start GGUF pack now passes the physical-device quick smoke in the shipped default path:
+    - command: `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 60`
+    - latest key runtime line: `ROSS_LOCAL_MODEL_SMOKE_RUNTIME context_tokens=4096 max_input_chars=22000 acceleration=standard draft_tokens=nil draft_model=nil`
+    - latest pass line: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start profile=quick elapsed=31.74s ...`
+  - this is the new preferred pause point for the below-target Quick Start GGUF lane:
+    - the physical-device quick-start path is now functionally passing on Aman’s phone
+    - the scheduler/runtime fix is still only present through a local swapped xcframework, not yet a repo-persistent dependency/package change
+    - the next meaningful pass is now to package that patched runtime persistently inside the repo and then rerun the same physical proof from a clean dependency state
+- newest June 18, 2026 packaging follow-up checkpoint, which supersedes the "still only present through a local swapped xcframework" caveat above:
+  - the repo now includes `scripts/prepare-patched-llama-runtime.sh`, which turns the patched GGUF runtime into a repeatable repo-owned prep step instead of a one-off manual artifact swap
+  - the repo also now checks in the exact upstream scheduler patch at `third_party/patches/llama.cpp/ggml-count-new-split-inputs.patch`
+  - that helper now overlays the patched xcframework into both dependency caches Ross actually uses:
+    - `ios/.build/artifacts/llama.swift/llama-cpp/llama.xcframework`
+    - `ios/build-device/SourcePackages/artifacts/llama.swift/llama-cpp/llama.xcframework`
+  - on a machine with `cmake` available, the helper can rebuild from upstream `llama.cpp` tag `b9672` plus the repo patch before doing that overlay
+  - on Aman’s current machine, `cmake` is not presently exposed on the shell PATH and no working local binary was discoverable, so this first repo-owned proof seeded the helper cache from the already-proven local xcframework at `/tmp/llama-cpp-b9672/build-apple/llama.xcframework`
+  - after deleting both `ios/.build` and `ios/build-device`, rerunning `scripts/prepare-patched-llama-runtime.sh`, rebuilding, reinstalling, and rerunning the default physical smoke on Aman’s cabled iPhone, the same constrained Quick Start GGUF lane still passes from that clean dependency state:
+    - `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileUsesConstrainedQuickStartE4BProfileFor7GBClassDevice|testLlamaRuntimeProfileUsesModelAwareGPUOffload|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones|testExperimentalGGUFProviderSurfacesDefaultDraftTokensWhenImplicit|testExperimentalGGUFProviderSuppressesDraftAccelerationForConstrainedQuickStartE4B|testExperimentalGGUFProviderHidesDraftMetadataAfterStandardFallback)'`
+    - `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
+    - `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
+    - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 60`
+    - latest pass line: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start profile=quick elapsed=23.90s ...`
+  - this is the current preferred pause point for the GGUF lane:
+    - the patched runtime is now represented in repo-owned scripts and patch files
+    - the clean dependency-state proof has been rerun successfully on Aman’s phone
+    - the only remaining caveat is that today’s helper proof still seeded from the existing local patched xcframework because `cmake` was unavailable on this machine, so the next optional cleanup pass would be to make the helper’s from-source rebuild path runnable here as well
 - Quick Start GGUF now also carries a constrained E4B runtime profile for 7 GB-class phones, so the real production pack no longer falls into the old aggressive decimal-byte lane on Aman's current iPhone:
   - `n_gpu_layers` now drops from the previous `99` all-GPU path to `20`
   - the same constrained lane now uses `n_ctx = 8192`, `n_batch = 768`, `n_ubatch = 512`, `draftTokens = 2`, and the smaller `22_000` quick-start input budget
@@ -98,6 +138,10 @@ Resume from the new physical-device checkpoint above, not from the older Gemma 4
    - below-12 GB iPhones keep Quick Start on GGUF in shipped setup/download/catalog flow
    - any later Quick Start MLX work on that device class should stay behind deliberate debug/runtime experimentation until a new physical-device proof changes the policy
 5. only after that policy decision should the next pass revisit any deeper MLX memory experiments on physical hardware
+6. for the GGUF lane specifically, resume from the latest local-patched-runtime checkpoint rather than the older scheduler-assert notes:
+   - keep the constrained E4B policy (`n_gpu_layers = 0`, `n_ctx = 4096`, draft suppressed)
+   - package the locally swapped patched llama xcframework or an equivalent repo-persistent wrapper dependency
+   - rerun the same default-path physical smoke from a clean dependency/artifact state before treating this lane as fully closed
 
 ## Current Stable State
 
@@ -176,6 +220,20 @@ Most recent commits that define this pause point:
 
 ## What Is Verified
 
+- with the locally swapped patched llama runtime still in place on June 18, 2026, Aman’s cabled iPhone now proves that the real manifest-backed production Quick Start GGUF pack can pass the default shipped quick smoke on the constrained below-target lane
+- with the repo-owned patched-runtime prep helper now in place, the same Quick Start GGUF lane also passes after wiping `ios/.build` and `ios/build-device`, rerunning the helper, rebuilding, reinstalling, and rerunning the default physical smoke on Aman’s cabled iPhone
+- the currently verified passing below-target Quick Start GGUF lane is:
+  - `n_gpu_layers = 0`
+  - `n_ctx = 4096`
+  - `n_batch = 512`
+  - `n_ubatch = 128`
+  - `offload_kqv = false`
+  - `op_offload = false`
+  - draft acceleration suppressed, yielding `acceleration=standard draft_tokens=nil draft_model=nil` in the latest physical-device smoke
+- the current passing physical proof command is:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 60`
+- the local-patched-runtime caveat is also verified:
+  - the scheduler-assert fix is now replayable through the repo-owned prep helper and checked-in patch file, but on this machine the helper still seeded its cache from the known-good local patched xcframework because `cmake` was unavailable for a fresh from-source rebuild
 - backend production catalog still advertises only the intended 3 GGUF primary packs
 - iOS Swift package graph builds against `llama.swift` `2.9672.0`
 - focused iOS tests still pass for:

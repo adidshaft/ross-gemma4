@@ -15,6 +15,32 @@ xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphone
 swift test --scratch-path tmp/swiftpm
 ```
 
+## Patched GGUF Runtime Prep
+
+Ross currently needs a patched `llama.cpp` Apple xcframework for the constrained
+Quick Start GGUF lane on smaller physical iPhones.
+
+Use the repo helper before a clean SwiftPM or Xcode build when you need that
+device-proof path:
+
+```bash
+cd /Users/amanpandey/projects/ross-gemma4
+scripts/prepare-patched-llama-runtime.sh
+swift test --package-path ios --filter 'AlphaExtractionTests/testExperimentalGGUFProviderSuppressesDraftAccelerationForConstrainedQuickStartE4B'
+xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=<device-udid>' -derivedDataPath ios/build-device build
+```
+
+Notes:
+
+- the helper overlays the patched xcframework into both `ios/.build/artifacts/...`
+  and `ios/build-device/SourcePackages/artifacts/...`
+- when `cmake` is available it can rebuild the patched xcframework from
+  `llama.cpp` tag `b9672` plus the repo patch in
+  `third_party/patches/llama.cpp/ggml-count-new-split-inputs.patch`
+- on this machine, if `cmake` is unavailable, the helper can still seed the
+  repo-owned cache from the already-proven local xcframework at
+  `/tmp/llama-cpp-b9672/build-apple/llama.xcframework`
+
 ## Current iOS launch flow
 
 The intended lawyer-facing flow is:
