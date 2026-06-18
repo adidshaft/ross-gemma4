@@ -99,7 +99,7 @@ Most recent commits that define this pause point:
 - the current iOS app bundle now builds for `iphoneos`, installs onto Aman's physical iPhone, and stays up after a foreground launch from `devicectl`
 - the current iPhone now also proves a real on-device GGUF smoke pass through the cabled-device helper and `--local-model-smoke`, using the local `gemma-2-2b-it-Q4_K_M.gguf` artifact as a Quick Start debug pack on the physical phone
 - the current iPhone now also proves that the intended `gemma-4-12b-it-UD-Q4_K_XL.gguf` artifact reaches the phone, opens in the real GGUF load path, and then fails specifically on memory mapping with `Cannot allocate memory`, with the device reporting `System physical memory: 7 GB`
-- the current physical 12B attempt also surfaced a signed-download checksum nuance that still needs follow-up before claiming end-to-end production download verification: the locally downloaded file hashed to `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, while current repo metadata still records `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
+- Ross production metadata now also pins the downloaded 12B GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, reconciling the earlier mismatch with the CDN/Xet `etag` value observed during the physical-device proof pass
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
@@ -131,6 +131,8 @@ Most recent verification commands:
 - `xcrun devicectl device install app --device '00008130-000C74820130001C' ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
 - `xcrun devicectl device process launch --device '00008130-000C74820130001C' --terminate-existing com.ross.ios`
 - `scripts/ios-device-gguf-smoke.sh --device 00008130-000C74820130001C --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --tier quickStart --stage-timeout 45`
+- `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test --test-name-pattern 'ios production sessions preserve multi-gb GGUF delivery descriptors end to end' backend/tests/model-registry.test.ts`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/testReleaseReadyAssistantArtifactsPinDownloadMetadata'`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
   Run from `/Users/amanpandey/projects/ross-gemma4/backend`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test backend/tests/routes-smoke.test.ts`
@@ -139,7 +141,7 @@ Most recent verification commands:
 
 - successful physical iPhone proof for the intended `Case Associate` 12B GGUF artifact on a 12 GB+ target, now that the current 7 GB-class A17 Pro phone has a recorded memory-mapping failure for that exact pack
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
-- real end-to-end client download and consumption proof for production multi-GB artifacts on device, including reconciliation of the currently observed 12B checksum/etag contract
+- real end-to-end client download and consumption proof for production multi-GB artifacts on device
 - Android native runtime validation beyond the recent retrieval and budget improvements
 
 ## Why This Is A Good Pause Point
@@ -154,9 +156,8 @@ Most recent verification commands:
 Resume with a focused real-device validation pass instead of more code changes:
 
 1. treat Aman's current iPhone as a completed below-target proof for the intended 12B `Case Associate` artifact: the real pack now stages and opens there, but it fails with `mmap failed: Cannot allocate memory` on a device that reports `System physical memory: 7 GB`
-2. before claiming production download proof, reconcile the current 12B checksum contract, because the live downloaded file hashed to `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020` while repo metadata still records `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
-3. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder
-4. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
-5. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
-6. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
-7. only then return to Android real-device runtime validation and deeper runtime work there
+2. resume the physical-device proof on a 12 GB+ iPhone target, or lower the intended Case Associate pack if that class of phone must be supported by the shipped ladder
+3. once one viable physical target can actually run the intended lane, compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
+4. once all needed lanes have recent evidence, tap `Save runtime comparison note` in hidden `Support details` so the current readout lands in `Notes & Drafts` as the device-QA artifact
+5. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+6. only then return to Android real-device runtime validation and deeper runtime work there

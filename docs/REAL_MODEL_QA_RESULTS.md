@@ -9,11 +9,14 @@
 - Model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
 - Model bytes observed locally: `7366421920`
 - Model SHA-256 observed locally: `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`
-- Repo metadata SHA-256 currently recorded for this artifact: `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
+- Repo metadata SHA-256 recorded before follow-up reconciliation: `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
 - Live HEAD nuance observed on June 18, 2026:
   - the Hugging Face resolver still advertised `content-length: 7366421920`
   - `x-linked-etag` matched the local file hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`
   - the final CDN `etag` still showed `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`
+- Follow-up reconciliation completed on June 18, 2026:
+  - Ross production metadata was updated to pin the downloaded GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`
+  - the prior `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637` value is now treated as the CDN/Xet reconstruction hash observed in `etag`, not as the downloaded file checksum contract
 - Smoke helper: `/Users/amanpandey/projects/ross-gemma4/scripts/ios-device-gguf-smoke.sh`
 - Smoke command:
   - `scripts/ios-device-gguf-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --tier caseAssociate --stage-timeout 120`
@@ -38,7 +41,7 @@
   - the current `gemma-4-12b-it-UD-Q4_K_XL.gguf` footprint does not fit this physical iPhone's available memory budget
 - What is still not proven:
   - successful physical-device generation for the intended 12B artifact on a 12 GB+ iPhone class target
-  - physical iPhone download/resume/verify/activate of the production 12B artifact with the current checksum contract
+  - physical iPhone download/resume/verify/activate of the production 12B artifact on a device that can run it
   - the longer-bundle comparison loop across GGUF, MLX, and CoreAI on a device that can actually run the intended 12B pack
 
 ## 2026-06-18 physical iPhone GGUF smoke via cabled-device helper

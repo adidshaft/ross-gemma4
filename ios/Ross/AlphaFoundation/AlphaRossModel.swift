@@ -1371,7 +1371,7 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         quantization: "UD-Q4_K_XL",
         downloadURLString: "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-UD-Q4_K_XL.gguf",
         sizeBytes: 7_366_421_920,
-        sha256: "2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637",
+        sha256: "ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020",
         artifactKind: "local_model_artifact",
         runtimeMode: .llamaCppGguf,
         developmentOnly: false,

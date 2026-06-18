@@ -126,7 +126,7 @@ scripts/ios-device-gguf-smoke.sh \
 - The helper seeds the GGUF plus a manifest into `Library/Application Support/RossAlpha/model-packs/<tier>/`, resolves the absolute device-side model path with a probe copy, then launches Ross with `--local-model-smoke` and the required `DEVICECTL_CHILD_ROSS_*` environment variables.
 - A June 18, 2026 run on Aman's physical iPhone (`iPhone16,1`, iOS `27.0`) passed this flow with the 2B GGUF artifact and emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start`.
 - A later June 18, 2026 run with `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf` under `--tier caseAssociate` proved that the intended 12B artifact can be staged and opened on the phone, but it failed with `llama_model_load: error loading model: mmap failed: Cannot allocate memory`.
-- That same 12B run also showed a checksum-contract nuance worth preserving for resume work: the locally-downloaded file hashed to `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, while current repo metadata still records `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`.
+- That same 12B run also exposed a Hugging Face checksum nuance that is now reconciled in Ross metadata: the downloaded GGUF bytes hash to `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, while the CDN `etag` still reported `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637`.
 - This helper proves the physical GGUF runtime path itself. It does not replace the still-needed successful `Case Associate` 12B proof on a device class that can actually fit that pack.
 
 The current `--local-model-smoke` pass requires all of these from the real provider:

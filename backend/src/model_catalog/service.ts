@@ -218,7 +218,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     downloadConfigured: true,
     fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
     downloadUrl: "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-UD-Q4_K_XL.gguf",
-    finalSha256: "2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637",
+    finalSha256: "ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020",
     draftArtifact: {
       fileName: "mtp-gemma-4-12b-it.gguf",
       sizeBytes: 465_109_248,
