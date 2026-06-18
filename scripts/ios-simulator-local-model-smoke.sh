@@ -324,6 +324,7 @@ command = [
 pass_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"\bROSS_RUNTIME_IDENTITY\b")
+matrix_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX\b")
 
 
 def parse_fields(line):
@@ -341,7 +342,7 @@ def summary_value(fields, key):
     return value if value not in (None, "") else "nil"
 
 
-def print_benchmark_summary(identity, pass_fields):
+def print_benchmark_summary(identity, pass_fields, matrix_fields):
     stages = ["source", "general", "bengali", "hindi", "tamil", "telugu"]
     summary = {
         "runtime": summary_value(identity, "actual_runtime"),
@@ -353,6 +354,8 @@ def print_benchmark_summary(identity, pass_fields):
         "draft_model": summary_value(identity, "draft_model"),
         "draft_status": summary_value(identity, "draft_status"),
         "profile": summary_value(pass_fields, "profile"),
+        "matrix_profile": summary_value(matrix_fields, "profile"),
+        "matrix_stages": summary_value(matrix_fields, "stages"),
         "elapsed": summary_value(pass_fields, "elapsed"),
     }
     for stage in stages:
@@ -409,6 +412,7 @@ def validate_identity_guard(identity, *, require_identity):
 
 
 identity = None
+matrix_fields = None
 pass_fields = None
 outcome = None
 deadline = time.time() + max(float(launch_timeout), 1.0)
@@ -428,6 +432,8 @@ try:
         print(line, flush=True)
         if identity_re.search(line):
             identity = parse_fields(line)
+        if matrix_re.search(line):
+            matrix_fields = parse_fields(line)
         if pass_re.search(line):
             outcome = "pass"
             pass_fields = parse_fields(line)
@@ -457,7 +463,10 @@ finally:
 
 if outcome == "pass" and pass_fields is not None:
     validate_identity_guard(identity, require_identity=True)
-    print_benchmark_summary(identity, pass_fields)
+    if matrix_fields is None:
+        print("ROSS_SMOKE_GUARD_FAIL reason=missing_benchmark_matrix", file=sys.stderr)
+        sys.exit(1)
+    print_benchmark_summary(identity, pass_fields, matrix_fields)
     sys.exit(0)
 
 if outcome == "fail":

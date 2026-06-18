@@ -55,6 +55,17 @@ if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotEx
     FAIL=1
 fi
 
+for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
+    if ! grep -q "missing_benchmark_matrix" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script does not require benchmark matrix before benchmark summary."
+        FAIL=1
+    fi
+    if ! grep -q "matrix_stages" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script benchmark summary omits matrix stages."
+        FAIL=1
+    fi
+done
+
 if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke runtime identity guard missing."
     FAIL=1

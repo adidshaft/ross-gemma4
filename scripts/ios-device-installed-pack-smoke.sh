@@ -493,6 +493,7 @@ command = [
 pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
+matrix_re = re.compile(r"^ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX\b")
 
 def parse_fields(line, skip_prefix=True):
     fields = {}
@@ -508,7 +509,7 @@ def summary_value(fields, key):
     value = fields.get(key)
     return value if value not in (None, "") else "nil"
 
-def print_benchmark_summary(identity, pass_fields):
+def print_benchmark_summary(identity, pass_fields, matrix_fields):
     stages = [
         "source",
         "general",
@@ -527,6 +528,8 @@ def print_benchmark_summary(identity, pass_fields):
         "draft_model": summary_value(identity, "draft_model"),
         "draft_status": summary_value(identity, "draft_status"),
         "profile": summary_value(pass_fields, "profile"),
+        "matrix_profile": summary_value(matrix_fields, "profile"),
+        "matrix_stages": summary_value(matrix_fields, "stages"),
         "elapsed": summary_value(pass_fields, "elapsed"),
     }
     for stage in stages:
@@ -580,6 +583,7 @@ def validate_identity_guard(identity, *, require_identity):
 
 outcome = None
 identity = None
+matrix_fields = None
 pass_fields = None
 process = subprocess.Popen(
     command,
@@ -597,6 +601,8 @@ try:
         print(line)
         if identity_re.search(line):
             identity = parse_fields(line)
+        if matrix_re.search(line):
+            matrix_fields = parse_fields(line)
         if pass_re.search(line):
             outcome = "pass"
             pass_fields = parse_fields(line)
@@ -616,7 +622,10 @@ finally:
 if outcome == "pass":
     validate_identity_guard(identity, require_identity=True)
     if pass_fields is not None:
-        print_benchmark_summary(identity, pass_fields)
+        if matrix_fields is None:
+            print("ROSS_SMOKE_GUARD_FAIL reason=missing_benchmark_matrix", file=sys.stderr)
+            sys.exit(1)
+        print_benchmark_summary(identity, pass_fields, matrix_fields)
     sys.exit(0)
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
