@@ -126,6 +126,11 @@ if ! grep -q "alphaPackUsesSystemFoundationModel" ios/Ross/AlphaFoundation/Alpha
     FAIL=1
 fi
 
+if ! grep -q "alphaDebugSmokePathUsesSystemFoundationModel" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: debug smoke CoreAI system path helper missing."
+    FAIL=1
+fi
+
 if ! grep -q 'artifactKind=system_model only with model path system-model' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator CoreAI system-model path preflight missing."
     FAIL=1

@@ -241,7 +241,10 @@ func alphaDebugLocalModelSmokePack(
     guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
         return nil
     }
-    let usesSystemFoundationModel = runtimeMode == .appleFoundationModels && modelPath == "system-model"
+    let usesSystemFoundationModel = alphaDebugSmokePathUsesSystemFoundationModel(
+        runtimeMode: runtimeMode,
+        modelPath: modelPath
+    )
     guard usesSystemFoundationModel || fileManager.fileExists(atPath: modelPath) else {
         return nil
     }
@@ -258,6 +261,17 @@ func alphaDebugLocalModelSmokePack(
         minimumAppVersion: "0.1.0-alpha",
         isActive: true
     )
+}
+
+func alphaDebugSmokePathUsesSystemFoundationModel(
+    runtimeMode: AlphaPackRuntimeMode,
+    modelPath: String
+) -> Bool {
+    runtimeMode == .appleFoundationModels &&
+        (
+            modelPath == "system-model" ||
+                modelPath.hasPrefix("system://")
+        )
 }
 
 struct RossLocalModelSmokeView: View {
@@ -805,7 +819,7 @@ struct RossLocalModelSmokeView: View {
             artifactPathType = "directory"
         } else if FileManager.default.fileExists(atPath: activePack.installPath) {
             artifactPathType = "file"
-        } else if activePack.runtimeMode == .appleFoundationModels && activePack.installPath == "system-model" {
+        } else if alphaPackUsesSystemFoundationModel(activePack) {
             artifactPathType = "system"
         } else {
             artifactPathType = "missing"

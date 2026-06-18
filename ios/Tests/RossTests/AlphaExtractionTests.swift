@@ -16141,6 +16141,26 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(pack.checksumVerified)
     }
 
+    func testDebugLocalModelSmokePackAllowsFoundationSystemURLSentinel() throws {
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            tierOverride: .quickStart,
+            packIDOverride: "system-foundation-smoke-url",
+            modelPath: "system://apple-foundation-models",
+            modelChecksum: nil,
+            modelKind: "system_model"
+        )
+
+        let pack = try XCTUnwrap(alphaDebugLocalModelSmokePack(environment: environment))
+
+        XCTAssertEqual(pack.packId, "system-foundation-smoke-url")
+        XCTAssertEqual(pack.installPath, "system://apple-foundation-models")
+        XCTAssertEqual(pack.artifactKind, "system_model")
+        XCTAssertEqual(pack.runtimeMode, .appleFoundationModels)
+        XCTAssertFalse(pack.checksumVerified)
+    }
+
     func testLocalModelSmokeProfileParsesQuickAliases() {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([
@@ -16449,6 +16469,48 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("gpu_offload=system_managed"))
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
+    }
+
+    func testRuntimeIdentityLineTreatsCoreAISystemURLAsSystemArtifact() throws {
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .appleFoundationModels,
+            packId: "system-coreai-url",
+            installPath: "system://apple-foundation-models",
+            checksum: String(repeating: "f", count: 64),
+            artifactKind: "system_model",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .appleFoundationModels,
+            available: false,
+            modelPathPresent: true,
+            modelPathLabel: "system-model",
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 14_000,
+            estimatedContextTokens: 14_336,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "not_supported",
+            lastErrorCategory: "unsupported_runtime_on_platform",
+            userFacingStatus: "Unavailable",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: RossLocalModelSmokeView.preflightProviderName(for: .appleFoundationModels),
+            actualRuntime: .appleFoundationModels,
+            providerHealth: health,
+            requestedRuntime: .appleFoundationModels
+        )
+
+        XCTAssertTrue(line.contains("artifact_path_type=system"))
+        XCTAssertTrue(line.contains("artifact_path=apple-foundation-models"))
+        XCTAssertTrue(line.contains("actual_runtime=apple_foundation_models"))
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 
