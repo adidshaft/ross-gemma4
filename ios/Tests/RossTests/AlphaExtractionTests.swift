@@ -7,6 +7,21 @@ import ZIPFoundation
 final class AlphaExtractionTests: XCTestCase {
     private var previousSupportRootOverride: String?
 
+    private actor PassingLlamaContext: AlphaLlamaCompletionContext {
+        func clear() {}
+        func completionInit(
+            text: String,
+            maxNewTokens requestedMaxNewTokens: Int32?,
+            samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+        ) throws {}
+        func completionLoop() -> String { "" }
+        func isDone() -> Bool { true }
+        func promptTokenCount() -> Int { 0 }
+        func generatedTokenCount() -> Int { 0 }
+        func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+        func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+    }
+
     override func setUp() {
         super.setUp()
         previousSupportRootOverride = ProcessInfo.processInfo.environment["ROSS_ALPHA_SUPPORT_ROOT"]
@@ -8824,11 +8839,14 @@ final class AlphaExtractionTests: XCTestCase {
 
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
         let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
         AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in PassingLlamaContext() }
         defer {
             AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
             AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
         }
 
         let data = Data("recovered ask fallback".utf8)
@@ -8907,11 +8925,14 @@ final class AlphaExtractionTests: XCTestCase {
 
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
         let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
         AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in PassingLlamaContext() }
         defer {
             AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
             AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
         }
 
         let data = Data("retained downloaded fallback".utf8)
@@ -9052,11 +9073,14 @@ final class AlphaExtractionTests: XCTestCase {
 
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
         let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
         AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in PassingLlamaContext() }
         defer {
             AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
             AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
         }
 
         let data = Data("execution fallback".utf8)
