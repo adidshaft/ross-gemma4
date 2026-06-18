@@ -24,6 +24,13 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - explicit Quick Start MLX requests in product setup flow now fall back to GGUF on below-12 GB iPhones instead of preserving the unsupported runtime choice
   - cached/backend catalog helpers now filter unsupported Quick Start MLX entries for that device class instead of letting them remain selectable earlier in setup flow
   - MLX on that device class is now effectively a deliberate debug/runtime-experiment path rather than a shipped setup/download default
+- Quick Start GGUF metadata is now reconciled with the current provider checksum contract:
+  - the shipped Quick Start GGUF main artifact and draft companion now pin the live `x-linked-etag` values Ross actually validates during preflight, instead of the older Xet reconstruction hashes
+  - the iOS bundled metadata, backend production metadata, and focused metadata/session tests now all agree on those updated Quick Start checksum pins
+- on June 18, 2026, a fresh bounded assistant-download smoke on Aman’s cabled iPhone (`3803F5B6-1666-56D3-A71A-62F131F6CE3B`) also proved the intended below-target Quick Start lane moved forward again:
+  - `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --mobile-allowed --force-refresh --wait-seconds 90`
+  - before the checksum-pin fix, the same `auto` smoke selected `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` and failed immediately with `The assistant download listing changed before setup could start.`
+  - after the checksum-pin fix, the same smoke still auto-selects `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` but now gets through preflight and into a real GGUF transfer, reaching `bytes=3098452346 total=5224958176` before timing out on the artificial `90 s` harness budget
 
 ## Latest MLX Runtime Checkpoint
 
@@ -97,6 +104,7 @@ Resume from the new physical-device checkpoint above, not from the older Gemma 4
 - hidden iOS Support details and the saved note now also state the ladder-decision gate directly, so the product itself says whether pack-selection review is unlocked or still waiting on specific physical-device notes
 - Android debug compile and assemble now succeed in the current dirty worktree, so the remaining Android gap is narrowed to real runtime validation rather than baseline build breakage
 - backend production download sessions now prove that the default 12B and 26B iOS GGUF packs preserve their real multi-GB size, byte-range resume metadata, and direct delivery URLs end to end through signed session payloads
+- backend production download sessions now also prove the default Quick Start iOS GGUF pack and draft companion preserve their current provider-aligned checksum pins end to end, closing the metadata gap that was aborting below-target Quick Start setup before download
 - iOS assistant download descriptors now preserve multi-GB segment and byte-range resume metadata from signed backend sessions, and bundled GGUF defaults now expose the same single-segment range assumptions on the client side
 - iOS installer acceptance now rejects assistant downloads whose delivery metadata falls outside the current client contract, so unsupported range units or resume strategies fail before real download begins
 - iOS installer acceptance now also enforces the current single-segment artifact contract directly, so multi-segment or mismatched segment-size payloads are rejected until the client has real segmented-download support
@@ -182,8 +190,10 @@ Most recent commits that define this pause point:
 - below-target iPhones now also treat the `Case Associate` 12B GGUF lane as unavailable up front instead of merely broken: the shipped minimum memory floor is now 12 GB for that pack, the hidden runtime-lane readiness copy reports it as unavailable on this iPhone, and the phone-side runtime chooser now prefers MLX for `Case Associate` when GGUF would not fit
 - below-target iPhones now also stop offering the unsupported `Case Associate` GGUF lane in setup/runtime variant chips, so smaller phones are steered toward viable MLX or built-in lanes instead of advertising a path that cannot activate there
 - below-target iPhones now also keep Quick Start on GGUF through shipped setup/download/catalog selection instead of letting explicit or cached MLX choices survive earlier in product flow
+- below-target iPhones now also get past the stale Quick Start GGUF checksum guard: the shipped `auto` setup lane still chooses `gemma-4-e4b-q4` on Aman's phone, and a fresh bounded device smoke now proves that lane reaches real download progress instead of failing immediately with the old listing-changed error
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
+- backend model-registry tests now explicitly cover the default iOS `Quick Start` GGUF pack and draft checksum pins in the same signed-session contract that already covered the larger GGUF lanes
 - focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
 - focused iOS extraction tests now also prove the installer rejects backend artifacts or cached download descriptors that advertise unsupported delivery metadata, instead of carrying them into a broken client download path
 - focused iOS extraction tests now also prove the installer rejects multi-segment or mismatched single-segment delivery metadata, so the current client contract stays aligned with the single full-artifact GGUF path it actually knows how to verify and download
@@ -260,7 +270,7 @@ Most recent verification commands:
 
 - successful physical iPhone proof for the intended `Case Associate` 12B GGUF artifact on a 12 GB+ target, now that the current 7 GB-class A17 Pro phone has a recorded memory-mapping failure for that exact pack
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
-- real end-to-end client download and consumption proof for production multi-GB artifacts on device, even though the current iPhone now proves full production MLX transfer, verification, install, manifest write, and installed-pack selection from app-private storage
+- real end-to-end client download and consumption proof for production multi-GB artifacts on device, even though the current iPhone now proves full production MLX transfer, verification, install, manifest write, and installed-pack selection from app-private storage, and now also proves that the intended below-target Quick Start GGUF lane gets through preflight and into a real multi-GB transfer
 - a successful real local-inference pass from the newly installed `quickStart` MLX production pack on Aman's current phone, which is now specifically blocked by an `MLXNN.UpdateError` weight-key mismatch during generation
 - Android native runtime validation beyond the recent retrieval and budget improvements
 

@@ -183,11 +183,11 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     downloadConfigured: true,
     fileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
     downloadUrl: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
-    finalSha256: "724f9a1e6966e36586c70f4c5fa08a8bdafbc39676469481ce98683a0366e8bf",
+    finalSha256: "30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36",
     draftArtifact: {
       fileName: "mtp-gemma-4-E4B-it.gguf",
       sizeBytes: 98_653_248,
-      finalSha256: "c41954b43f5e2de1ff5128d5c2abb4195aea72ee7ed5e36405be9b02fa687e77",
+      finalSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
       artifactKind: "local_model_artifact",
       downloadUrl: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mtp-gemma-4-E4B-it.gguf"
     },

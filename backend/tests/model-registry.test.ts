@@ -499,6 +499,17 @@ test("ios production sessions preserve multi-gb GGUF delivery descriptors end to
 
   const expectedPacks = [
     {
+      packId: "gemma-4-e4b-q4",
+      fileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+      downloadUrl:
+        "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+      sizeBytes: 5_126_304_928,
+      finalSha256: "30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36",
+      draftFileName: "mtp-gemma-4-E4B-it.gguf",
+      draftSizeBytes: 98_653_248,
+      draftFinalSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376"
+    },
+    {
       packId: "gemma-4-12b-q4",
       fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
       downloadUrl:
@@ -506,7 +517,8 @@ test("ios production sessions preserve multi-gb GGUF delivery descriptors end to
       sizeBytes: 7_366_421_920,
       finalSha256: "ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020",
       draftFileName: "mtp-gemma-4-12b-it.gguf",
-      draftSizeBytes: 465_109_248
+      draftSizeBytes: 465_109_248,
+      draftFinalSha256: "aed49e55a3d0123a8a13b47667eb8d8198f4237f5e8c7c57829b531c26b34200"
     },
     {
       packId: "gemma-4-26b-a4b-q4",
@@ -516,7 +528,8 @@ test("ios production sessions preserve multi-gb GGUF delivery descriptors end to
       sizeBytes: 17_010_978_592,
       finalSha256: "7e9c7880585fbf09ab31f3c042bd4c2c20d1c8036441163cdd839fd16670736d",
       draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
-      draftSizeBytes: 461_766_816
+      draftSizeBytes: 461_766_816,
+      draftFinalSha256: "fb7a81da9da6f2287b5c8b357e9e854d0dfaca4d24eac7d69ab564ad5514e525"
     }
   ] as const;
 
@@ -593,7 +606,7 @@ test("ios production sessions preserve multi-gb GGUF delivery descriptors end to
 
     assert.equal(body.downloadSession.payload.artifact.draftArtifact?.fileName, expectedPack.draftFileName);
     assert.equal(body.downloadSession.payload.artifact.draftArtifact?.sizeBytes, expectedPack.draftSizeBytes);
-    assert.match(body.downloadSession.payload.artifact.draftArtifact?.finalSha256 ?? "", /^[a-f0-9]{64}$/);
+    assert.equal(body.downloadSession.payload.artifact.draftArtifact?.finalSha256, expectedPack.draftFinalSha256);
   }
 });
 

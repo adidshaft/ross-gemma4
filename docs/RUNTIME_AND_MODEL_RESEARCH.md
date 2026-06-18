@@ -12,10 +12,10 @@
 | artifact format | GGUF UD-Q4_K_XL |
 | file name | `gemma-4-E4B-it-UD-Q4_K_XL.gguf` |
 | sizeBytes | `5126304928` |
-| checksumSha256 | `724f9a1e6966e36586c70f4c5fa08a8bdafbc39676469481ce98683a0366e8bf` |
+| checksumSha256 | `30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36` |
 | draft companion | `mtp-gemma-4-E4B-it.gguf` |
 | draftSizeBytes | `98653248` |
-| draftChecksumSha256 | `c41954b43f5e2de1ff5128d5c2abb4195aea72ee7ed5e36405be9b02fa687e77` |
+| draftChecksumSha256 | `b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376` |
 | verified | true |
 | releaseReady | true |
 | notes | Lighter visible pack for everyday work and faster short-turn review. |

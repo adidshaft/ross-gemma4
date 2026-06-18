@@ -1356,7 +1356,7 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         quantization: "UD-Q4_K_XL",
         downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
         sizeBytes: 5_126_304_928,
-        sha256: "724f9a1e6966e36586c70f4c5fa08a8bdafbc39676469481ce98683a0366e8bf",
+        sha256: "30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36",
         artifactKind: "local_model_artifact",
         runtimeMode: .llamaCppGguf,
         developmentOnly: false,
@@ -1374,7 +1374,7 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         draftArtifact: AlphaAssistantDraftArtifactDescriptor(
             fileName: "mtp-gemma-4-E4B-it.gguf",
             sizeBytes: 98_653_248,
-            checksumSha256: "c41954b43f5e2de1ff5128d5c2abb4195aea72ee7ed5e36405be9b02fa687e77",
+            checksumSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
             artifactKind: "local_model_artifact",
             downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mtp-gemma-4-E4B-it.gguf",
             draftTokens: nil
