@@ -16095,6 +16095,63 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=nil"))
     }
 
+    func testRuntimeIdentityLineIncludesUnavailableMLXPreflightError() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross identity invalid mlx \(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "quick-invalid-mlx",
+            installPath: directory.path,
+            checksum: String(repeating: "c", count: 64),
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .mlxSwiftLm,
+            available: false,
+            modelPathPresent: true,
+            modelPathLabel: directory.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [],
+            maxInputChars: 16_000,
+            estimatedContextTokens: 12_288,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            lastErrorCategory: "invalid_mlx_artifact",
+            userFacingStatus: "Needs repair",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: RossLocalModelSmokeView.preflightProviderName(for: .mlxSwiftLm),
+            actualRuntime: .mlxSwiftLm,
+            providerHealth: health,
+            requestedRuntime: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaMLXLocalProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("actual_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("pack_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("model_format=mlx_directory"))
+        XCTAssertTrue(line.contains("artifact_path_type=directory"))
+        XCTAssertTrue(line.contains("artifact_path=ross_identity_invalid_mlx_"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_tokens=nil"))
+        XCTAssertTrue(line.contains("draft_model=nil"))
+        XCTAssertTrue(line.contains("context_tokens=12288"))
+        XCTAssertTrue(line.contains("gpu_offload=mlx_default"))
+        XCTAssertTrue(line.contains("fallback=none"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=invalid_mlx_artifact"))
+    }
+
     func testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed() {
         let measuredOutput = AlphaLocalModelOutput(
             rawText: "Answer",

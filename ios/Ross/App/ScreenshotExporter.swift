@@ -281,6 +281,15 @@ struct RossLocalModelSmokeView: View {
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "active_pack"))
         guard activePackHealth?.available == true else {
+            if let activePackHealth {
+                RossLocalModelSmokeView.logRuntimeIdentity(
+                    activePack: activePack,
+                    providerName: RossLocalModelSmokeView.preflightProviderName(for: activePack.runtimeMode),
+                    actualRuntime: activePack.runtimeMode,
+                    providerHealth: activePackHealth,
+                    requestedRuntime: runtimeEnvironment.runtimeModeOverride
+                )
+            }
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log(
                 "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(activePack.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=active_pack error=\(activePackHealth?.lastErrorCategory ?? "runtime_unavailable")"
@@ -713,12 +722,44 @@ struct RossLocalModelSmokeView: View {
         providerHealth: AlphaLocalRuntimeHealth,
         requestedRuntime: AlphaPackRuntimeMode?
     ) {
-        log("ROSS_RUNTIME_IDENTITY \(runtimeIdentityLine(activePack: activePack, provider: provider, providerHealth: providerHealth, requestedRuntime: requestedRuntime))")
+        logRuntimeIdentity(
+            activePack: activePack,
+            providerName: String(describing: type(of: provider)),
+            actualRuntime: provider.runtimeMode,
+            providerHealth: providerHealth,
+            requestedRuntime: requestedRuntime
+        )
+    }
+
+    nonisolated static func logRuntimeIdentity(
+        activePack: AlphaInstalledModelPack,
+        providerName: String,
+        actualRuntime: AlphaPackRuntimeMode,
+        providerHealth: AlphaLocalRuntimeHealth,
+        requestedRuntime: AlphaPackRuntimeMode?
+    ) {
+        log("ROSS_RUNTIME_IDENTITY \(runtimeIdentityLine(activePack: activePack, providerName: providerName, actualRuntime: actualRuntime, providerHealth: providerHealth, requestedRuntime: requestedRuntime))")
     }
 
     nonisolated static func runtimeIdentityLine(
         activePack: AlphaInstalledModelPack,
         provider: any AlphaLocalModelProvider,
+        providerHealth: AlphaLocalRuntimeHealth,
+        requestedRuntime: AlphaPackRuntimeMode?
+    ) -> String {
+        runtimeIdentityLine(
+            activePack: activePack,
+            providerName: String(describing: type(of: provider)),
+            actualRuntime: provider.runtimeMode,
+            providerHealth: providerHealth,
+            requestedRuntime: requestedRuntime
+        )
+    }
+
+    nonisolated static func runtimeIdentityLine(
+        activePack: AlphaInstalledModelPack,
+        providerName: String,
+        actualRuntime: AlphaPackRuntimeMode,
         providerHealth: AlphaLocalRuntimeHealth,
         requestedRuntime: AlphaPackRuntimeMode?
     ) -> String {
@@ -735,7 +776,7 @@ struct RossLocalModelSmokeView: View {
         }
 
         let gpuOffloadInfo: String
-        switch provider.runtimeMode {
+        switch actualRuntime {
         case .llamaCppGguf:
             let gpuLayers = AlphaLlamaRuntimeProfile.gpuLayerCount(forModelPath: activePack.installPath)
             let offloadKQV = AlphaLlamaRuntimeProfile.shouldOffloadKQV(forModelPath: activePack.installPath)
@@ -750,9 +791,9 @@ struct RossLocalModelSmokeView: View {
         }
 
         let fields: [(String, String)] = [
-            ("provider", String(describing: type(of: provider))),
+            ("provider", providerName),
             ("requested_runtime", requestedRuntime?.rawValue ?? "nil"),
-            ("actual_runtime", provider.runtimeMode.rawValue),
+            ("actual_runtime", actualRuntime.rawValue),
             ("pack_runtime", activePack.runtimeMode.rawValue),
             ("model_format", activePack.artifactKind),
             ("artifact_path_type", artifactPathType),
@@ -762,7 +803,7 @@ struct RossLocalModelSmokeView: View {
             ("draft_model", providerHealth.draftModelPathLabel ?? "nil"),
             ("context_tokens", providerHealth.estimatedContextTokens.map(String.init) ?? "nil"),
             ("gpu_offload", gpuOffloadInfo),
-            ("fallback", provider.runtimeMode == .deterministicDev ? "deterministic_dev" : "none"),
+            ("fallback", actualRuntime == .deterministicDev ? "deterministic_dev" : "none"),
             ("available", String(providerHealth.available)),
             ("error", providerHealth.lastErrorCategory ?? "nil"),
         ]
@@ -770,6 +811,21 @@ struct RossLocalModelSmokeView: View {
             .map { "\($0.0)=\(stableSmokeValue($0.1))" }
             .joined(separator: " ")
         return line
+    }
+
+    nonisolated static func preflightProviderName(for runtimeMode: AlphaPackRuntimeMode) -> String {
+        switch runtimeMode {
+        case .llamaCppGguf:
+            return "AlphaLlamaCppProvider"
+        case .mlxSwiftLm:
+            return "AlphaMLXLocalProvider"
+        case .appleFoundationModels:
+            return "AlphaFoundationModelsLocalProvider"
+        case .deterministicDev:
+            return "DeterministicDevLocalModelProvider"
+        case .mediapipeLlm, .unavailable:
+            return "AlphaUnavailableRealLocalModelProvider"
+        }
     }
 
     nonisolated private static func stableSmokeValue(_ value: String) -> String {
