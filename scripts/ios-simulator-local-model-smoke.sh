@@ -165,6 +165,18 @@ if [[ -z "$model_path" ]]; then
   exit 2
 fi
 
+mlx_directory_looks_usable() {
+  local directory="$1"
+  [[ -d "$directory" ]] || return 1
+  [[ -f "$directory/config.json" ]] || return 1
+
+  if [[ ! -f "$directory/tokenizer.json" && ! -f "$directory/tokenizer.model" && ! -f "$directory/tokenizer_config.json" ]]; then
+    return 1
+  fi
+
+  find "$directory" -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -print -quit | grep -q .
+}
+
 case "$normalized_runtime" in
   gemma_local_runtime)
     case "$artifact_kind" in
@@ -194,6 +206,10 @@ case "$normalized_runtime" in
     esac
     if [[ ! -d "$model_path" ]]; then
       echo "MLX model directory not found: $model_path" >&2
+      exit 2
+    fi
+    if ! mlx_directory_looks_usable "$model_path"; then
+      echo "MLX simulator smoke requires a directory with config.json, tokenizer metadata, and safetensors weights or index: $model_path" >&2
       exit 2
     fi
     ;;

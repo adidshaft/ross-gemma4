@@ -75,6 +75,11 @@ if ! grep -q "alphaMLXDirectoryArtifactLooksUsable" ios/Ross/AlphaFoundation/Alp
     FAIL=1
 fi
 
+if ! grep -q "mlx_directory_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MLX artifact content preflight missing."
+    FAIL=1
+fi
+
 if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
     echo "❌ FAIL: CoreAI missing-artifact error category missing."
     FAIL=1
