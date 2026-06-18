@@ -2933,6 +2933,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "மூன்று runtime lane-களுக்கும் recent longer-bundle evidence இப்போது உள்ளது.",
             "te": "మూడు runtime lane‌లకూ recent longer-bundle evidence ఇప్పుడు ఉంది."
         ],
+        "private_assistant_runtime_summary_readout": [
+            "en": "Comparison readout",
+            "hi": "Comparison readout",
+            "bn": "Comparison readout",
+            "ta": "Comparison readout",
+            "te": "Comparison readout"
+        ],
+        "private_assistant_runtime_summary_fastest_first_response": [
+            "en": "Fastest first response: %@ (%@)",
+            "hi": "Fastest first response: %@ (%@)",
+            "bn": "Fastest first response: %@ (%@)",
+            "ta": "Fastest first response: %@ (%@)",
+            "te": "Fastest first response: %@ (%@)"
+        ],
+        "private_assistant_runtime_summary_fastest_token_speed": [
+            "en": "Fastest token speed: %@ (%@)",
+            "hi": "Fastest token speed: %@ (%@)",
+            "bn": "Fastest token speed: %@ (%@)",
+            "ta": "Fastest token speed: %@ (%@)",
+            "te": "Fastest token speed: %@ (%@)"
+        ],
+        "private_assistant_runtime_summary_broadest_coverage": [
+            "en": "Broadest visible coverage: %@ (%d source refs, %d blocks)",
+            "hi": "Broadest visible coverage: %@ (%d source refs, %d blocks)",
+            "bn": "Broadest visible coverage: %@ (%d source refs, %d blocks)",
+            "ta": "Broadest visible coverage: %@ (%d source refs, %d blocks)",
+            "te": "Broadest visible coverage: %@ (%d source refs, %d blocks)"
+        ],
+        "private_assistant_runtime_summary_cleanest_run": [
+            "en": "Cleanest recent run: %@",
+            "hi": "Cleanest recent run: %@",
+            "bn": "Cleanest recent run: %@",
+            "ta": "Cleanest recent run: %@",
+            "te": "Cleanest recent run: %@"
+        ],
         "private_assistant_runtime_comparison_hint": [
             "en": "Switch runtime here, then rerun the longer bundle check and compare the hidden history below.",
             "hi": "Runtime यहां बदलें, फिर longer bundle check दोबारा चलाकर नीचे की hidden history compare करें.",

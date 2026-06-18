@@ -145,6 +145,7 @@ Manual in-app flow:
    - token speed
    - runtime choice / execution path / acceleration detail shown for that run
 11. Use the hidden `Latest by runtime` summary to confirm whether GGUF, MLX, and CoreAI each have a recent longer-bundle result before making the final ladder decision.
+12. Read the hidden `Comparison readout` after the three runtime lanes have recent results so you can note the current leaders on first response, token speed, and visible source coverage before deciding whether the ladder should change.
 
 If the runtime is unavailable:
 

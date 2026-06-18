@@ -824,6 +824,10 @@ private struct AlphaMatterBundleComparisonRuntimeSummarySection: View {
         return labels.joined(separator: ", ")
     }
 
+    private var decisionHints: [String] {
+        alphaMatterBundleDecisionHints(reports)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(rossLocalized("private_assistant_runtime_summary_title"))
@@ -861,6 +865,23 @@ private struct AlphaMatterBundleComparisonRuntimeSummarySection: View {
                     }
                 }
                 .padding(.vertical, 2)
+            }
+
+            if !decisionHints.isEmpty {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(rossLocalized("private_assistant_runtime_summary_readout"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    ForEach(Array(decisionHints.enumerated()), id: \.offset) { _, hint in
+                        Text(hint)
+                            .font(.caption2)
+                            .foregroundStyle(Color.rossInk.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
         }
     }
@@ -985,6 +1006,67 @@ func alphaMatterBundleMissingRuntimeLabels(_ reports: [AlphaMatterBundleComparis
     return requiredModes
         .filter { !presentModes.contains($0) }
         .map(\.displayLabel)
+}
+
+func alphaMatterBundleDecisionHints(_ reports: [AlphaMatterBundleComparisonReport]) -> [String] {
+    let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
+    guard latestReports.count >= 2 else { return [] }
+
+    var hints: [String] = []
+
+    if let fastestFirstResponse = latestReports
+        .filter({ $0.timeToFirstTokenMs != nil })
+        .min(by: { ($0.timeToFirstTokenMs ?? .max) < ($1.timeToFirstTokenMs ?? .max) }),
+       let firstResponseMs = fastestFirstResponse.timeToFirstTokenMs {
+        hints.append(
+            String(
+                format: rossLocalized("private_assistant_runtime_summary_fastest_first_response"),
+                alphaLocalInferenceSmokeRuntimeLabel(fastestFirstResponse.runtimeUsed),
+                alphaAssistantFirstResponseLabel(milliseconds: firstResponseMs)
+            )
+        )
+    }
+
+    if let fastestTokenSpeed = latestReports
+        .filter({ $0.estimatedOutputTokensPerSecond != nil })
+        .max(by: { ($0.estimatedOutputTokensPerSecond ?? 0) < ($1.estimatedOutputTokensPerSecond ?? 0) }),
+       let tokenSpeed = fastestTokenSpeed.estimatedOutputTokensPerSecond {
+        hints.append(
+            String(
+                format: rossLocalized("private_assistant_runtime_summary_fastest_token_speed"),
+                alphaLocalInferenceSmokeRuntimeLabel(fastestTokenSpeed.runtimeUsed),
+                alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
+            )
+        )
+    }
+
+    if let broadestCoverage = latestReports.max(by: { lhs, rhs in
+        let lhsScore = (lhs.sourceRefsReturned, lhs.sourceBlockCount)
+        let rhsScore = (rhs.sourceRefsReturned, rhs.sourceBlockCount)
+        return lhsScore < rhsScore
+    }) {
+        hints.append(
+            String(
+                format: rossLocalized("private_assistant_runtime_summary_broadest_coverage"),
+                alphaLocalInferenceSmokeRuntimeLabel(broadestCoverage.runtimeUsed),
+                broadestCoverage.sourceRefsReturned,
+                broadestCoverage.sourceBlockCount
+            )
+        )
+    }
+
+    if let cleanestRun = latestReports.first(where: {
+        $0.schemaValid && ($0.needsReviewWarning?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    }) {
+        hints.append(
+            String(
+                format: rossLocalized("private_assistant_runtime_summary_cleanest_run"),
+                alphaLocalInferenceSmokeRuntimeLabel(cleanestRun.runtimeUsed)
+            )
+        )
+    }
+
+    return hints
 }
 
 func alphaAssistantComparisonRuntimeOptions(

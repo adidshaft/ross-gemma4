@@ -4669,6 +4669,74 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(alphaMatterBundleMissingRuntimeLabels(reports), ["CoreAI", "MLX"])
     }
 
+    func testMatterBundleDecisionHintsSummarizeCurrentLeaders() {
+        let reports = [
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 10,
+                sourceRefsReturned: 3,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                durationMs: 2100,
+                timeToFirstTokenMs: 410,
+                estimatedOutputTokensPerSecond: 14.0,
+                message: "gguf"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 8,
+                sourceRefsReturned: 2,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: nil,
+                durationMs: 1700,
+                timeToFirstTokenMs: 260,
+                estimatedOutputTokensPerSecond: 18.5,
+                message: "mlx"
+            ),
+            AlphaMatterBundleComparisonReport(
+                ran: true,
+                runtimeUsed: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                schemaValid: true,
+                selectedDocumentCount: 3,
+                sourceBlockCount: 7,
+                sourceRefsReturned: 1,
+                assistantDisplayName: nil,
+                runtimeSelectionReason: nil,
+                executionPathLabel: nil,
+                accelerationSummary: nil,
+                answerHeadline: nil,
+                answerPreview: nil,
+                needsReviewWarning: "Needs advocate review",
+                durationMs: 1500,
+                timeToFirstTokenMs: 320,
+                estimatedOutputTokensPerSecond: 12.0,
+                message: "coreai"
+            )
+        ]
+
+        let hints = alphaMatterBundleDecisionHints(reports)
+        XCTAssertTrue(hints.contains(where: { $0.contains("Fastest first response: MLX") }))
+        XCTAssertTrue(hints.contains(where: { $0.contains("Fastest token speed: MLX") }))
+        XCTAssertTrue(hints.contains(where: { $0.contains("Broadest visible coverage: Gemma GGUF") }))
+        XCTAssertTrue(hints.contains(where: { $0.contains("Cleanest recent run: Gemma GGUF") || $0.contains("Cleanest recent run: MLX") }))
+    }
+
     func testAssistantComparisonRuntimeOptionsOnlyKeepImmediatelyAvailableRuntimes() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
