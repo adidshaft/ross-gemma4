@@ -17756,7 +17756,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .quickStart,
-                physicalMemory: 8_000_000_000
+                physicalMemory: 9_000_000_000
             ),
             36_000
         )
@@ -17814,7 +17814,7 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/google_gemma-4-E4B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 7_000_000_000
             ),
-            32
+            20
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.gpuLayerCount(
@@ -17846,6 +17846,55 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000
             ),
             1_536
+        )
+    }
+
+    func testLlamaRuntimeProfileUsesConstrainedQuickStartE4BProfileFor7GBClassDevice() {
+        let modelPath = "/tmp/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+        let physicalMemory = UInt64(8_400_000_000)
+
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            8_192
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.maxInputChars(
+                for: .quickStart,
+                physicalMemory: physicalMemory
+            ),
+            22_000
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.gpuLayerCount(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            20
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.promptBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            768
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.physicalBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            512
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.defaultDraftTokens(
+                for: .quickStart,
+                modelPath: modelPath,
+                physicalMemory: physicalMemory
+            ),
+            2
         )
     }
 

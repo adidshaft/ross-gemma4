@@ -31,6 +31,21 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --mobile-allowed --force-refresh --wait-seconds 90`
   - before the checksum-pin fix, the same `auto` smoke selected `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` and failed immediately with `The assistant download listing changed before setup could start.`
   - after the checksum-pin fix, the same smoke still auto-selects `pack=gemma-4-e4b-q4 runtime=gemma_local_runtime` but now gets through preflight and into a real GGUF transfer, reaching `bytes=3098452346 total=5224958176` before timing out on the artificial `90 s` harness budget
+- Quick Start GGUF now also carries a constrained E4B runtime profile for 7 GB-class phones, so the real production pack no longer falls into the old aggressive decimal-byte lane on Aman's current iPhone:
+  - `n_gpu_layers` now drops from the previous `99` all-GPU path to `20`
+  - the same constrained lane now uses `n_ctx = 8192`, `n_batch = 768`, `n_ubatch = 512`, `draftTokens = 2`, and the smaller `22_000` quick-start input budget
+  - focused iOS tests now pass for that bounded profile shift, including the new 7 GB-class E4B expectations
+- after rebuilding and reinstalling that constrained profile on Aman’s cabled iPhone, the real manifest-backed production Quick Start GGUF pack now gets materially farther into runtime setup:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30`
+  - the smoke selects the real app-private pack `gemma-4-e4b-q4`, reports `Using n_gpu_layers = 20`, and reaches real context/KV setup instead of the earlier immediate `n_gpu_layers = 99` Metal-allocation failure
+  - with draft still enabled, the phone still gets terminated by `signal 9`, but only after the runtime has already allocated about `5314 MiB` of the device's `5461 MiB` recommended GPU working set
+- the same constrained Quick Start GGUF lane now also exposes a clearer no-draft blocker instead of only another jetsam:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30 --disable-draft`
+  - the real pack still selects `n_gpu_layers = 20` and completes model/KV setup with `n_ctx = 8192`
+  - the terminal failure has now moved to a concrete llama.cpp scheduler assertion, `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)`, followed by `signal 6`
+- this is the current preferred pause point for the below-target Quick Start GGUF lane:
+  - download/session/checksum/catalog work is now behaving as intended on the physical phone
+  - the next meaningful pass is a llama.cpp offload/scheduler compatibility fix for this constrained E4B lane, not another catalog or installer change
 
 ## Latest MLX Runtime Checkpoint
 
@@ -186,6 +201,12 @@ Most recent commits that define this pause point:
 - the installed-pack cabled-device smoke helper now also refuses those seeded manifests by default, so a missing real client-download proof on the phone is surfaced immediately instead of being mistaken for production download evidence
 - with explicit `--allow-device-proof-pack`, the installed-pack helper now also reaches the live GGUF load path for the already-installed Quick Start artifact on Aman's phone, including provider resolution, model load, KV/cache allocation, and a real local completion attempt against the app-container model path
 - the updated installed-pack helper and `quick` smoke profile now also produce a structured on-device failure for that seeded Quick Start artifact instead of an ambiguous hang: on Aman's phone the source-grounded stage completed successfully in `6357 ms`, then the general no-source stage timed out after `15 s`, yielding `ROSS_LOCAL_MODEL_SMOKE_FAIL ... profile=quick ... general_error=smoke_stage_timeout_general`
+- the current iPhone now also proves that a real client-downloaded manifest-backed production Quick Start GGUF pack exists in app-private storage and is selectable through the installed-pack helper: `tier=quick_start pack=gemma-4-e4b-q4 runtime=gemma_local_runtime file=gemma-4-E4B-it-UD-Q4_K_XL.gguf size=5.13 GB draft=mtp-gemma-4-E4B-it.gguf`
+- the constrained Quick Start GGUF E4B runtime profile is now in code and covered by focused iOS tests, keeping 7 GB-class phones on the smaller `n_gpu_layers = 20`, `n_ctx = 8192`, `n_batch = 768`, `n_ubatch = 512`, and `draftTokens = 2` lane instead of the old aggressive decimal-byte branch
+- with that constrained lane installed on Aman's phone, the real production Quick Start GGUF pack now gets beyond the earlier `n_gpu_layers = 99` Metal-allocation cliff:
+  - with draft enabled, it still ends in `signal 9`, but only after loading the real production pack and allocating roughly `5314 MiB` of the `5461 MiB` recommended GPU working set
+  - with `--disable-draft`, it now reaches full model/context/KV setup and exposes a concrete llama.cpp scheduler assertion, `GGML_ASSERT(n_inputs < GGML_SCHED_MAX_SPLIT_INPUTS)`, followed by `signal 6`
+- the current below-target Quick Start GGUF blocker has therefore moved from checksum/download failure to llama.cpp runtime compatibility on the constrained E4B lane
 - Ross production metadata now also pins the downloaded 12B GGUF bytes hash `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020`, reconciling the earlier mismatch with the CDN/Xet `etag` value observed during the physical-device proof pass
 - below-target iPhones now also treat the `Case Associate` 12B GGUF lane as unavailable up front instead of merely broken: the shipped minimum memory floor is now 12 GB for that pack, the hidden runtime-lane readiness copy reports it as unavailable on this iPhone, and the phone-side runtime chooser now prefers MLX for `Case Associate` when GGUF would not fit
 - below-target iPhones now also stop offering the unsupported `Case Associate` GGUF lane in setup/runtime variant chips, so smaller phones are steered toward viable MLX or built-in lanes instead of advertising a path that cannot activate there
@@ -248,6 +269,11 @@ Most recent verification commands:
 - `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
 - `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --force-refresh --wait-seconds 900`
 - `scripts/ios-device-assistant-download-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime mlx --mobile-allowed --wait-seconds 180`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileRaisesHighQualityInputBudgets|testLlamaRuntimeProfileUsesModelAwareGPUOffload|testLlamaRuntimeProfileEnablesBroaderBatching|testLlamaRuntimeProfileUsesConstrainedQuickStartE4BProfileFor7GBClassDevice|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones)'`
+- `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
+- `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
+- `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30`
+- `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick --stage-timeout 30 --disable-draft`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' backend/node_modules/tsx/dist/cli.mjs --test --test-name-pattern 'ios production sessions preserve multi-gb GGUF delivery descriptors end to end' backend/tests/model-registry.test.ts`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/testReleaseReadyAssistantArtifactsPinDownloadMetadata'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testRecommendedOnDeviceTierMatchesCurrentThreeTierProductLineup|testPreferredAssistantRuntimeModeUsesMLXForCaseAssociateBelow12GBPhoneFloor|testLlamaRuntimeHealthMarks12BPackUnavailableOnBelowTargetPhoneMemory)'`

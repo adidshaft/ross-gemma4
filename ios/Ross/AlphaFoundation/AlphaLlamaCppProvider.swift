@@ -10,6 +10,8 @@ enum AlphaLlamaRuntimeProfile {
         case unknown
     }
 
+    private static let constrainedE4BProfileMemoryCeilingBytes: UInt64 = 8_500_000_000
+
     private static func containsAny(_ value: String, fragments: [String]) -> Bool {
         let lowered = value.lowercased()
         return fragments.contains { lowered.contains($0.lowercased()) }
@@ -30,6 +32,14 @@ enum AlphaLlamaRuntimeProfile {
             return .e4b
         }
         return .unknown
+    }
+
+    private static func usesConstrainedE4BProfile(
+        forModelPath path: String?,
+        physicalMemory: UInt64
+    ) -> Bool {
+        archiveProfile(forModelPath: path) == .e4b &&
+            physicalMemory < constrainedE4BProfileMemoryCeilingBytes
     }
 
     static func minimumSupportedMemoryBytes(forModelPath path: String?) -> UInt64 {
@@ -56,6 +66,9 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .e4b:
+            if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+                return 8_192
+            }
             if physicalMemory >= 12_000_000_000 {
                 return 24_576
             }
@@ -90,6 +103,12 @@ enum AlphaLlamaRuntimeProfile {
             }
             return 40
         case .e4b:
+            // Real device proof on 7 GB-class A17 Pro phones showed the aggressive
+            // all-GPU E4B profile crashing during Metal allocation, so keep this
+            // lane on a smaller offload budget there.
+            if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+                return 20
+            }
             if physicalMemory < 8_000_000_000 {
                 return 32
             }
@@ -120,7 +139,7 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 12_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 36_000 : 22_000
+            return physicalMemory >= constrainedE4BProfileMemoryCeilingBytes ? 36_000 : 22_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
                 return 72_000
@@ -182,6 +201,9 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 1_024 : 768
         case .e4b:
+            if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+                return 768
+            }
             if physicalMemory >= 12_000_000_000 {
                 return 2_048
             }
@@ -209,6 +231,9 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 768 : 512
         case .e4b:
+            if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+                return 512
+            }
             if physicalMemory >= 12_000_000_000 {
                 return 1_536
             }
@@ -238,7 +263,11 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             suggestedTokens = physicalMemory >= 8_000_000_000 ? 4 : 2
         case .e4b:
-            suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+            if usesConstrainedE4BProfile(forModelPath: modelPath, physicalMemory: physicalMemory) {
+                suggestedTokens = 2
+            } else {
+                suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+            }
         case .gemma12b:
             if physicalMemory >= 16_000_000_000 {
                 suggestedTokens = 8
