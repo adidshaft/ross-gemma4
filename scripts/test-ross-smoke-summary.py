@@ -146,6 +146,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         self.assertEqual(
             runtime_identity_draft_artifact_error(
+                {**active_mtp, "draft_model": "mtp.bin"},
+                "gemma_local_runtime",
+            ),
+            "draft_model_format=mtp.bin",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
                 {**active_mtp, "draft_status": "validator_rejected"},
                 "gemma_local_runtime",
             ),

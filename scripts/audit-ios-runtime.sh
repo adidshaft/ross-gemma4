@@ -329,6 +329,11 @@ if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summa
     FAIL=1
 fi
 
+if ! grep -q "draft_model_format" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared MTP guard does not reject non-GGUF draft artifact labels."
+    FAIL=1
+fi
+
 if ! grep -q "draft_validator_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not surface draft validator failure categories."
     FAIL=1

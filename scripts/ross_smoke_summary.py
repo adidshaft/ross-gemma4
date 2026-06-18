@@ -84,6 +84,10 @@ def runtime_identity_draft_artifact_error(identity, expected_runtime):
         return None
     if draft_path_type not in expected_path_types:
         return f"draft_model_path_type={summary_value(identity, 'draft_model_path_type')}"
+    if expected_runtime == "gemma_local_runtime":
+        draft_model = identity.get("draft_model") or ""
+        if not draft_model.lower().endswith(".gguf"):
+            return f"draft_model_format={summary_value(identity, 'draft_model')}"
     return None
 
 
