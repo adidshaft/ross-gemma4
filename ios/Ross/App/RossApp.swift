@@ -3164,6 +3164,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved system version",
             "te": "Saved system version"
         ],
+        "private_assistant_device_comparison_saved_device_state_label": [
+            "en": "Saved device state",
+            "hi": "Saved device state",
+            "bn": "Saved device state",
+            "ta": "Saved device state",
+            "te": "Saved device state"
+        ],
         "private_assistant_device_comparison_delivery_contract_label": [
             "en": "Saved delivery contract",
             "hi": "Saved delivery contract",

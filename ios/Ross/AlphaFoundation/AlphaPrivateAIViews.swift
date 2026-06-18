@@ -1094,6 +1094,17 @@ private struct AlphaPrivateAIDeviceComparisonProofCoverageSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if let latestSavedRecord = status.latestSavedRecord {
+                        Text(
+                            rossLocalized("private_assistant_device_comparison_saved_device_state_label") +
+                                ": " +
+                                alphaPrivateAIDeviceComparisonSavedDeviceStateSummary(latestSavedRecord)
+                        )
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     if let latestSavedRecord = status.latestSavedRecord,
                        let savedFileName = alphaPrivateAIDeviceComparisonSavedFileName(latestSavedRecord) {
                         Text(rossLocalized("notes_drafts_metadata_saved_file") + ": " + savedFileName)
@@ -1641,6 +1652,16 @@ func alphaPrivateAIDeviceComparisonSavedFileName(
     let trimmed = record.exportRelativePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     guard !trimmed.isEmpty else { return nil }
     return URL(fileURLWithPath: trimmed).lastPathComponent
+}
+
+func alphaPrivateAIDeviceComparisonSavedDeviceStateSummary(
+    _ record: AlphaPrivateAIDeviceComparisonProofRecord
+) -> String {
+    [
+        "\(record.profile.freeStorageGB) GB free",
+        "\(rossLocalized("private_assistant_device_low_power_label")): \(record.profile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))",
+        "\(rossLocalized("private_assistant_device_thermal_label")): \(record.profile.thermalCondition)"
+    ].joined(separator: " · ")
 }
 
 func alphaPrivateAIDeviceComparisonSavedDeliveryContract(
