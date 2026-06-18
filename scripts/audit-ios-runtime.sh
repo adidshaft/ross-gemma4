@@ -194,6 +194,11 @@ if ! grep -q "unsupported_mlx_draft_artifact" ios/Ross/AlphaFoundation/AlphaMLXL
     FAIL=1
 fi
 
+if ! grep -q "draftModelPathType: draftModelPathType()" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: MLX runtime health does not preserve configured draft artifact path type in unavailable branches."
+    FAIL=1
+fi
+
 if ! grep -q "alphaMLXDirectoryArtifactLooksUsable" ios/Ross/AlphaFoundation/AlphaStore.swift 2>/dev/null; then
     echo "❌ FAIL: MLX install-time artifact content guard missing."
     FAIL=1

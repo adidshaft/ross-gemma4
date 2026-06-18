@@ -19737,6 +19737,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftModelPathType, "directory")
         XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
     }
 
@@ -19767,6 +19768,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftModelPathType, "missing")
         XCTAssertEqual(health?.draftAccelerationStatus, "draft_file_unavailable")
     }
 

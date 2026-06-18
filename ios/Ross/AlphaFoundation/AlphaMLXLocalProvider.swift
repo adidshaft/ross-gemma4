@@ -1761,6 +1761,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             accelerationMode: .standard,
             accelerationDraftTokens: nil,
             draftModelPathLabel: nil,
+            draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: "runtime_dependency_unavailable",
             lastErrorCategory: "runtime_dependency_unavailable",
             userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
@@ -1774,6 +1775,30 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     func maxInputChars() -> Int? {
         AlphaMLXRuntimeProfile.maxInputChars(for: capabilityTier)
+    }
+
+    private func configuredDraftDirectoryURL() -> URL? {
+        guard let draftModelPath else {
+            return nil
+        }
+        let trimmedPath = draftModelPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPath.isEmpty else {
+            return nil
+        }
+        return URL(fileURLWithPath: trimmedPath, isDirectory: true)
+    }
+
+    private func draftModelPathType() -> String? {
+        guard let draftDirectoryURL = configuredDraftDirectoryURL() else {
+            return nil
+        }
+        if (try? draftDirectoryURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            return "directory"
+        }
+        if FileManager.default.fileExists(atPath: draftDirectoryURL.path) {
+            return "file"
+        }
+        return "missing"
     }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
