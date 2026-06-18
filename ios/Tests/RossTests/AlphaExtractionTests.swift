@@ -18512,6 +18512,65 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider() throws {
+        let modelURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-explicit-mlx-no-gguf-fallback-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-not-mlx".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "c", count: 64),
+            modelKind: "gguf"
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let health = provider?.runtimeHealth()
+
+        XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
+        XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
+    }
+
+    func testExplicitCoreMLRuntimeRequestDoesNotFallBackToGGUFProvider() {
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: AlphaPackRuntimeMode(runtimeAlias: "coreml"),
+            modelPath: "/tmp/private/device/debug/missing-coreml-adapter.mlmodelc",
+            modelChecksum: String(repeating: "d", count: 64),
+            modelKind: "coreml_model"
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let health = provider?.runtimeHealth()
+
+        XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
+        XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertTrue(
+            health?.lastErrorCategory == "missing_coreai_artifact" ||
+                health?.lastErrorCategory == "unsupported_runtime_on_platform"
+        )
+    }
+
     func testRuntimeHealthMarksIncompleteConfiguredMLXDirectoryUnavailable() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-incomplete-\(UUID().uuidString)", isDirectory: true)
