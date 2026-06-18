@@ -1539,14 +1539,29 @@ func alphaPrivateAIDeviceComparisonProofSummary(_ status: AlphaPrivateAIDeviceCo
         return rossLocalized("private_assistant_device_comparison_not_saved")
     }
 
-    if latestSavedRecord.runtimeCoverageComplete {
+    if latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified {
         return String(
-            format: rossLocalized("private_assistant_device_comparison_saved_complete"),
+            format: rossLocalized("private_assistant_device_comparison_saved_complete_with_delivery"),
+            latestSavedRecord.profile.deviceModelLabel
+        )
+    }
+
+    if latestSavedRecord.runtimeCoverageComplete && !latestSavedRecord.downloadDeliveryVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_delivery"),
             latestSavedRecord.profile.deviceModelLabel
         )
     }
 
     let missingLabels = latestSavedRecord.missingRuntimeCoverageLabels.joined(separator: ", ")
+    if !missingLabels.isEmpty && !latestSavedRecord.downloadDeliveryVerified {
+        return String(
+            format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime_and_delivery"),
+            latestSavedRecord.profile.deviceModelLabel,
+            missingLabels
+        )
+    }
+
     if !missingLabels.isEmpty {
         return String(
             format: rossLocalized("private_assistant_device_comparison_saved_missing_runtime"),
@@ -1568,7 +1583,9 @@ func alphaPrivateAIDeviceComparisonMissingTargetLabels(
         guard let latestSavedRecord = status.latestSavedRecord else {
             return status.target.localizedLabel
         }
-        return latestSavedRecord.runtimeCoverageComplete ? nil : status.target.localizedLabel
+        return latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified
+            ? nil
+            : status.target.localizedLabel
     }
 }
 
@@ -1581,7 +1598,7 @@ func alphaPrivateAIDeviceComparisonNextSteps(
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_8gb")
             }
-            guard !latestSavedRecord.runtimeCoverageComplete else { return nil }
+            guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
             return String(
                 format: rossLocalized("private_assistant_device_comparison_next_step_rerun"),
                 status.target.localizedLabel,
@@ -1591,7 +1608,7 @@ func alphaPrivateAIDeviceComparisonNextSteps(
             guard let latestSavedRecord = status.latestSavedRecord else {
                 return rossLocalized("private_assistant_device_comparison_next_step_save_12gb")
             }
-            guard !latestSavedRecord.runtimeCoverageComplete else { return nil }
+            guard !(latestSavedRecord.runtimeCoverageComplete && latestSavedRecord.downloadDeliveryVerified) else { return nil }
             return String(
                 format: rossLocalized("private_assistant_device_comparison_next_step_rerun"),
                 status.target.localizedLabel,

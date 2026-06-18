@@ -1809,6 +1809,7 @@ struct AlphaAssistantDownloadDeliveryVerificationSummary: Hashable, Sendable {
     let contractLabel: String
     let statusLabel: String
     let lastCheckedLabel: String?
+    let isVerifiedOnDevice: Bool
 }
 
 func alphaAssistantDownloadDeliveryVerificationSummary(
@@ -1843,13 +1844,17 @@ func alphaAssistantDownloadDeliveryVerificationSummary(
     )
 
     let statusLabel: String
+    let isVerifiedOnDevice: Bool
     switch latestRelevantEntry?.title {
     case "Assistant download verified", "Assistant verified", "Assistant restored":
         statusLabel = rossLocalized("private_assistant_download_delivery_status_verified")
+        isVerifiedOnDevice = true
     case "Assistant download failed":
         statusLabel = rossLocalized("private_assistant_download_delivery_status_failed")
+        isVerifiedOnDevice = false
     default:
         statusLabel = rossLocalized("private_assistant_download_delivery_status_ready")
+        isVerifiedOnDevice = false
     }
 
     let lastCheckedLabel = latestRelevantEntry?.timestamp.formatted(date: .abbreviated, time: .shortened)
@@ -1859,7 +1864,8 @@ func alphaAssistantDownloadDeliveryVerificationSummary(
         sourceLabel: sourceLabel,
         contractLabel: contractLabel,
         statusLabel: statusLabel,
-        lastCheckedLabel: lastCheckedLabel
+        lastCheckedLabel: lastCheckedLabel,
+        isVerifiedOnDevice: isVerifiedOnDevice
     )
 }
 

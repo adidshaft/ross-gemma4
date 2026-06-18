@@ -125,8 +125,54 @@ struct AlphaPrivateAIDeviceComparisonProofRecord: Codable, Hashable, Sendable {
     var profile: AlphaPrivateAIDeviceProofProfile
     var runtimeCoverageComplete: Bool
     var missingRuntimeCoverageLabels: [String]
+    var downloadDeliveryVerified: Bool
+    var downloadDeliveryStatusLabel: String?
+    var downloadDeliveryContractLabel: String?
     var exportRelativePath: String?
     var createdAt: Date = .now
+
+    init(
+        profile: AlphaPrivateAIDeviceProofProfile,
+        runtimeCoverageComplete: Bool,
+        missingRuntimeCoverageLabels: [String],
+        downloadDeliveryVerified: Bool = false,
+        downloadDeliveryStatusLabel: String? = nil,
+        downloadDeliveryContractLabel: String? = nil,
+        exportRelativePath: String? = nil,
+        createdAt: Date = .now
+    ) {
+        self.profile = profile
+        self.runtimeCoverageComplete = runtimeCoverageComplete
+        self.missingRuntimeCoverageLabels = missingRuntimeCoverageLabels
+        self.downloadDeliveryVerified = downloadDeliveryVerified
+        self.downloadDeliveryStatusLabel = downloadDeliveryStatusLabel
+        self.downloadDeliveryContractLabel = downloadDeliveryContractLabel
+        self.exportRelativePath = exportRelativePath
+        self.createdAt = createdAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case profile
+        case runtimeCoverageComplete
+        case missingRuntimeCoverageLabels
+        case downloadDeliveryVerified
+        case downloadDeliveryStatusLabel
+        case downloadDeliveryContractLabel
+        case exportRelativePath
+        case createdAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        profile = try container.decode(AlphaPrivateAIDeviceProofProfile.self, forKey: .profile)
+        runtimeCoverageComplete = try container.decodeIfPresent(Bool.self, forKey: .runtimeCoverageComplete) ?? false
+        missingRuntimeCoverageLabels = try container.decodeIfPresent([String].self, forKey: .missingRuntimeCoverageLabels) ?? []
+        downloadDeliveryVerified = try container.decodeIfPresent(Bool.self, forKey: .downloadDeliveryVerified) ?? false
+        downloadDeliveryStatusLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryStatusLabel)
+        downloadDeliveryContractLabel = try container.decodeIfPresent(String.self, forKey: .downloadDeliveryContractLabel)
+        exportRelativePath = try container.decodeIfPresent(String.self, forKey: .exportRelativePath)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+    }
 }
 
 struct AlphaPrivateAISnapshot: Hashable, Sendable {

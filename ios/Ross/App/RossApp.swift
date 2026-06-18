@@ -3108,6 +3108,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved note covers the full runtime comparison on %@.",
             "te": "Saved note covers the full runtime comparison on %@."
         ],
+        "private_assistant_device_comparison_saved_complete_with_delivery": [
+            "en": "Saved note covers the full runtime comparison and verified download delivery on %@.",
+            "hi": "Saved note covers the full runtime comparison and verified download delivery on %@.",
+            "bn": "Saved note covers the full runtime comparison and verified download delivery on %@.",
+            "ta": "Saved note covers the full runtime comparison and verified download delivery on %@.",
+            "te": "Saved note covers the full runtime comparison and verified download delivery on %@."
+        ],
         "private_assistant_device_comparison_saved_partial": [
             "en": "Saved note exists on %@, but the runtime comparison still needs another pass.",
             "hi": "Saved note exists on %@, but the runtime comparison still needs another pass.",
@@ -3121,6 +3128,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Saved note exists on %@, but it still misses %@.",
             "ta": "Saved note exists on %@, but it still misses %@.",
             "te": "Saved note exists on %@, but it still misses %@."
+        ],
+        "private_assistant_device_comparison_saved_missing_runtime_and_delivery": [
+            "en": "Saved note exists on %@, but it still misses %@ and a verified download delivery check.",
+            "hi": "Saved note exists on %@, but it still misses %@ and a verified download delivery check.",
+            "bn": "Saved note exists on %@, but it still misses %@ and a verified download delivery check.",
+            "ta": "Saved note exists on %@, but it still misses %@ and a verified download delivery check.",
+            "te": "Saved note exists on %@, but it still misses %@ and a verified download delivery check."
+        ],
+        "private_assistant_device_comparison_saved_missing_delivery": [
+            "en": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
+            "hi": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
+            "bn": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
+            "ta": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check.",
+            "te": "Saved note covers the runtime comparison on %@, but still needs a verified download delivery check."
         ],
         "private_assistant_device_comparison_next_steps_title": [
             "en": "Physical note next steps",

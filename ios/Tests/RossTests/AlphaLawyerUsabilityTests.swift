@@ -4742,6 +4742,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ),
             runtimeCoverageComplete: true,
             missingRuntimeCoverageLabels: [],
+            downloadDeliveryVerified: true,
+            downloadDeliveryStatusLabel: "Verified on this device",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
             exportRelativePath: "exports/device-note-8gb.pdf"
         )
         let simulatorRecord = AlphaPrivateAIDeviceComparisonProofRecord(
@@ -4757,6 +4760,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ),
             runtimeCoverageComplete: true,
             missingRuntimeCoverageLabels: [],
+            downloadDeliveryVerified: true,
+            downloadDeliveryStatusLabel: "Verified on this device",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
             exportRelativePath: "exports/device-note-simulator.pdf"
         )
 
@@ -4767,7 +4773,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(statuses[0].latestSavedRecord?.profile.deviceModelLabel, "iPhone17,2")
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
-            "Saved note covers the full runtime comparison on iPhone17,2."
+            "Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."
         )
         XCTAssertEqual(statuses[1].target, .class12GBOrHigher)
         XCTAssertNil(statuses[1].latestSavedRecord)
@@ -4780,6 +4786,42 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(
             alphaPrivateAIDeviceComparisonDecisionReadinessSummary([saved8GBRecord, simulatorRecord]),
             "Hold the final pack decision until these physical notes are complete: 12 GB+ class."
+        )
+    }
+
+    func testPrivateAIDeviceComparisonProofStatusesTreatMissingDeliveryVerificationAsIncomplete() {
+        let saved8GBRecord = AlphaPrivateAIDeviceComparisonProofRecord(
+            profile: AlphaPrivateAIDeviceProofProfile(
+                captureSource: .physicalIPhone,
+                deviceModelLabel: "iPhone17,2",
+                systemVersionLabel: "iOS 26.4.1",
+                memoryGB: 8,
+                representativeClass: .class8GB,
+                freeStorageGB: 28,
+                lowPowerModeEnabled: false,
+                thermalCondition: "Nominal"
+            ),
+            runtimeCoverageComplete: true,
+            missingRuntimeCoverageLabels: [],
+            downloadDeliveryVerified: false,
+            downloadDeliveryStatusLabel: "Ready for on-device verification",
+            downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
+            exportRelativePath: "exports/device-note-8gb.pdf"
+        )
+
+        let statuses = alphaPrivateAIDeviceComparisonProofStatuses([saved8GBRecord])
+
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonProofSummary(statuses[0]),
+            "Saved note covers the runtime comparison on iPhone17,2, but still needs a verified download delivery check."
+        )
+        XCTAssertEqual(alphaPrivateAIDeviceComparisonMissingTargetLabels([saved8GBRecord]), ["8 GB class", "12 GB+ class"])
+        XCTAssertEqual(
+            alphaPrivateAIDeviceComparisonNextSteps([saved8GBRecord]),
+            [
+                "Re-run and save the full 8 GB class comparison note on iPhone17,2.",
+                "Save a full physical iPhone comparison note on a 12 GB+-class device."
+            ]
         )
     }
 
@@ -5172,6 +5214,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 profile: deviceProofProfile,
                 runtimeCoverageComplete: true,
                 missingRuntimeCoverageLabels: [],
+                downloadDeliveryVerified: true,
+                downloadDeliveryStatusLabel: "Verified on this device",
+                downloadDeliveryContractLabel: "bytes · 1 segment · range_request_segments",
                 exportRelativePath: "exports/device-note-8gb.pdf"
             )
         ]
@@ -5180,7 +5225,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             sourceLabel: "Signed session",
             contractLabel: "bytes · 1 segment · range_request_segments",
             statusLabel: "Verified on this device",
-            lastCheckedLabel: "Jun 13, 2024 at 1:46 PM"
+            lastCheckedLabel: "Jun 13, 2024 at 1:46 PM",
+            isVerifiedOnDevice: true
         )
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
@@ -5210,7 +5256,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(joined.contains("Saved device comparison coverage"))
         XCTAssertTrue(joined.contains("Only saved physical iPhone comparison notes count toward these targets."))
         XCTAssertTrue(joined.contains("Still needed before the final device comparison is complete: 12 GB+ class."))
-        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison on iPhone17,2."))
+        XCTAssertTrue(joined.contains("Saved note covers the full runtime comparison and verified download delivery on iPhone17,2."))
         XCTAssertTrue(joined.contains("12 GB+ class"))
         XCTAssertTrue(joined.contains("No saved note yet."))
         XCTAssertTrue(joined.contains("Physical note next steps"))

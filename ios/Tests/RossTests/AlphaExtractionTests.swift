@@ -12467,6 +12467,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(summary.contractLabel, "bytes · 1 segment · range_request_segments")
         XCTAssertEqual(summary.statusLabel, "Verified on this device")
         XCTAssertNotNil(summary.lastCheckedLabel)
+        XCTAssertTrue(summary.isVerifiedOnDevice)
     }
 
     func testAssistantDownloadDescriptorPrefersCompatibleMLXArchiveSessionArtifact() {

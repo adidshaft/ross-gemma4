@@ -1801,6 +1801,7 @@ func alphaPrivateAIDeviceComparisonProofRecord(
     smokeReports: [AlphaLocalInferenceSmokeReport],
     comparisonReports: [AlphaMatterBundleComparisonReport],
     profile: AlphaPrivateAIDeviceProofProfile,
+    downloadDeliverySummary: AlphaAssistantDownloadDeliveryVerificationSummary? = nil,
     exportRelativePath: String? = nil,
     createdAt: Date = .now
 ) -> AlphaPrivateAIDeviceComparisonProofRecord {
@@ -1812,6 +1813,9 @@ func alphaPrivateAIDeviceComparisonProofRecord(
         profile: profile,
         runtimeCoverageComplete: missingRuntimeCoverageLabels.isEmpty,
         missingRuntimeCoverageLabels: missingRuntimeCoverageLabels,
+        downloadDeliveryVerified: downloadDeliverySummary?.isVerifiedOnDevice ?? false,
+        downloadDeliveryStatusLabel: downloadDeliverySummary?.statusLabel,
+        downloadDeliveryContractLabel: downloadDeliverySummary?.contractLabel,
         exportRelativePath: exportRelativePath,
         createdAt: createdAt
     )
@@ -3008,11 +3012,6 @@ extension AlphaRossModel {
         let reports = matterBundleComparisonReports
         guard !reports.isEmpty else { return }
         let deviceProofProfile = alphaCurrentPrivateAIDeviceProofProfile()
-        let provisionalDeviceComparisonProofRecord = alphaPrivateAIDeviceComparisonProofRecord(
-            smokeReports: localInferenceSmokeReports,
-            comparisonReports: reports,
-            profile: deviceProofProfile
-        )
         let tier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
         let laneReadinessStatuses = alphaPrivateAIRuntimeLaneReadinessStatuses(
             for: tier,
@@ -3033,6 +3032,12 @@ extension AlphaRossModel {
             preferredRuntimeMode: deliveryPreferredRuntimeMode,
             cachedDownloads: persisted.cachedAssistantDownloads,
             ledgerEntries: persisted.ledgerEntries
+        )
+        let provisionalDeviceComparisonProofRecord = alphaPrivateAIDeviceComparisonProofRecord(
+            smokeReports: localInferenceSmokeReports,
+            comparisonReports: reports,
+            profile: deviceProofProfile,
+            downloadDeliverySummary: downloadDeliverySummary
         )
 
         matterBundleComparisonExportRunning = true
