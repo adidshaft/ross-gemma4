@@ -4426,6 +4426,40 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("model") == true)
         XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("provider") == true)
         XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("byte-range") == true)
+
+        let history = await MainActor.run { model.localInferenceSmokeReports }
+        XCTAssertEqual(history.first, sanitizedReport)
+        XCTAssertEqual(history.count, 2)
+    }
+
+    @MainActor
+    func testLocalInferenceSmokeHistoryKeepsMostRecentRuns() {
+        let model = AlphaRossModel()
+
+        for index in 0..<(AlphaRossModel.localInferenceSmokeHistoryLimit + 2) {
+            model.recordLocalInferenceSmokeReport(
+                AlphaLocalInferenceSmokeReport(
+                    ran: index.isMultiple(of: 2),
+                    runtimeUsed: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                    schemaValid: index.isMultiple(of: 2),
+                    fieldsFound: index,
+                    fieldsVerified: index,
+                    fieldsNeedingReview: 0,
+                    unsupportedAccepted: 0,
+                    durationMs: 1_000 + index,
+                    timeToFirstTokenMs: 250 + index,
+                    estimatedOutputTokensPerSecond: Double(index) + 1,
+                    exportRelativePath: nil,
+                    message: "run \(index)",
+                    createdAt: Date(timeIntervalSince1970: Double(index))
+                )
+            )
+        }
+
+        XCTAssertEqual(model.localInferenceSmokeReports.count, AlphaRossModel.localInferenceSmokeHistoryLimit)
+        XCTAssertEqual(model.localInferenceSmokeReports.first?.message, "run 7")
+        XCTAssertEqual(model.localInferenceSmokeReports.last?.message, "run 2")
+        XCTAssertEqual(model.persisted.localInferenceSmokeReports?.count, AlphaRossModel.localInferenceSmokeHistoryLimit)
     }
 
     func testPrivateAssistantSampleCheckReportUsesProductLanguage() async throws {

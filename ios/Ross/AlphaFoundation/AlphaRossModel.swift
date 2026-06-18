@@ -84,7 +84,7 @@ extension View {
     }
 }
 
-struct AlphaLocalInferenceSmokeReport: Hashable {
+struct AlphaLocalInferenceSmokeReport: Codable, Hashable, Sendable {
     var ran: Bool
     var runtimeUsed: String
     var schemaValid: Bool
@@ -759,6 +759,8 @@ struct AlphaStorageSnapshot {
 @MainActor
 @Observable
 final class AlphaRossModel {
+    static let localInferenceSmokeHistoryLimit = 6
+
     enum DockCommandAction: Hashable {
         case addTask(title: String, dueDate: Date?)
         case completeTask(title: String)
@@ -815,6 +817,9 @@ final class AlphaRossModel {
     var publicLawSearchStatus: AlphaPublicLawSearchStatus = .idle
     var publicLawSearchInFlight: Bool { publicLawSearchStatus == .running }
     var localInferenceSmokeReport: AlphaLocalInferenceSmokeReport?
+    var localInferenceSmokeReports: [AlphaLocalInferenceSmokeReport] {
+        persisted.localInferenceSmokeReports ?? []
+    }
     var localInferenceSmokeRunning = false
     var privateAISnapshot = AlphaPrivateAISnapshot()
     var refreshingCaseOverviewIDs: Set<UUID> = []

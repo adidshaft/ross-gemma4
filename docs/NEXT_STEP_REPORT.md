@@ -12,6 +12,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - CoreAI, MLX, and GGUF runtime selection logic is already present on iOS and has been improved further for modern iPhones
 - long-file ask handling on iOS now scales source chunk sizing with runtime budget instead of using only the old fixed chunk size
 - answer diagnostics stay hidden behind secondary actions instead of adding more up-front UI clutter
+- hidden iOS Technical details now retain a short on-device history of sample-file checks so GGUF, MLX, and CoreAI runs can be compared without extra logging setup
 
 ## Visible Pack Mapping
 
@@ -44,6 +45,7 @@ Most recent commits that define this pause point:
   - llama runtime context and draft-token budget expectations
 - MLX and CoreAI decision paths are implemented in code and covered by unit tests
 - hidden answer details already include `Tokens processed` and `Token speed`
+- hidden iOS Technical details now keep recent sample-file smoke results with runtime, first-response, and token-speed evidence
 
 Most recent verification commands:
 
@@ -73,6 +75,6 @@ Most recent verification commands:
 Resume with a focused real-device validation pass instead of more code changes:
 
 1. verify Case Associate on a physical iPhone using the current GGUF lane
-2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle
+2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to keep the recent sample-check history visible between runs
 3. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
 4. only then return to Android cleanup and deeper runtime work there

@@ -136,6 +136,7 @@ Manual in-app flow:
    - fields found
    - fields verified
    - unsupported accepted `0`
+8. In `Support details`, keep the hidden recent sample-check history visible while switching runtimes so first-response and token-speed comparisons stay on-device.
 
 If the runtime is unavailable:
 

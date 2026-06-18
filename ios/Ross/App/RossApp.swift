@@ -2625,6 +2625,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இல்லை",
             "te": "లేదు"
         ],
+        "not_run": [
+            "en": "Not run",
+            "hi": "नहीं चला",
+            "bn": "চালানো হয়নি",
+            "ta": "இயக்கப்படவில்லை",
+            "te": "నడపలేదు"
+        ],
+        "schema_valid": [
+            "en": "Schema valid",
+            "hi": "Schema valid",
+            "bn": "Schema valid",
+            "ta": "Schema valid",
+            "te": "Schema valid"
+        ],
         "local_file": [
             "en": "Local file",
             "hi": "Device पर file",
@@ -2905,12 +2919,26 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Review தேவைப்படும் fields: %d",
             "te": "Review అవసరమైన fields: %d"
         ],
+        "unsupported_accepted_count": [
+            "en": "Unsupported accepted: %d",
+            "hi": "Unsupported accepted: %d",
+            "bn": "Unsupported accepted: %d",
+            "ta": "Unsupported accepted: %d",
+            "te": "Unsupported accepted: %d"
+        ],
         "private_assistant_sample_file_check_completed_private": [
             "en": "Private assistant sample file check completed without logging prompt or source text.",
             "hi": "Private assistant sample file check prompt या source text log किए बिना पूरा हुआ.",
             "bn": "Private assistant sample file check prompt বা source text log না করেই শেষ হয়েছে.",
             "ta": "Private assistant sample file check prompt அல்லது source text log செய்யாமல் முடிந்தது.",
             "te": "Private assistant sample file check prompt లేదా source text log చేయకుండా పూర్తయింది."
+        ],
+        "private_assistant_sample_file_check_recent_runs": [
+            "en": "Recent sample checks",
+            "hi": "Recent sample checks",
+            "bn": "Recent sample checks",
+            "ta": "Recent sample checks",
+            "te": "Recent sample checks"
         ],
         "completed": [
             "en": "Completed",

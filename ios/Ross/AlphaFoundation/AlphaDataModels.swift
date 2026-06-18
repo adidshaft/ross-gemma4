@@ -2519,6 +2519,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var routineRuns: [AlphaRoutineRun]?
     var routineSettings: AlphaRoutineSettings?
     var modelUpdateCandidates: [AlphaModelUpdateCandidate]?
+    var localInferenceSmokeReports: [AlphaLocalInferenceSmokeReport]? = nil
 
     static func empty() -> AlphaPersistedState {
         AlphaPersistedState(
@@ -2551,7 +2552,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             preparedWorkItems: [],
             routineRuns: [],
             routineSettings: .default,
-            modelUpdateCandidates: []
+            modelUpdateCandidates: [],
+            localInferenceSmokeReports: []
         )
     }
 
@@ -2946,7 +2948,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             preparedWorkItems: [],
             routineRuns: [],
             routineSettings: .default,
-            modelUpdateCandidates: []
+            modelUpdateCandidates: [],
+            localInferenceSmokeReports: []
         )
     }
 }

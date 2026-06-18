@@ -2705,7 +2705,7 @@ extension AlphaRossModel {
         Task {
             let runtimeHealth = activeRuntimeHealth
             guard let runtimeHealth, runtimeHealth.available else {
-                localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                recordLocalInferenceSmokeReport(AlphaLocalInferenceSmokeReport(
                     ran: false,
                     runtimeUsed: runtimeHealth?.runtimeMode.rawValue ?? AlphaPackRuntimeMode.unavailable.rawValue,
                     schemaValid: false,
@@ -2718,7 +2718,7 @@ extension AlphaRossModel {
                         runtimeHealth?.userFacingStatus,
                         fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
                     )
-                )
+                ))
                 localInferenceSmokeRunning = false
                 return
             }
@@ -2790,7 +2790,7 @@ extension AlphaRossModel {
                 persist()
             }
 
-            localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+            recordLocalInferenceSmokeReport(AlphaLocalInferenceSmokeReport(
                 ran: true,
                 runtimeUsed: result.modelInvocations.last?.runtimeMode ?? runtimeHealth.runtimeMode.rawValue,
                 schemaValid: !result.modelInvocations.contains { $0.errorCategory == "invalid_model_output" },
@@ -2803,9 +2803,19 @@ extension AlphaRossModel {
                 estimatedOutputTokensPerSecond: result.modelInvocations.last?.estimatedOutputTokensPerSecond,
                 exportRelativePath: export?.relativePath,
                 message: rossLocalized("private_assistant_sample_file_check_completed_private")
-            )
+            ))
             localInferenceSmokeRunning = false
         }
+    }
+
+    func recordLocalInferenceSmokeReport(_ report: AlphaLocalInferenceSmokeReport) {
+        localInferenceSmokeReport = report
+        var reports = persisted.localInferenceSmokeReports ?? []
+        reports.insert(report, at: 0)
+        if reports.count > Self.localInferenceSmokeHistoryLimit {
+            reports.removeLast(reports.count - Self.localInferenceSmokeHistoryLimit)
+        }
+        persisted.localInferenceSmokeReports = reports
     }
 
     func advanceOnboarding() {

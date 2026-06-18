@@ -460,6 +460,10 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         return rossLocalized("started_but_did_not_finish")
     }
 
+    private var latestSmokeReport: AlphaLocalInferenceSmokeReport? {
+        model.localInferenceSmokeReport ?? model.localInferenceSmokeReports.first
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !model.privateAISnapshot.installedPacks.isEmpty {
@@ -530,8 +534,93 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
             }
             .rossGlassButtonStyle(tint: Color.rossAccent)
             .disabled(model.localInferenceSmokeRunning)
+
+            if let latestSmokeReport {
+                Divider()
+                AlphaPrivateAISmokeReportCard(report: latestSmokeReport)
+            }
+
+            if model.localInferenceSmokeReports.count > 1 {
+                Divider()
+                AlphaPrivateAISmokeHistorySection(reports: Array(model.localInferenceSmokeReports.dropFirst()))
+            }
         }
         .padding(.top, 12)
+    }
+}
+
+private struct AlphaPrivateAISmokeReportCard: View {
+    let report: AlphaLocalInferenceSmokeReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(rossLocalized("private_assistant_sample_file_check_report_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            AlphaSettingsValueRow(label: rossLocalized("status"), value: alphaLocalInferenceSmokeStatusLabel(report))
+            AlphaSettingsValueRow(label: rossLocalized("runtime_used"), value: alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))
+            AlphaSettingsValueRow(
+                label: rossLocalized("schema_valid"),
+                value: report.schemaValid ? rossLocalized("yes") : rossLocalized("no")
+            )
+            if let durationMs = report.durationMs {
+                AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
+            }
+            if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+                AlphaSettingsValueRow(
+                    label: rossLocalized("runtime_first_response"),
+                    value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+                )
+            }
+            if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+                AlphaSettingsValueRow(
+                    label: rossLocalized("runtime_output_speed"),
+                    value: alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond)
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(format: rossLocalized("fields_found_count"), report.fieldsFound))
+                Text(String(format: rossLocalized("fields_verified_count"), report.fieldsVerified))
+                Text(String(format: rossLocalized("fields_needing_review_count"), report.fieldsNeedingReview))
+                Text(String(format: rossLocalized("unsupported_accepted_count"), report.unsupportedAccepted))
+            }
+            .font(.caption)
+            .foregroundStyle(Color.rossInk.opacity(0.72))
+
+            Text(report.message)
+                .font(.caption)
+                .foregroundStyle(Color.rossInk.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaPrivateAISmokeHistorySection: View {
+    let reports: [AlphaLocalInferenceSmokeReport]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_sample_file_check_recent_runs"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            ForEach(Array(reports.prefix(AlphaRossModel.localInferenceSmokeHistoryLimit - 1).enumerated()), id: \.offset) { _, report in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        "\(report.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(alphaLocalInferenceSmokeStatusLabel(report)) · \(alphaLocalInferenceSmokeRuntimeLabel(report.runtimeUsed))"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+
+                    Text(alphaLocalInferenceSmokeMetricsSummary(report))
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .padding(.vertical, 2)
+            }
+        }
     }
 }
 #endif
@@ -562,6 +651,28 @@ func alphaAssistantContextWindowLabel(tokens: Int) -> String {
 
 func alphaAssistantInputBudgetLabel(chars: Int) -> String {
     "\(chars.formatted()) chars"
+}
+
+func alphaLocalInferenceSmokeRuntimeLabel(_ runtimeRawValue: String) -> String {
+    AlphaPackRuntimeMode(rawValue: runtimeRawValue)?.displayLabel ?? runtimeRawValue
+}
+
+func alphaLocalInferenceSmokeStatusLabel(_ report: AlphaLocalInferenceSmokeReport) -> String {
+    report.ran ? rossLocalized("completed") : rossLocalized("not_run")
+}
+
+func alphaLocalInferenceSmokeMetricsSummary(_ report: AlphaLocalInferenceSmokeReport) -> String {
+    var parts = [
+        String(format: rossLocalized("fields_found_count"), report.fieldsFound),
+        String(format: rossLocalized("fields_verified_count"), report.fieldsVerified)
+    ]
+    if let timeToFirstTokenMs = report.timeToFirstTokenMs {
+        parts.append("\(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")
+    }
+    if let estimatedOutputTokensPerSecond = report.estimatedOutputTokensPerSecond {
+        parts.append("\(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
+    }
+    return parts.joined(separator: " · ")
 }
 
 func alphaAssistantAccelerationLabel(
