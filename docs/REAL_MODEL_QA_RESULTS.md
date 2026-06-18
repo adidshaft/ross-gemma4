@@ -1,5 +1,33 @@
 # Real Model QA Results
 
+## 2026-06-19 iOS simulator GGUF benchmark checkpoint
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
+- Runtime mode: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Whether model files were committed: No
+- Whether the simulator app was rebuilt before smoke: Yes
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil context_tokens=14336 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Quick profile result: passed.
+- Quick profile pass marker:
+  - `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start profile=quick elapsed=67.73s source_raw_chars=467 source_parsed_chars=202 general_output_chars=442 source_refs=1 source_native_model=true general_native_model=true source_input_tokens=207 source_output_tokens=118 source_token_speed=7.25 source_first_token_ms=15538 source_measured_tokens=false general_input_tokens=190 general_output_tokens=192 general_token_speed=8.67 general_first_token_ms=13965 general_measured_tokens=false`
+- Full variety profile result: not fully passed.
+- Full variety terminal marker:
+  - `ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime tier=quick_start profile=full elapsed=67.76s source_error=nil bengali_error=nil hindi_error=nil tamil_error=nil telugu_error=nil general_error=nil source_grounded=true bengali_grounded=true hindi_grounded=true tamil_grounded=false telugu_grounded=false source_refs_kept=true bengali_refs_kept=true hindi_refs_kept=true tamil_refs_kept=true telugu_refs_kept=true source_refs=1 bengali_source_refs=1 hindi_source_refs=1 tamil_source_refs=1 telugu_source_refs=1 source_native_model=true bengali_native_model=true hindi_native_model=true tamil_native_model=true telugu_native_model=true general_native_model=true source_warning_count=0 bengali_warning_count=0 hindi_warning_count=0 tamil_warning_count=0 telugu_warning_count=0 general_warning_count=0 source_raw_chars=467 bengali_output_chars=135 hindi_output_chars=270 tamil_output_chars=176 telugu_output_chars=78 general_output_chars=442 source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 source_first_token_ms=17392 source_measured_tokens=false bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=8.84 bengali_first_token_ms=24339 bengali_measured_tokens=false hindi_input_tokens=278 hindi_output_tokens=134 hindi_token_speed=8.64 hindi_first_token_ms=23663 hindi_measured_tokens=false tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=8.10 tamil_first_token_ms=25131 tamil_measured_tokens=false telugu_input_tokens=345 telugu_output_tokens=51 telugu_token_speed=8.33 telugu_first_token_ms=28052 telugu_measured_tokens=false general_input_tokens=190 general_output_tokens=192 general_token_speed=8.57 general_first_token_ms=14781 general_measured_tokens=false`
+- Observed behavior:
+  - the fresh simulator build launches successfully
+  - GGUF runtime identity is explicit and confirms no fallback
+  - quick document-grounded handling and a general query both pass with native-model outputs
+  - the fuller run exercises source, general, Bengali, Hindi, Tamil, and Telugu stages
+  - every full-profile stage completed without provider errors and reported native-model output
+  - the full-profile failure is quality-gating, not a crash: Tamil and Telugu outputs did not satisfy the smoke harness grounding heuristic
+- Current interpretation:
+  - simulator GGUF execution, hidden benchmark fields, token counts, token speed, first-token latency, and source-reference retention are working for this local 2B GGUF baseline
+  - product claims should not say the full multilingual grounded bundle is green yet, because Tamil and Telugu still need prompt/evaluator/runtime follow-up
+  - this run does not prove MLX, CoreAI/CoreML, MTP, or physical-device performance
+
 ## 2026-06-18 physical iPhone intended 12B GGUF attempt
 
 - Branch: `main`
