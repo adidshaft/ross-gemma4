@@ -12380,6 +12380,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(descriptor.releaseReady)
     }
 
+    func testAssistantDownloadDescriptorPreservesMultiGBSessionDeliveryMetadata() {
+        let session = AlphaBackendDownloadSessionPayload(
+            sessionId: "sess-case-associate-gguf",
+            packId: "gemma-4-12b-q4",
+            artifact: AlphaBackendArtifact(
+                fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 7_381_382_048,
+                segmentSizeBytes: 7_381_382_048,
+                segmentCount: 1,
+                finalSha256: String(repeating: "a", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                downloadPath: "/artifacts/gemma-4-12b-it.gguf",
+                downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-it.gguf",
+                rangeUnit: "bytes",
+                resumeStrategy: "range_request_segments",
+                segments: [
+                    AlphaBackendArtifactSegment(
+                        index: 0,
+                        startByte: 0,
+                        endByteInclusive: 7_381_382_047,
+                        sizeBytes: 7_381_382_048,
+                        sha256: String(repeating: "b", count: 64),
+                        rangeHeader: "bytes=0-7381382047"
+                    )
+                ]
+            )
+        )
+
+        let descriptor = alphaAssistantDownloadDescriptor(
+            for: .caseAssociate,
+            session: session,
+            resolvedURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf"
+        )
+
+        XCTAssertEqual(descriptor.sessionId, "sess-case-associate-gguf")
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-q4")
+        XCTAssertEqual(descriptor.sizeBytes, 7_381_382_048)
+        XCTAssertEqual(descriptor.segmentSizeBytes, 7_381_382_048)
+        XCTAssertEqual(descriptor.segmentCount, 1)
+        XCTAssertEqual(descriptor.rangeUnit, "bytes")
+        XCTAssertEqual(descriptor.resumeStrategy, "range_request_segments")
+        XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-it.gguf")
+    }
+
     func testAssistantDownloadDescriptorPrefersCompatibleMLXArchiveSessionArtifact() {
         let session = AlphaBackendDownloadSessionPayload(
             sessionId: "sess-supported-mlx",
@@ -12482,6 +12528,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.fileName, pinned.fileName)
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
         XCTAssertEqual(descriptor.downloadURLString, pinned.downloadURLString)
+    }
+
+    func testDefaultAssistantDownloadDescriptorUsesSingleSegmentByteRangeDefaultsForGGUF() {
+        let descriptor = alphaDefaultAssistantDownloadDescriptor(for: .seniorDraftingSupport)
+        let pinned = alphaAssistantModelArtifact(for: .seniorDraftingSupport)
+
+        XCTAssertEqual(descriptor.packId, pinned.packId)
+        XCTAssertEqual(descriptor.sizeBytes, pinned.sizeBytes)
+        XCTAssertEqual(descriptor.segmentSizeBytes, pinned.sizeBytes)
+        XCTAssertEqual(descriptor.segmentCount, 1)
+        XCTAssertEqual(descriptor.rangeUnit, "bytes")
+        XCTAssertEqual(descriptor.resumeStrategy, "range_request_segments")
     }
 
     func testPreferredAssistantDownloadFallbackUsesCachedCompatibleMLXDescriptor() {

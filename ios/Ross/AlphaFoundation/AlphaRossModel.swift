@@ -1136,14 +1136,50 @@ struct AlphaBackendDownloadSessionPayload: Codable {
 struct AlphaBackendArtifact: Codable {
     let fileName: String
     let sizeBytes: Int64
+    let segmentSizeBytes: Int64?
+    let segmentCount: Int?
     let finalSha256: String
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
     let downloadPath: String?
     let downloadUrl: String
+    let rangeUnit: String?
+    let resumeStrategy: String?
     let segments: [AlphaBackendArtifactSegment]
     var draftArtifact: AlphaBackendArtifactDraft? = nil
+
+    init(
+        fileName: String,
+        sizeBytes: Int64,
+        segmentSizeBytes: Int64? = nil,
+        segmentCount: Int? = nil,
+        finalSha256: String,
+        artifactKind: String,
+        runtimeMode: AlphaPackRuntimeMode,
+        developmentOnly: Bool,
+        downloadPath: String?,
+        downloadUrl: String,
+        rangeUnit: String? = nil,
+        resumeStrategy: String? = nil,
+        segments: [AlphaBackendArtifactSegment],
+        draftArtifact: AlphaBackendArtifactDraft? = nil
+    ) {
+        self.fileName = fileName
+        self.sizeBytes = sizeBytes
+        self.segmentSizeBytes = segmentSizeBytes
+        self.segmentCount = segmentCount
+        self.finalSha256 = finalSha256
+        self.artifactKind = artifactKind
+        self.runtimeMode = runtimeMode
+        self.developmentOnly = developmentOnly
+        self.downloadPath = downloadPath
+        self.downloadUrl = downloadUrl
+        self.rangeUnit = rangeUnit
+        self.resumeStrategy = resumeStrategy
+        self.segments = segments
+        self.draftArtifact = draftArtifact
+    }
 }
 
 struct AlphaBackendArtifactDraft: Codable {

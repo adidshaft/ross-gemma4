@@ -79,14 +79,56 @@ struct AlphaAssistantDownloadDescriptor: Codable, Hashable, Sendable {
     let tier: AlphaCapabilityTier
     let fileName: String
     let sizeBytes: Int64
+    let segmentSizeBytes: Int64?
+    let segmentCount: Int?
     let checksumSha256: String
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
     let downloadURLString: String
+    let rangeUnit: String?
+    let resumeStrategy: String?
     let verified: Bool
     let releaseReady: Bool
     var draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
+
+    init(
+        sessionId: String?,
+        packId: String,
+        tier: AlphaCapabilityTier,
+        fileName: String,
+        sizeBytes: Int64,
+        segmentSizeBytes: Int64? = nil,
+        segmentCount: Int? = nil,
+        checksumSha256: String,
+        artifactKind: String,
+        runtimeMode: AlphaPackRuntimeMode,
+        developmentOnly: Bool,
+        downloadURLString: String,
+        rangeUnit: String? = nil,
+        resumeStrategy: String? = nil,
+        verified: Bool,
+        releaseReady: Bool,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
+    ) {
+        self.sessionId = sessionId
+        self.packId = packId
+        self.tier = tier
+        self.fileName = fileName
+        self.sizeBytes = sizeBytes
+        self.segmentSizeBytes = segmentSizeBytes
+        self.segmentCount = segmentCount
+        self.checksumSha256 = checksumSha256
+        self.artifactKind = artifactKind
+        self.runtimeMode = runtimeMode
+        self.developmentOnly = developmentOnly
+        self.downloadURLString = downloadURLString
+        self.rangeUnit = rangeUnit
+        self.resumeStrategy = resumeStrategy
+        self.verified = verified
+        self.releaseReady = releaseReady
+        self.draftArtifact = draftArtifact
+    }
 }
 
 func alphaAssistantDraftArtifactRuntimeMode(
@@ -115,11 +157,15 @@ private func alphaAssistantDraftDownloadDescriptor(
         tier: resolvedDownload.tier,
         fileName: draftArtifact.fileName,
         sizeBytes: draftArtifact.sizeBytes,
+        segmentSizeBytes: draftArtifact.sizeBytes,
+        segmentCount: 1,
         checksumSha256: draftArtifact.checksumSha256,
         artifactKind: draftArtifact.artifactKind,
         runtimeMode: runtimeMode,
         developmentOnly: resolvedDownload.developmentOnly,
         downloadURLString: draftArtifact.downloadURLString,
+        rangeUnit: resolvedDownload.rangeUnit,
+        resumeStrategy: resolvedDownload.resumeStrategy,
         verified: resolvedDownload.verified,
         releaseReady: resolvedDownload.releaseReady,
         draftArtifact: nil
@@ -135,11 +181,15 @@ private func alphaReusableAssistantDownloadDescriptor(
         tier: descriptor.tier,
         fileName: descriptor.fileName,
         sizeBytes: descriptor.sizeBytes,
+        segmentSizeBytes: descriptor.segmentSizeBytes,
+        segmentCount: descriptor.segmentCount,
         checksumSha256: descriptor.checksumSha256,
         artifactKind: descriptor.artifactKind,
         runtimeMode: descriptor.runtimeMode,
         developmentOnly: descriptor.developmentOnly,
         downloadURLString: descriptor.downloadURLString,
+        rangeUnit: descriptor.rangeUnit,
+        resumeStrategy: descriptor.resumeStrategy,
         verified: descriptor.verified,
         releaseReady: descriptor.releaseReady,
         draftArtifact: descriptor.draftArtifact
@@ -737,11 +787,15 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
         tier: artifact.tier,
         fileName: artifact.fileName,
         sizeBytes: artifact.sizeBytes,
+        segmentSizeBytes: artifact.sizeBytes,
+        segmentCount: 1,
         checksumSha256: artifact.sha256,
         artifactKind: artifact.artifactKind,
         runtimeMode: artifact.runtimeMode,
         developmentOnly: artifact.developmentOnly,
         downloadURLString: artifact.downloadURLString,
+        rangeUnit: "bytes",
+        resumeStrategy: "range_request_segments",
         verified: artifact.verified,
         releaseReady: artifact.releaseReady,
         draftArtifact: artifact.draftArtifact
@@ -1682,11 +1736,15 @@ func alphaAssistantDownloadDescriptor(
         tier: tier,
         fileName: session.artifact.fileName,
         sizeBytes: session.artifact.sizeBytes,
+        segmentSizeBytes: session.artifact.segmentSizeBytes ?? session.artifact.segments.first?.sizeBytes ?? session.artifact.sizeBytes,
+        segmentCount: session.artifact.segmentCount ?? (session.artifact.segments.isEmpty ? nil : session.artifact.segments.count),
         checksumSha256: session.artifact.finalSha256.lowercased(),
         artifactKind: session.artifact.artifactKind,
         runtimeMode: session.artifact.runtimeMode,
         developmentOnly: session.artifact.developmentOnly,
         downloadURLString: resolvedURLString,
+        rangeUnit: session.artifact.rangeUnit ?? "bytes",
+        resumeStrategy: session.artifact.resumeStrategy,
         verified: true,
         releaseReady: true,
         draftArtifact: alphaAssistantDownloadDescriptorDraftArtifact(session.artifact.draftArtifact)

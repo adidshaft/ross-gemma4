@@ -1,6 +1,6 @@
 # Ross Pause Point
 
-This is the current safe handoff point for the Ross Gemma 4 runtime and product-quality pass as of June 17, 2026.
+This is the current safe handoff point for the Ross Gemma 4 runtime and product-quality pass as of June 18, 2026.
 
 ## Current Stable State
 
@@ -29,6 +29,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - hidden iOS Support details and the saved note now also state the ladder-decision gate directly, so the product itself says whether pack-selection review is unlocked or still waiting on specific physical-device notes
 - Android debug compile and assemble now succeed in the current dirty worktree, so the remaining Android gap is narrowed to real runtime validation rather than baseline build breakage
 - backend production download sessions now prove that the default 12B and 26B iOS GGUF packs preserve their real multi-GB size, byte-range resume metadata, and direct delivery URLs end to end through signed session payloads
+- iOS assistant download descriptors now preserve multi-GB segment and byte-range resume metadata from signed backend sessions, and bundled GGUF defaults now expose the same single-segment range assumptions on the client side
 
 ## Visible Pack Mapping
 
@@ -78,11 +79,13 @@ Most recent commits that define this pause point:
 - hidden iOS ladder-decision readiness is now exported alongside the device note, so final pack judgment is explicitly held until the missing physical-note targets are complete
 - Android debug build now completes cleanly in the current worktree after clearing the lingering Kotlin annotation-target warning in `AlphaRossApp.kt`
 - backend model-registry tests now explicitly cover signed multi-GB delivery descriptors for the default iOS `Case Associate` and `Senior Drafting Support` GGUF packs
+- focused iOS extraction tests now prove the client preserves multi-GB GGUF session metadata for segment size, segment count, range unit, and resume strategy, and that bundled GGUF defaults expose the same single-segment byte-range assumptions before device download begins
 
 Most recent verification commands:
 
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testAskRuntimeSourcePackChunksLongTaggedPageIntoMultipleBlocks|testAskRuntimeSourcePackHonorsChunkSizingFromOverridePolicy)'`
 - `swift test --package-path ios --filter 'AlphaExtractionTests/(testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones|testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones)'`
+- `swift test --package-path ios --filter 'AlphaExtractionTests/(testAssistantDownloadDescriptorPreservesMultiGBSessionDeliveryMetadata|testDefaultAssistantDownloadDescriptorUsesSingleSegmentByteRangeDefaultsForGGUF)'`
 - `./gradlew :app:compileDebugKotlin`
 - `./gradlew :app:assembleDebug`
 - `'/Users/amanpandey/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node' node_modules/tsx/dist/cli.mjs --test tests/model-registry.test.ts`
@@ -93,7 +96,7 @@ Most recent verification commands:
 
 - physical iPhone proof for the full GGUF and MLX setup lifecycle on representative 8 GB and 12 GB devices
 - final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
-- real client-side delivery proof for production multi-GB artifacts end to end
+- real end-to-end client download and consumption proof for production multi-GB artifacts on device
 - Android native runtime validation beyond the recent retrieval and budget improvements
 
 ## Why This Is A Good Pause Point
