@@ -1,6 +1,7 @@
 .DS_Store
 .idea/
 .vscode/
+.claude/
 node_modules/
 dist/
 build/
@@ -38,6 +39,9 @@ tmp/
 model-cache/
 downloads/
 ios/build-device/
+ios/build-sim/
+ios/tmp/
+*.xcuserstate
 qa-screenshots/
 .migration/
 *.gguf
