@@ -6981,6 +6981,114 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.executionPathLabel, "Gemma GGUF via llama.cpp")
     }
 
+    func testExperimentalGGUFProviderReusesPreparedContextAcrossHealthChecksAndRun() async throws {
+        final class LoadCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var contextFactoryCalls = 0
+            private(set) var validatorCalls = 0
+
+            func recordContextFactoryCall() {
+                lock.lock()
+                defer { lock.unlock() }
+                contextFactoryCalls += 1
+            }
+
+            func recordValidatorCall() {
+                lock.lock()
+                defer { lock.unlock() }
+                validatorCalls += 1
+            }
+        }
+
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            private var emitted = false
+
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String {
+                emitted = true
+                return "Prepared answer"
+            }
+            func isDone() -> Bool { emitted }
+            func promptTokenCount() -> Int { 256 }
+            func generatedTokenCount() -> Int { emitted ? 18 : 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-reuse-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        defer { try? FileManager.default.removeItem(at: mainURL) }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let capture = LoadCapture()
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in
+            capture.recordContextFactoryCall()
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in
+            capture.recordValidatorCall()
+        }
+
+        let firstProvider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true
+        )
+        let secondProvider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true
+        )
+
+        let firstHealth = firstProvider.runtimeHealth()
+        let secondHealth = secondProvider.runtimeHealth()
+        let output = await secondProvider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertEqual(firstHealth.accelerationMode, .standard)
+        XCTAssertEqual(secondHealth.accelerationMode, .standard)
+        XCTAssertEqual(output.rawText, "Prepared answer")
+        XCTAssertEqual(capture.contextFactoryCalls, 1)
+        XCTAssertEqual(capture.validatorCalls, 0)
+    }
+
     func testExperimentalGGUFProviderHidesDraftMetadataAfterStandardFallback() async throws {
         actor StubLlamaContext: AlphaLlamaCompletionContext {
             func clear() {}

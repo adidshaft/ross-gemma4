@@ -391,7 +391,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
         do {
-            try Self.validateModelCanLoad(at: modelPath)
+            // Reuse the same prepared context across repeated runtime-health
+            // probes and the first real run so constrained phones do not pay
+            // for multiple full GGUF loads back to back.
+            _ = try getOrContext(path: modelPath)
             return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
         } catch {
             return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))

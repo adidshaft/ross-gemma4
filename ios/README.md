@@ -34,12 +34,16 @@ Notes:
 
 - the helper overlays the patched xcframework into both `ios/.build/artifacts/...`
   and `ios/build-device/SourcePackages/artifacts/...`
-- when `cmake` is available it can rebuild the patched xcframework from
+- it can rebuild the patched xcframework from
   `llama.cpp` tag `b9672` plus the repo patch in
   `third_party/patches/llama.cpp/ggml-count-new-split-inputs.patch`
-- on this machine, if `cmake` is unavailable, the helper can still seed the
+- if `cmake` is unavailable, the helper can still seed the
   repo-owned cache from the already-proven local xcframework at
   `/tmp/llama-cpp-b9672/build-apple/llama.xcframework`
+- the current Ross repo state has already been reproved on Aman’s cabled iPhone
+  from the helper’s true from-source rebuild path plus a clean
+  `scripts/ios-device-installed-pack-smoke.sh --tier quickStart --runtime gguf --smoke-profile quick`
+  pass
 
 ## Current iOS launch flow
 
