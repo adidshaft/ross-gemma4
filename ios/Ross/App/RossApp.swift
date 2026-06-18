@@ -2905,6 +2905,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Longer matter bundle check report பார்க்கவும்",
             "te": "Longer matter bundle check report చూడండి"
         ],
+        "private_assistant_runtime_comparison_title": [
+            "en": "Runtime comparison",
+            "hi": "Runtime comparison",
+            "bn": "Runtime comparison",
+            "ta": "Runtime comparison",
+            "te": "Runtime comparison"
+        ],
+        "private_assistant_runtime_comparison_hint": [
+            "en": "Switch runtime here, then rerun the longer bundle check and compare the hidden history below.",
+            "hi": "Runtime यहां बदलें, फिर longer bundle check दोबारा चलाकर नीचे की hidden history compare करें.",
+            "bn": "এখানে runtime বদলান, তারপর longer bundle check আবার চালিয়ে নিচের hidden history compare করুন.",
+            "ta": "இங்கே runtime-ஐ மாற்றி, longer bundle check-ஐ மீண்டும் இயக்கி கீழே உள்ள hidden history-ஐ compare செய்யவும்.",
+            "te": "ఇక్కడ runtime మార్చి, longer bundle check ను మళ్లీ నడిపి కింద ఉన్న hidden history ని compare చేయండి."
+        ],
         "private_assistant_sample_file_check_completed_on_iphone": [
             "en": "Sample file check completed on this iPhone",
             "hi": "Sample file check इस iPhone पर पूरा हुआ",

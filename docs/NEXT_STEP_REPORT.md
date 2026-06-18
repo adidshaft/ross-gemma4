@@ -14,6 +14,7 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
 - answer diagnostics stay hidden behind secondary actions instead of adding more up-front UI clutter
 - hidden iOS Technical details now retain a short on-device history of sample-file checks so GGUF, MLX, and CoreAI runs can be compared without extra logging setup
 - hidden iOS Technical details now also include a longer matter-bundle check for the current runtime, with persisted history for answer preview, source refs, first response, and token speed
+- hidden iOS Support details now include a direct runtime switcher for immediately-available lanes on the current tier, so the longer-bundle comparison loop no longer has to go back through setup
 
 ## Visible Pack Mapping
 
@@ -48,6 +49,7 @@ Most recent commits that define this pause point:
 - hidden answer details already include `Tokens processed` and `Token speed`
 - hidden iOS Technical details now keep recent sample-file smoke results with runtime, first-response, and token-speed evidence
 - hidden iOS Technical details now keep recent longer-bundle comparison runs for the current runtime without adding more front-stage UI
+- hidden iOS Support details now expose a direct GGUF / MLX / CoreAI switcher whenever more than one runtime is immediately available for the current tier
 
 Most recent verification commands:
 
@@ -77,6 +79,6 @@ Most recent verification commands:
 Resume with a focused real-device validation pass instead of more code changes:
 
 1. verify Case Associate on a physical iPhone using the current GGUF lane
-2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details > Check private assistant with a longer matter bundle` and the persisted hidden history between runtime switches
+2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle, using `Settings > Private AI > Support details` to switch the current runtime directly and rerun `Check private assistant with a longer matter bundle` between passes
 3. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
 4. only then return to Android cleanup and deeper runtime work there

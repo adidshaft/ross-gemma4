@@ -4538,6 +4538,43 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(model.persisted.matterBundleComparisonReports?.count, AlphaRossModel.matterBundleComparisonHistoryLimit)
     }
 
+    func testAssistantComparisonRuntimeOptionsOnlyKeepImmediatelyAvailableRuntimes() {
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-gguf",
+            tier: .caseAssociate,
+            installPath: "/tmp/case.gguf",
+            checksumSha256: "abc",
+            runtimeMode: .llamaCppGguf,
+            checksumVerified: true,
+            isActive: true
+        )
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "/tmp/case-mlx",
+            checksumSha256: "def",
+            artifactKind: "mlx_model_directory",
+            runtimeMode: .mlxSwiftLm,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantComparisonRuntimeOptions(
+            for: .caseAssociate,
+            installedPacks: [ggufPack, mlxPack],
+            activePack: ggufPack,
+            systemAssistantAvailable: true,
+            preferredRuntimeMode: .llamaCppGguf,
+            canActivateRuntime: { runtimeMode in
+                runtimeMode == .llamaCppGguf || runtimeMode == .appleFoundationModels
+            }
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.llamaCppGguf, .appleFoundationModels])
+        XCTAssertTrue(options.first?.isSelected == true)
+        XCTAssertTrue(options.last?.isBuiltIn == true)
+    }
+
     func testPrivateAssistantSampleCheckReportUsesProductLanguage() async throws {
         rossSetBackendBaseURLOverride("http://127.0.0.1:9")
         defer { rossSetBackendBaseURLOverride(nil) }

@@ -468,6 +468,41 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         model.matterBundleComparisonReport ?? model.matterBundleComparisonReports.first
     }
 
+    private var comparisonTier: AlphaCapabilityTier? {
+        model.activePack?.tier ?? model.persisted.settings.activeTier ?? model.selectedTier
+    }
+
+    private var comparisonRuntimeOptions: [AlphaAssistantVariantOption] {
+        guard let comparisonTier else { return [] }
+        return alphaAssistantComparisonRuntimeOptions(
+            for: comparisonTier,
+            installedPacks: model.privateAISnapshot.installedPacks,
+            activePack: model.activePack,
+            systemAssistantAvailable: model.systemAssistantHealth(for: comparisonTier)?.available == true,
+            preferredRuntimeMode: model.activePack?.runtimeMode,
+            cachedCatalogs: model.persisted.cachedAssistantCatalogs,
+            cachedDownloads: model.persisted.cachedAssistantDownloads,
+            canActivateRuntime: { runtimeMode in
+                model.canActivateAssistantRuntimeImmediately(for: comparisonTier, runtimeMode: runtimeMode)
+            }
+        )
+    }
+
+    private var comparisonRuntimeChoiceLabel: String? {
+        guard let comparisonTier,
+              let selectedRuntimeMode = model.activePack?.runtimeMode ?? model.activeRuntimeHealth?.runtimeMode else {
+            return nil
+        }
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: selectedRuntimeMode,
+            tier: comparisonTier,
+            existingRuntimeMode: model.activePack?.runtimeMode,
+            systemAssistantAvailable: model.systemAssistantHealth(for: comparisonTier)?.available == true,
+            lastInvocation: model.lastModelInvocation
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !model.privateAISnapshot.installedPacks.isEmpty {
@@ -547,6 +582,53 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
             if model.localInferenceSmokeReports.count > 1 {
                 Divider()
                 AlphaPrivateAISmokeHistorySection(reports: Array(model.localInferenceSmokeReports.dropFirst()))
+            }
+
+            if let comparisonTier, comparisonRuntimeOptions.count > 1 {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(rossLocalized("private_assistant_runtime_comparison_title"))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+
+                    AlphaSettingsValueRow(label: rossLocalized("assistant_used"), value: comparisonTier.setupTitle)
+                    AlphaSettingsValueRow(
+                        label: rossLocalized("runtime_used"),
+                        value: alphaLocalInferenceSmokeRuntimeLabel(
+                            model.activePack?.runtimeMode.rawValue ?? model.activeRuntimeHealth?.runtimeMode.rawValue ?? AlphaPackRuntimeMode.unavailable.rawValue
+                        )
+                    )
+
+                    if let comparisonRuntimeChoiceLabel {
+                        Text(comparisonRuntimeChoiceLabel)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.60))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Text(rossLocalized("private_assistant_runtime_comparison_hint"))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.60))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(comparisonRuntimeOptions) { option in
+                                AlphaAssistantVariantChip(
+                                    option: option,
+                                    action: {
+                                        _ = model.activateAssistantRuntimeIfAvailable(
+                                            for: comparisonTier,
+                                            runtimeMode: option.runtimeMode
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
             }
 
             Divider()
@@ -805,6 +887,28 @@ func alphaMatterBundleComparisonMetricsSummary(_ report: AlphaMatterBundleCompar
         parts.append("\(rossLocalized("runtime_output_speed")): \(alphaAssistantTokenRateLabel(tokensPerSecond: estimatedOutputTokensPerSecond))")
     }
     return parts.joined(separator: " · ")
+}
+
+func alphaAssistantComparisonRuntimeOptions(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack],
+    activePack: AlphaInstalledModelPack?,
+    systemAssistantAvailable: Bool,
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil,
+    canActivateRuntime: (AlphaPackRuntimeMode) -> Bool
+) -> [AlphaAssistantVariantOption] {
+    alphaAssistantVariantOptions(
+        for: tier,
+        installedPacks: installedPacks,
+        activePack: activePack,
+        systemAssistantAvailable: systemAssistantAvailable,
+        preferredRuntimeMode: preferredRuntimeMode,
+        cachedCatalogs: cachedCatalogs,
+        cachedDownloads: cachedDownloads
+    )
+    .filter { canActivateRuntime($0.runtimeMode) }
 }
 
 func alphaAssistantAccelerationLabel(
