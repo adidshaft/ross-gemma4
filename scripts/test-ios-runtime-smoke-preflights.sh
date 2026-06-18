@@ -44,4 +44,8 @@ run_expect_exit_2 \
   "adapter artifact with system-model sentinel" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model system-model
 
+run_expect_exit_2 \
+  "adapter artifact with system URL sentinel" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model system://apple-foundation-models
+
 echo "iOS runtime smoke preflight tests: PASS"
