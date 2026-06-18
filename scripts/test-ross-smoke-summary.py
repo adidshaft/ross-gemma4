@@ -19,6 +19,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
+            "cases=english_source_bound_document_qa,bengali_source_bound_document_qa,english_open_no_document_query "
             "stages=source:document_qa:en:source_refs_required:max_tokens=192,"
             "bengali:document_qa:bn:source_refs_required:max_tokens=192,"
             "general:open_query:en:no_source_refs:max_tokens=192"
@@ -37,6 +38,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("matrix_profile=full", summary)
+        self.assertIn(
+            "matrix_cases=english_source_bound_document_qa,bengali_source_bound_document_qa,english_open_no_document_query",
+            summary,
+        )
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
         self.assertIn("source_token_speed=9.00", summary)
         self.assertIn("bengali_token_speed=8.84", summary)
@@ -78,6 +83,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("draft_status=no_draft_configured", summary)
         self.assertIn("matrix_profile=full", summary)
+        self.assertIn("matrix_cases=nil", summary)
         self.assertIn("tamil_grounded=false", summary)
         self.assertIn("tamil_token_speed=7.53", summary)
 

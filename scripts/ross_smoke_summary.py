@@ -46,6 +46,7 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
         "draft_status": summary_value(identity, "draft_status"),
         "profile": summary_value(pass_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields, "profile"),
+        "matrix_cases": summary_value(matrix_fields, "cases"),
         "matrix_stages": summary_value(matrix_fields, "stages"),
         "elapsed": summary_value(pass_fields, "elapsed"),
     }
@@ -76,6 +77,7 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "draft_status": summary_value(identity, "draft_status"),
         "profile": summary_value(fail_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields or {}, "profile"),
+        "matrix_cases": summary_value(matrix_fields or {}, "cases"),
         "matrix_stages": summary_value(matrix_fields or {}, "stages"),
         "stage": summary_value(fail_fields, "stage"),
         "error": summary_value(fail_fields, "error"),

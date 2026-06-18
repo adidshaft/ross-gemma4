@@ -16203,6 +16203,17 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(fullStages.contains("telugu:document_qa:te:source_refs_required:max_tokens=192"))
         XCTAssertTrue(fullStages.contains("general:open_query:en:no_source_refs:max_tokens=192"))
         XCTAssertEqual(
+            RossLocalModelSmokeProfile.full.benchmarkMatrixCases,
+            [
+                "english_source_bound_document_qa",
+                "bengali_source_bound_document_qa",
+                "hindi_source_bound_document_qa",
+                "tamil_source_bound_document_qa",
+                "telugu_source_bound_document_qa",
+                "english_open_no_document_query"
+            ]
+        )
+        XCTAssertEqual(
             RossLocalModelSmokeProfile.quick.benchmarkMatrixStages,
             [
                 "source:document_qa:en:source_refs_required:max_tokens=192",
@@ -16216,9 +16227,16 @@ final class AlphaExtractionTests: XCTestCase {
                 "general:open_query:en:no_source_refs:max_tokens=64"
             ]
         )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixCases,
+            [
+                "english_source_bound_document_qa_low_token",
+                "english_open_no_document_query_low_token"
+            ]
+        )
         XCTAssertTrue(
             RossLocalModelSmokeProfile.full.benchmarkMatrixLogLine
-                .contains("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full stages=source:document_qa")
+                .contains("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full cases=english_source_bound_document_qa")
         )
     }
 

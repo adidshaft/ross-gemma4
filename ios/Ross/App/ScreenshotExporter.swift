@@ -205,8 +205,32 @@ enum RossLocalModelSmokeProfile: String {
         ]
     }
 
+    var benchmarkMatrixCases: [String] {
+        switch self {
+        case .quick:
+            return [
+                "english_source_bound_document_qa",
+                "english_open_no_document_query"
+            ]
+        case .mtpQuick:
+            return [
+                "english_source_bound_document_qa_low_token",
+                "english_open_no_document_query_low_token"
+            ]
+        case .full:
+            return [
+                "english_source_bound_document_qa",
+                "bengali_source_bound_document_qa",
+                "hindi_source_bound_document_qa",
+                "tamil_source_bound_document_qa",
+                "telugu_source_bound_document_qa",
+                "english_open_no_document_query"
+            ]
+        }
+    }
+
     var benchmarkMatrixLogLine: String {
-        "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=\(rawValue) stages=\(benchmarkMatrixStages.joined(separator: ","))"
+        "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=\(rawValue) cases=\(benchmarkMatrixCases.joined(separator: ",")) stages=\(benchmarkMatrixStages.joined(separator: ","))"
     }
 
     static func fromEnvironment(_ environment: [String: String]) -> RossLocalModelSmokeProfile {
