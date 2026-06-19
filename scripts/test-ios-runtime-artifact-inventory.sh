@@ -54,6 +54,7 @@ printf '{}' > "$mlx_dir/tokenizer.json"
 : > "$mlx_dir/model.safetensors"
 
 mkdir -p "$tmpdir/foundation-adapter.mlmodelc"
+printf 'not an adapter' > "$tmpdir/foundation-adapter.txt"
 
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=gguf status=present" /tmp/ross-runtime-inventory.out
@@ -65,6 +66,11 @@ printf 'weights' > "$mlx_dir/model.safetensors"
 grep -q "lane=mlx status=present" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
+if grep -q "foundation-adapter.txt" /tmp/ross-runtime-inventory.out; then
+  echo "Did not expect non-adapter .txt file to satisfy CoreAI adapter inventory." >&2
+  cat /tmp/ross-runtime-inventory.out >&2
+  exit 1
+fi
 
 mlx_draft_only_root="$tmpdir/mlx-draft-only"
 mlx_draft_dir="$mlx_draft_only_root/gemma-4-E4B-it-qat-assistant-6bit"
@@ -414,6 +420,20 @@ wrong_checksum = hashlib.sha256(b"not the installed artifact").hexdigest()
     "verifiedAt": "2026-06-19T00:00:00Z",
 }))
 
+(packs / "coreai" / "txt-adapter.txt").write_text("not an adapter")
+(packs / "coreai" / "txt.manifest.json").write_text(json.dumps({
+    "packId": "txt-coreai",
+    "tier": "quickStart",
+    "fileName": "txt-adapter.txt",
+    "relativePath": "model-packs/coreai/txt-adapter.txt",
+    "checksumSha256": "abc",
+    "bytes": 14,
+    "artifactKind": "coreml_model",
+    "runtimeMode": "apple_foundation_models",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
 (packs / "quickStart" / "checksum.manifest.json").write_text(json.dumps({
     "packId": "checksum-mismatch",
     "tier": "quickStart",
@@ -446,5 +466,6 @@ grep -q "lane=installed_mlx status=missing .*reason=unsupported_model_archive .*
 grep -q "lane=installed_mlx_draft status=missing .*reason=unsupported_model_archive .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-coreai" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_foreign_coreai_adapter .*pack=foreign-coreai" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_coreai status=missing .*reason=manifest_non_coreai_adapter_path .*pack=txt-coreai" /tmp/ross-runtime-inventory.out
 
 echo "iOS runtime artifact inventory tests: PASS"

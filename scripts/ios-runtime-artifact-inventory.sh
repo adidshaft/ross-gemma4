@@ -157,6 +157,13 @@ coreai_adapter_looks_usable() {
   local lower_path
   lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
   case "$lower_path" in
+    *.bundle|*.mlmodel|*.mlmodelc|*.mlpackage)
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  case "$lower_path" in
     *.gguf|*.safetensors|*.bin)
       return 1
       ;;
@@ -568,6 +575,8 @@ def mlx_archive_unsupported_reason(path: pathlib.Path, mode: str = "primary") ->
 
 def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
     lower_path = str(path).lower()
+    if not lower_path.endswith((".bundle", ".mlmodel", ".mlmodelc", ".mlpackage")):
+        return False
     if lower_path.endswith((".gguf", ".safetensors", ".bin")):
         return False
     if path.is_file():
@@ -645,6 +654,8 @@ def compatible_primary(runtime: str, artifact_kind: str, relative_path: str) -> 
             return False, "manifest_incompatible_artifact_kind"
         elif lower_path.endswith((".gguf", ".safetensors", ".bin")):
             return False, "manifest_foreign_coreai_adapter"
+        elif not lower_path.endswith((".bundle", ".mlmodel", ".mlmodelc", ".mlpackage")):
+            return False, "manifest_non_coreai_adapter_path"
     return True, "manifest_primary_compatible"
 
 def compatible_draft(runtime: str, artifact_kind: str, relative_path: str) -> tuple[bool, str]:

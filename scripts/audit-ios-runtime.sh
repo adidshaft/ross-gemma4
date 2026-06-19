@@ -821,6 +821,13 @@ if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventor
     FAIL=1
 fi
 
+if ! grep -q "manifest_non_coreai_adapter_path" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "txt-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "foundation-adapter.txt" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: CoreAI adapter inventory can still treat non-adapter path shapes as ready."
+    FAIL=1
+fi
+
 if ! grep -q "installed_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory tests do not cover installed MTP draft manifests."
     FAIL=1
