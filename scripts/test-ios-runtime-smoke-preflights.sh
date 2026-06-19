@@ -20,6 +20,31 @@ run_expect_exit_2() {
 
 tmpdir="$(mktemp -d /tmp/ross-runtime-preflight.XXXXXX)"
 trap 'rm -rf "$tmpdir" /tmp/ross-runtime-preflight.out' EXIT
+fake_bin="$tmpdir/bin"
+mkdir -p "$fake_bin"
+
+cat >"$fake_bin/xcrun" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" != "simctl" ]]; then
+  echo "fake xcrun only supports simctl" >&2
+  exit 2
+fi
+shift
+
+if [[ "${1:-}" != "launch" ]]; then
+  echo "fake simctl only supports launch" >&2
+  exit 2
+fi
+
+if [[ -z "${FAKE_SIMCTL_PROCESS_LOG:-}" ]]; then
+  echo "missing FAKE_SIMCTL_PROCESS_LOG" >&2
+  exit 2
+fi
+cat "$FAKE_SIMCTL_PROCESS_LOG"
+SH
+chmod +x "$fake_bin/xcrun"
 
 run_expect_exit_2 \
   "unsupported simulator smoke profile" \
@@ -206,5 +231,50 @@ preflight_expect_ok \
   "CoreAI non-empty adapter directory" \
   "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=apple_foundation_models artifact_kind=foundation_adapter model_path_type=directory" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$coreml_file" --preflight-only
+
+run_process_guard_expect_exit_1() {
+  local description="$1"
+  local expected="$2"
+  local process_log="$3"
+  shift 3
+  set +e
+  PATH="$fake_bin:$PATH" \
+    FAKE_SIMCTL_PROCESS_LOG="$process_log" \
+    "$@" >/tmp/ross-runtime-preflight.out 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 1 ]]; then
+    echo "❌ FAIL: $description expected exit 1, got $rc" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+  if ! grep -q "$expected" /tmp/ross-runtime-preflight.out; then
+    echo "❌ FAIL: $description did not emit expected message: $expected" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+}
+
+cat >"$tmpdir/simulator-mlx-wrong-artifact.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=other-mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=mlx_swift_lm requested_runtime=mlx_swift_lm profile=quick elapsed=10.00s source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_refs=1 source_native_model=true general_input_tokens=80 general_output_tokens=24 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_native_model=true
+EOF
+run_process_guard_expect_exit_1 \
+  "simulator MLX request rejects wrong artifact identity" \
+  "runtime_identity_artifact_path_mismatch" \
+  "$tmpdir/simulator-mlx-wrong-artifact.log" \
+  "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --smoke-profile quick --launch-timeout 5
+
+cat >"$tmpdir/simulator-coreai-wrong-artifact.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaFoundationModelsProvider requested_runtime=apple_foundation_models actual_runtime=apple_foundation_models pack_runtime=apple_foundation_models model_format=foundation_adapter checksum_verified=true artifact_path_type=directory artifact_path=other-adapter.mlmodelc acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=not_supported context_tokens=4096 gpu_offload=foundation_default fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=apple_foundation_models requested_runtime=apple_foundation_models profile=quick elapsed=10.00s source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_refs=1 source_native_model=true general_input_tokens=80 general_output_tokens=24 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_native_model=true
+EOF
+run_process_guard_expect_exit_1 \
+  "simulator CoreAI request rejects wrong artifact identity" \
+  "runtime_identity_artifact_path_mismatch" \
+  "$tmpdir/simulator-coreai-wrong-artifact.log" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$coreml_file" --smoke-profile quick --launch-timeout 5
 
 echo "iOS runtime smoke preflight tests: PASS"
