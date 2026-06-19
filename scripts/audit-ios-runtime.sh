@@ -202,6 +202,7 @@ if ! grep -q "timeoutOutput(" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null 
    ! grep -q "providerHealth.accelerationMode" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "stageDoneLine(stage: stage, durationMs: durationMs, output: timeoutOutput)" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "smoke_stage_timeout_source" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: smoke stage timeouts do not preserve benchmark/runtime metadata."
     FAIL=1

@@ -18934,7 +18934,7 @@ final class AlphaExtractionTests: XCTestCase {
             draftCandidateTokens: 2,
             draftCandidatePathLabel: "mtp draft.gguf",
             draftAccelerationStatus: "active",
-            draftAccelerationDetail: nil,
+            draftAccelerationDetail: "configured_acceleration=draftModelSpeculative",
             runtimeErrorDetail: nil,
             lastErrorCategory: nil,
             userFacingStatus: "Ready",

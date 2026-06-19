@@ -1176,7 +1176,7 @@ struct RossLocalModelSmokeView: View {
             accelerationDraftTokens: providerHealth.accelerationDraftTokens,
             accelerationDraftModelLabel: providerHealth.draftModelPathLabel,
             errorCategory: "smoke_stage_timeout_\(stage)",
-            runtimeErrorDetail: providerHealth.runtimeErrorDetail ?? providerHealth.draftAccelerationDetail ?? "smoke_stage_timeout_\(stage)"
+            runtimeErrorDetail: "smoke_stage_timeout_\(stage)"
         )
     }
 
