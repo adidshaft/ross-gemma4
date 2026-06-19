@@ -876,6 +876,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "adapter_path_type=system",
         )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "coreml_model",
+                    "artifact_path_type": "file",
+                    "artifact_path": "model.gguf",
+                },
+                "apple_foundation_models",
+            ),
+            "adapter_foreign_model_path=model.gguf",
+        )
 
     def test_runtime_identity_availability_rules_reject_fallback_numbers(self):
         self.assertIsNone(

@@ -155,6 +155,10 @@ def runtime_identity_artifact_error(identity, expected_runtime):
                 return f"system_model_path={summary_value(identity, 'artifact_path')}"
         if model_format != "system_model" and artifact_path_type == "system":
             return f"adapter_path_type={summary_value(identity, 'artifact_path_type')}"
+        if model_format != "system_model":
+            artifact_path = (identity.get("artifact_path") or "").lower()
+            if artifact_path.endswith((".gguf", ".bin", ".safetensors")):
+                return f"adapter_foreign_model_path={summary_value(identity, 'artifact_path')}"
     return None
 
 
