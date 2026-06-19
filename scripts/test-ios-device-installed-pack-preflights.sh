@@ -204,6 +204,16 @@ run_expect_exit_2 \
   "${base_command[@]}" --runtime gguf --smoke-profile typo
 
 run_expect_exit_2 \
+  "nonnumeric installed-pack stage timeout" \
+  "Stage timeout must be a positive integer" \
+  "${base_command[@]}" --runtime gguf --stage-timeout nope
+
+run_expect_exit_2 \
+  "zero installed-pack stage timeout" \
+  "Stage timeout must be a positive integer" \
+  "${base_command[@]}" --runtime gguf --stage-timeout 0
+
+run_expect_exit_2 \
   "installed-pack draft proof without MTP profile" \
   "Draft acceleration proof requires --smoke-profile mtp_quick" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile quick

@@ -339,6 +339,13 @@ if ! grep -q "runtime_identity_mismatch" scripts/ios-device-installed-pack-smoke
     FAIL=1
 fi
 
+if ! grep -q "Stage timeout must be a positive integer" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "nonnumeric installed-pack stage timeout" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "zero installed-pack stage timeout" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke does not validate stage timeouts before launch."
+    FAIL=1
+fi
+
 if ! grep -q "installed MLX request rejects GGUF identity" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
    ! grep -q "runtime_identity_mismatch" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack smoke tests do not cover rejecting GGUF identity for a requested MLX lane."
