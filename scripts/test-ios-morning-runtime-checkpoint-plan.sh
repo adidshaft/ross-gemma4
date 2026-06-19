@@ -13,6 +13,7 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
 grep -q "not draft_output_degenerate" /tmp/ross-morning-plan.out
+grep -q "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query." /tmp/ross-morning-plan.out
 
 support_root="$tmpdir/RossAlpha"
 packs_root="$support_root/model-packs"
@@ -46,9 +47,9 @@ PY
 grep -q "Inventory gate: installed_root=$support_root" /tmp/ross-morning-plan.out
 grep -q "3. MTP low-token proof" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=manifest_missing_draft_artifact" /tmp/ross-morning-plan.out
-grep -q "4. MLX identity" /tmp/ross-morning-plan.out
+grep -q "4. MLX identity and varied document/query full smoke" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=missing_installed_mlx" /tmp/ross-morning-plan.out
-grep -q "5. CoreAI" /tmp/ross-morning-plan.out
+grep -q "5. CoreAI/CoreML/Foundation varied document/query full smoke" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=missing_installed_coreai" /tmp/ross-morning-plan.out
 
 mkdir -p "$packs_root/mlx/gemma-mlx"
@@ -119,6 +120,12 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
+if [[ "$(grep -c -- "--smoke-profile full" /tmp/ross-morning-plan.out)" -ne 2 ]]; then
+  echo "Expected MLX and CoreAI ready lanes to request the full varied profile" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+grep -q -- "--smoke-profile mtp_quick" /tmp/ross-morning-plan.out
 if grep -q "SKIP reason=" /tmp/ross-morning-plan.out; then
   echo "Expected ready inventory plan to avoid runtime SKIP lines" >&2
   cat /tmp/ross-morning-plan.out >&2

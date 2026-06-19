@@ -107,7 +107,8 @@ if [[ -n "$installed_root" ]]; then
   echo "Inventory gate: installed_root=${installed_root}"
 fi
 echo
-echo "Order: list installed packs first, then run only short smokes. Stop on memory pressure, thermal issues, instability, or fallback."
+echo "Order: list installed packs first, run GGUF/MTP as short smokes, then run installed MLX/CoreAI with the full varied document/query matrix when available. Stop on memory pressure, thermal issues, instability, or fallback."
+echo "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query."
 echo
 
 print_command \
@@ -150,33 +151,33 @@ fi
 
 if inventory_has_present_lane "installed_mlx"; then
   print_command \
-    "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
+    "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
     scripts/ios-device-installed-pack-smoke.sh \
     --device "$device_id" \
     --bundle-id "$bundle_id" \
     --runtime mlx \
     --tier "$tier" \
-    --smoke-profile quick \
+    --smoke-profile full \
     --stage-timeout "$stage_timeout"
 else
   print_skip \
-    "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
+    "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
     "$(inventory_skip_reason "installed_mlx" || echo missing_installed_mlx)"
 fi
 
 if inventory_has_present_lane "installed_coreai"; then
   print_command \
-    "5. CoreAI/CoreML/Foundation quick smoke if available" \
+    "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
     scripts/ios-device-installed-pack-smoke.sh \
     --device "$device_id" \
     --bundle-id "$bundle_id" \
     --runtime coreai \
     --tier "$tier" \
-    --smoke-profile quick \
+    --smoke-profile full \
     --stage-timeout "$stage_timeout"
 else
   print_skip \
-    "5. CoreAI/CoreML/Foundation quick smoke if available" \
+    "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
     "$(inventory_skip_reason "installed_coreai" || echo missing_installed_coreai)"
 fi
 
