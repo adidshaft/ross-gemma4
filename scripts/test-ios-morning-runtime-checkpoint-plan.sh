@@ -12,6 +12,7 @@ grep -q "MTP low-token proof" /tmp/ross-morning-plan.out
 grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
+grep -q "not draft_output_degenerate" /tmp/ross-morning-plan.out
 
 support_root="$tmpdir/RossAlpha"
 packs_root="$support_root/model-packs"
