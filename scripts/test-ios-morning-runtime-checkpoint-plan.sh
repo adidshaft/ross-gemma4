@@ -14,6 +14,9 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
 grep -q "not draft_output_degenerate" /tmp/ross-morning-plan.out
+grep -q "provider" /tmp/ross-morning-plan.out
+grep -q "positive context_tokens" /tmp/ross-morning-plan.out
+grep -q "gpu_offload evidence" /tmp/ross-morning-plan.out
 grep -q "per-stage token/speed metrics" /tmp/ross-morning-plan.out
 grep -q "native-model markers" /tmp/ross-morning-plan.out
 grep -q "source refs for source-bound stages" /tmp/ross-morning-plan.out
