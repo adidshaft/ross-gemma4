@@ -1808,6 +1808,36 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("fail_runtime_error_detail=missing_mlx_artifact", summary)
         self.assertIn("fail_draft_error_detail=no_draft_configured", summary)
 
+    def test_failure_summary_rejects_foreign_runtime_identity(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=mlx_swift_lm actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime model_format=local_model_artifact "
+            "artifact_path_type=file acceleration=standard draft_tokens=nil "
+            "draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured "
+            "draft_error_detail=no_draft_configured runtime_error_detail=nil"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm "
+            "profile=quick stage=runtime_identity error=runtime_identity_mismatch "
+            "runtime_error_detail=runtime_identity_mismatch draft_error_detail=no_draft_configured "
+            "elapsed=2.4s"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, None)
+
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_invalid", summary)
+        self.assertIn(
+            "failure_runtime_proof_error=runtime_identity_mismatch "
+            "requested_runtime=mlx_swift_lm identity_runtime=gemma_local_runtime",
+            summary,
+        )
+        self.assertIn("failure_mtp_proof_status=not_mtp_profile", summary)
+        self.assertIn("runtime=gemma_local_runtime", summary)
+        self.assertIn("requested_runtime=mlx_swift_lm", summary)
+        self.assertIn("fail_runtime=mlx_swift_lm", summary)
+
     def test_failure_summary_preserves_matrix_shape_error(self):
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "

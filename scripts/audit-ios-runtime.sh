@@ -412,6 +412,7 @@ if ! grep -q '"failure_benchmark_status": "invalid_failed_smoke"' scripts/ross_s
    ! grep -q '"failure_mtp_proof_status": mtp_proof_status' scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "test_failure_summary_marks_active_mtp_failure_as_not_benchmark_valid" scripts/test-ross-smoke-summary.py 2>/dev/null ||
    ! grep -q "test_failure_summary_marks_inactive_mtp_failure_separately" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "test_failure_summary_rejects_foreign_runtime_identity" scripts/test-ross-smoke-summary.py 2>/dev/null ||
    ! grep -q "failure_benchmark_status=invalid_failed_smoke" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: failure summaries do not explicitly classify failed MTP evidence as non-benchmark proof."
     FAIL=1
