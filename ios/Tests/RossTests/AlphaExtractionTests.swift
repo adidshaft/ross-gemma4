@@ -16776,6 +16776,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 
+    func testRuntimeIdentityLineMarksDeterministicProviderAsFallback() throws {
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .deterministicDev,
+            packId: "dev-fallback",
+            installPath: "model-packs/quick_start/dev.json",
+            checksum: String(repeating: "d", count: 64),
+            artifactKind: "tiny_dev_artifact",
+            developmentOnly: true
+        )
+        let provider = DeterministicDevLocalModelProvider(capabilityTier: .quickStart) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: provider.runtimeHealth(),
+            requestedRuntime: .llamaCppGguf
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=DeterministicDevLocalModelProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("actual_runtime=deterministic_dev"))
+        XCTAssertTrue(line.contains("pack_runtime=deterministic_dev"))
+        XCTAssertTrue(line.contains("fallback=deterministic_dev"))
+        XCTAssertTrue(line.contains("available=true"))
+    }
+
     func testRuntimeIdentityLineTreatsCoreAISystemURLAsSystemArtifact() throws {
         let activePack = installedPack(
             .quickStart,

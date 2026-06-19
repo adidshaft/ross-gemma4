@@ -167,6 +167,11 @@ if ! grep -q "testCanRunRealLocalAskFallsBackFromUnavailableSystemAssistantToRec
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeIdentityLineMarksDeterministicProviderAsFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not prove deterministic fallback identity is marked as fallback."
+    FAIL=1
+fi
+
 if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
     FAIL=1
