@@ -5,6 +5,14 @@ FAIL=0
 
 echo "Running iOS Runtime Audit..."
 
+if [[ ! -x scripts/test-ios-runtime-swiftpm.sh ]] ||
+   ! grep -q "testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
+   ! grep -q "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+    echo "❌ FAIL: SwiftPM runtime guardrail test helper is missing MLX/CoreAI/MTP coverage."
+    FAIL=1
+fi
+
 if grep -qE "pgorzelany|swift-gemma-runtime" ios/Package.swift 2>/dev/null; then
     echo "❌ FAIL: Dead dependency found in ios/Package.swift"
     FAIL=1

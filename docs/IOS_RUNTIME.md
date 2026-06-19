@@ -126,6 +126,7 @@ For local Swift verification:
 
 ```bash
 swift test --package-path ios
+scripts/test-ios-runtime-swiftpm.sh
 ```
 
 For app integration, build and launch through Xcode or XcodeBuildMCP using the shared `Ross` scheme. Simulator success is useful evidence for compilation and integration, but it does not replace physical-device proof for model downloads, storage pressure, or hardware runtime behavior.
