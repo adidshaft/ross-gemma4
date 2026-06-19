@@ -834,6 +834,12 @@ if ! grep -q "benchmark_profile_draft_error" scripts/ross_smoke_summary.py 2>/de
     FAIL=1
 fi
 
+if ! grep -q "mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "mtp.*/.*mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: iOS runtime docs do not document both MTP smoke profile aliases as guarded proof profiles."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not require per-stage token and speed metrics."
     FAIL=1
