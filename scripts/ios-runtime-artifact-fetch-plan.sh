@@ -80,7 +80,23 @@ fi
 
 inventory_output="$("${inventory_args[@]}")"
 
-ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT="$inventory_output" python3 - "$tier" "$target_root" "$ROOT_DIR" <<'PY'
+downloader_status="${ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS:-}"
+if [[ -z "$downloader_status" ]]; then
+  if command -v hf >/dev/null 2>&1; then
+    downloader_status="hf_cli"
+  elif python3 - <<'PY' >/dev/null 2>&1
+import huggingface_hub
+PY
+  then
+    downloader_status="python_module"
+  else
+    downloader_status="missing"
+  fi
+fi
+
+ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT="$inventory_output" \
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS="$downloader_status" \
+python3 - "$tier" "$target_root" "$ROOT_DIR" <<'PY'
 import os
 import pathlib
 import shlex
@@ -90,6 +106,7 @@ tier = sys.argv[1]
 target_root = pathlib.Path(sys.argv[2]).expanduser()
 root_dir = pathlib.Path(sys.argv[3])
 raw_inventory = os.environ.get("ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT", "").splitlines()
+downloader_status = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS", "missing")
 
 tier_aliases = {
     "quickStart": {"quickStart", "quick_start"},
@@ -130,7 +147,18 @@ def emit(lane: str, status: str, action: str, **fields: object) -> None:
         line += f" {extras}"
     print(line)
 
-print(f"ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier={q(tier)} target_root={q(target_root)}")
+print(
+    f"ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier={q(tier)} "
+    f"target_root={q(target_root)} downloader_status={q(downloader_status)}"
+)
+
+if downloader_status == "missing":
+    emit(
+        "downloader",
+        "missing",
+        "install",
+        command=command("python3", "-m", "pip", "install", "--user", "huggingface_hub"),
+    )
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
 if present_mlx:

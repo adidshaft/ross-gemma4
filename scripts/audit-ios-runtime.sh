@@ -797,6 +797,9 @@ if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inven
    ! grep -q "catalog_mlx" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q '"hf", "download"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "downloader_status" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "lane=downloader status=missing" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "downloader_status" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "preflight_after_download" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "catalog_mlx status=expected" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory tests/docs do not cover catalog MLX primary and draft expectations."
