@@ -331,6 +331,11 @@ if ! grep -q "testRuntimeIdentityLineIncludesMissingCoreAIArtifactForExplicitCor
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeIdentityLineIncludesMissingMLXArtifactForExplicitMLXWithoutBorrowingGGUF" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not prove explicit MLX requests without an MLX artifact fail as missing_mlx_artifact without borrowing active GGUF identity."
+    FAIL=1
+fi
+
 if ! grep -q "PassingLlamaContext" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: fallback tests do not stub GGUF context creation for placeholder fixtures."
     FAIL=1

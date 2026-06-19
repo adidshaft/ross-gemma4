@@ -21373,6 +21373,51 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=missing_coreai_artifact"))
     }
 
+    func testRuntimeIdentityLineIncludesMissingMLXArtifactForExplicitMLXWithoutBorrowingGGUF() throws {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            installPath: "/tmp/private/device/debug/active-gguf.gguf",
+            artifactKind: "local_model_artifact"
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+        let resolvedProvider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let provider = try XCTUnwrap(resolvedProvider)
+        let health = provider.runtimeHealth()
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: pack,
+            provider: provider,
+            providerHealth: health,
+            requestedRuntime: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaUnavailableRealLocalModelProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("actual_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("pack_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("model_format=local_model_artifact"))
+        XCTAssertTrue(line.contains("artifact_path_type=missing"))
+        XCTAssertTrue(line.contains("artifact_path=active-gguf.gguf"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_status=missing_mlx_artifact"))
+        XCTAssertTrue(line.contains("runtime_error_detail=missing_mlx_artifact"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=missing_mlx_artifact"))
+    }
+
     func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() {
         let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
         let environment = AlphaLocalRuntimeEnvironment(
