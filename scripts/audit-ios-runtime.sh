@@ -840,6 +840,12 @@ if ! grep -q "mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null ||
     FAIL=1
 fi
 
+if ! grep -q "full | quick | mtp | mtp-quick | mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "quick | full | mtp | mtp-quick | mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: smoke helper usage text does not advertise all accepted MTP proof profile aliases."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not require per-stage token and speed metrics."
     FAIL=1
