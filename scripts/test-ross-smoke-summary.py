@@ -1288,6 +1288,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "source_draft_attempted=4 source_draft_accepted=2 "
             "general_input_tokens=80 general_output_tokens=16 general_token_speed=10.5 "
             "general_first_token_ms=850 general_measured_tokens=true "
             "general_acceleration=standard general_draft_tokens=nil general_draft_model=nil"
@@ -1496,10 +1497,12 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=1 source_native_model=true "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "source_draft_attempted=4 source_draft_accepted=2 "
             "general_input_tokens=80 general_output_tokens=6 general_token_speed=10.5 "
             "general_first_token_ms=850 general_measured_tokens=true "
             "general_native_model=true "
-            "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf"
+            "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf "
+            "general_draft_attempted=4 general_draft_accepted=2"
         )
 
         summary = benchmark_summary_line(identity, pass_fields, matrix)
@@ -1507,7 +1510,35 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("acceleration=draftModelSpeculative", summary)
         self.assertIn("draft_candidate_model=mtp.gguf", summary)
         self.assertIn("source_acceleration=draftModelSpeculative", summary)
+        self.assertIn("source_draft_accepted=2", summary)
         self.assertIn("general_draft_model=mtp.gguf", summary)
+
+    def test_benchmark_summary_rejects_mtp_without_draft_acceptance_telemetry(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
+            "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
+            "draft_model_path_type=file draft_candidate_tokens=2 draft_candidate_model=mtp.gguf "
+            "draft_status=active context_tokens=4096 "
+            "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=8"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_refs=1 source_native_model=true "
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf"
+        )
+
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "source_draft_attempted=nil"):
+            benchmark_summary_line(identity, pass_fields, matrix)
 
     def test_benchmark_summary_rejects_missing_source_refs_for_source_bound_stage(self):
         identity = self.valid_identity()

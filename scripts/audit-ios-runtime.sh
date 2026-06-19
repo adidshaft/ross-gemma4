@@ -1177,6 +1177,14 @@ if ! grep -q "benchmark_stage_draft_error" scripts/ross_smoke_summary.py 2>/dev/
     FAIL=1
 fi
 
+if ! grep -q 'stage_draft_attempted in (None, "", "nil")' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_mtp_without_draft_acceptance_telemetry" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "source_draft_attempted=nil" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "positive .*_draft_attempted.*_draft_accepted" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not require positive MTP draft acceptance telemetry."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_profile_draft_error" scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "test_benchmark_summary_rejects_mtp_profile_without_active_draft_identity" scripts/test-ross-smoke-summary.py 2>/dev/null ||
    ! grep -q "test_benchmark_profile_draft_error_recognizes_hyphenated_mtp_alias" scripts/test-ross-smoke-summary.py 2>/dev/null ||

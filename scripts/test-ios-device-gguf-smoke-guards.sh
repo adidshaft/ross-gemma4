@@ -104,8 +104,8 @@ case "$command" in
 Launched application with com.ross.ios bundle identifier.
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=draftModelSpeculative draft_tokens=$draft_tokens draft_model=$draft_artifact draft_model_path_type=file draft_status=active draft_error_detail=configured_acceleration=draftModelSpeculative runtime_error_detail=nil context_tokens=1024 gpu_offload=n_gpu_layers:0 fallback=none available=true
 ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=$smoke_profile cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24
-ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil source_input_tokens=10 source_output_tokens=5 source_token_speed=10.0 source_first_token_ms=100 source_measured_tokens=true source_acceleration=draftModelSpeculative source_draft_tokens=$draft_tokens source_draft_model=$draft_artifact source_runtime_error_detail=nil
-ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil general_input_tokens=10 general_output_tokens=5 general_token_speed=10.0 general_first_token_ms=100 general_measured_tokens=true general_acceleration=draftModelSpeculative general_draft_tokens=$draft_tokens general_draft_model=$draft_artifact general_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil source_input_tokens=10 source_output_tokens=5 source_token_speed=10.0 source_first_token_ms=100 source_measured_tokens=true source_acceleration=draftModelSpeculative source_draft_tokens=$draft_tokens source_draft_model=$draft_artifact source_draft_attempted=4 source_draft_accepted=2 source_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil general_input_tokens=10 general_output_tokens=5 general_token_speed=10.0 general_first_token_ms=100 general_measured_tokens=true general_acceleration=draftModelSpeculative general_draft_tokens=$draft_tokens general_draft_model=$draft_artifact general_draft_attempted=4 general_draft_accepted=2 general_runtime_error_detail=nil
 ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime tier=quick_start profile=$smoke_profile elapsed=10.00s source_refs=1 source_native_model=true general_native_model=true
 EOF
       exit 0
@@ -371,7 +371,9 @@ if ! grep -q "ROSS_SMOKE_BENCHMARK_SUMMARY" "$tmpdir/gguf-draft.out"; then
 fi
 if ! grep -q "matrix_profile=mtp_quick" "$tmpdir/gguf-draft.out" ||
    ! grep -q "source_acceleration=draftModelSpeculative" "$tmpdir/gguf-draft.out" ||
-   ! grep -q "general_acceleration=draftModelSpeculative" "$tmpdir/gguf-draft.out"; then
+   ! grep -q "general_acceleration=draftModelSpeculative" "$tmpdir/gguf-draft.out" ||
+   ! grep -q "source_draft_accepted=2" "$tmpdir/gguf-draft.out" ||
+   ! grep -q "general_draft_accepted=2" "$tmpdir/gguf-draft.out"; then
   echo "FAIL: fake GGUF MTP draft summary did not preserve profile and draft-stage metrics." >&2
   cat "$tmpdir/gguf-draft.out" >&2 || true
   exit 1
