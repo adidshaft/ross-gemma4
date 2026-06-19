@@ -1,5 +1,27 @@
 # Real Model QA Results
 
+## 2026-06-19 iOS simulator current-build MTP low-token checkpoint
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
+- Whether the simulator app was rebuilt before smoke: Yes, via XcodeBuildMCP using scheme `Ross`
+- Runtime mode requested: `gemma_local_runtime` with MTP draft acceleration required
+- Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
+- Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration --tier caseAssociate --smoke-profile mtp_quick --stage-timeout 90 --launch-timeout 240`
+- Result: failed by helper launch guard before a terminal smoke marker; no benchmark claimed.
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Observed behavior:
+  - the current simulator build honors the `mtp_quick` cap: the source stage logged `max_new_tokens=8`
+  - the source-bound document QA stage completed under active MTP draft acceleration with `duration_ms=92021`, but the helper expired at `ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout=240` before a terminal pass/fail marker
+  - the open-query stage began with `max_new_tokens=8`, but no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
+- Current interpretation:
+  - MTP routing, draft artifact loading, active draft identity, and low-token cap behavior are proven on the current simulator build
+  - this is still not benchmark evidence because the helper did not emit a guarded terminal summary with per-stage token metrics
+  - physical-device morning validation is still required before claiming MTP performance
+
 ## 2026-06-19 iOS simulator MTP draft checkpoint
 
 - Branch: `main`
