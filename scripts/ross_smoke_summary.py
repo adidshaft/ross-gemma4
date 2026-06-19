@@ -12,6 +12,18 @@ METRICS = [
     "draft_tokens",
     "draft_model",
 ]
+STAGE_AUX_METRICS = [
+    "raw_chars",
+    "parsed_chars",
+    "output_chars",
+    "refs",
+    "source_refs",
+    "warning_count",
+    "grounded",
+    "refs_kept",
+    "native_model",
+    "error",
+]
 
 RUNTIME_ARTIFACT_RULES = {
     "gemma_local_runtime": {
@@ -340,6 +352,10 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             key = f"{stage}_{metric}"
             if key in pass_fields:
                 summary[key] = pass_fields[key]
+        for metric in STAGE_AUX_METRICS:
+            key = f"{stage}_{metric}"
+            if key in pass_fields:
+                summary[key] = pass_fields[key]
     return summary
 
 
@@ -380,18 +396,12 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "elapsed": summary_value(fail_fields, "elapsed"),
     }
 
-    for key, value in fail_fields.items():
-        if (
-            key.endswith("_error")
-            or key.endswith("_grounded")
-            or key.endswith("_refs_kept")
-            or key.endswith("_native_model")
-            or key.endswith("_warning_count")
-        ):
-            summary[key] = value
-
     for stage in STAGES:
         for metric in METRICS:
+            key = f"{stage}_{metric}"
+            if key in fail_fields:
+                summary[key] = fail_fields[key]
+        for metric in STAGE_AUX_METRICS:
             key = f"{stage}_{metric}"
             if key in fail_fields:
                 summary[key] = fail_fields[key]

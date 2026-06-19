@@ -84,6 +84,28 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("source_token_speed=9.00", summary)
         self.assertIn("bengali_token_speed=8.84", summary)
         self.assertIn("general_token_speed=8.57", summary)
+        self.assertNotIn("source_output_chars=", summary)
+
+    def test_benchmark_summary_preserves_stage_auxiliary_metrics_when_present(self):
+        identity = self.valid_identity()
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=4.2s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=false "
+            "source_raw_chars=240 source_parsed_chars=220 source_refs=1 source_native_model=true"
+        )
+
+        summary = benchmark_summary_line(identity, pass_fields, matrix)
+
+        self.assertIn("source_raw_chars=240", summary)
+        self.assertIn("source_parsed_chars=220", summary)
+        self.assertIn("source_refs=1", summary)
+        self.assertIn("source_native_model=true", summary)
 
     def test_missing_benchmark_matrix_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix"):
@@ -774,6 +796,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime profile=full elapsed=66.49s "
             "source_error=nil tamil_error=nil source_grounded=true tamil_grounded=false "
             "source_refs_kept=true tamil_refs_kept=true source_native_model=true tamil_native_model=true "
+            "source_refs=1 tamil_source_refs=1 source_raw_chars=480 tamil_output_chars=96 "
+            "source_warning_count=0 tamil_warning_count=1 "
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=7.78 "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
             "tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=7.53 "
@@ -791,6 +815,12 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("matrix_cases=nil", summary)
         self.assertIn("matrix_shape_error=cases=0", summary)
         self.assertIn("tamil_grounded=false", summary)
+        self.assertIn("source_refs=1", summary)
+        self.assertIn("tamil_source_refs=1", summary)
+        self.assertIn("source_raw_chars=480", summary)
+        self.assertIn("tamil_output_chars=96", summary)
+        self.assertIn("source_warning_count=0", summary)
+        self.assertIn("tamil_warning_count=1", summary)
         self.assertIn("tamil_token_speed=7.53", summary)
         self.assertIn("source_acceleration=draftModelSpeculative", summary)
         self.assertIn("source_draft_model=mtp.gguf", summary)
