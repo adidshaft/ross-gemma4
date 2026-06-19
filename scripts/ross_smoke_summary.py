@@ -170,24 +170,32 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
                 return f"{key}=nil"
 
         output_tokens = pass_fields.get(f"{stage}_output_tokens")
+        input_tokens = pass_fields.get(f"{stage}_input_tokens")
         token_speed = pass_fields.get(f"{stage}_token_speed")
-        if token_speed != "nil":
-            try:
-                if float(token_speed) <= 0:
-                    return f"{stage}_token_speed={token_speed}"
-            except ValueError:
-                return f"{stage}_token_speed={token_speed}"
-            try:
-                if int(output_tokens) <= 0:
-                    return f"{stage}_output_tokens={output_tokens}"
-            except ValueError:
+        first_token_ms = pass_fields.get(f"{stage}_first_token_ms")
+        measured_tokens = pass_fields.get(f"{stage}_measured_tokens")
+        try:
+            if int(input_tokens) < 0:
+                return f"{stage}_input_tokens={input_tokens}"
+        except (TypeError, ValueError):
+            return f"{stage}_input_tokens={summary_value(pass_fields, f'{stage}_input_tokens')}"
+        try:
+            if int(output_tokens) <= 0:
                 return f"{stage}_output_tokens={output_tokens}"
-
-        if pass_fields.get(f"{stage}_measured_tokens") == "true":
-            if pass_fields.get(f"{stage}_input_tokens") == "nil":
-                return f"{stage}_input_tokens=nil"
-            if output_tokens == "nil":
-                return f"{stage}_output_tokens=nil"
+        except (TypeError, ValueError):
+            return f"{stage}_output_tokens={summary_value(pass_fields, f'{stage}_output_tokens')}"
+        try:
+            if float(token_speed) <= 0:
+                return f"{stage}_token_speed={token_speed}"
+        except (TypeError, ValueError):
+            return f"{stage}_token_speed={summary_value(pass_fields, f'{stage}_token_speed')}"
+        try:
+            if float(first_token_ms) < 0:
+                return f"{stage}_first_token_ms={first_token_ms}"
+        except (TypeError, ValueError):
+            return f"{stage}_first_token_ms={summary_value(pass_fields, f'{stage}_first_token_ms')}"
+        if measured_tokens not in ("true", "false"):
+            return f"{stage}_measured_tokens={summary_value(pass_fields, f'{stage}_measured_tokens')}"
     return None
 
 

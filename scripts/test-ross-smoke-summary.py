@@ -329,6 +329,70 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 matrix,
             )
 
+    def test_benchmark_summary_rejects_nil_token_speed(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "nil",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        self.assertEqual(
+            benchmark_stage_metric_error(pass_fields, matrix),
+            "source_token_speed=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+            benchmark_summary_line(
+                self.valid_identity(),
+                pass_fields,
+                matrix,
+            )
+
+    def test_benchmark_summary_rejects_invalid_stage_metric_values(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        valid_pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        cases = [
+            ("source_input_tokens", "nil", "source_input_tokens=nil"),
+            ("source_input_tokens", "-1", "source_input_tokens=-1"),
+            ("source_first_token_ms", "soon", "source_first_token_ms=soon"),
+            ("source_first_token_ms", "-1", "source_first_token_ms=-1"),
+            ("source_measured_tokens", "estimated", "source_measured_tokens=estimated"),
+        ]
+        for key, value, expected in cases:
+            with self.subTest(key=key, value=value):
+                pass_fields = {**valid_pass_fields, key: value}
+                self.assertEqual(
+                    benchmark_stage_metric_error(pass_fields, matrix),
+                    expected,
+                )
+                with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+                    benchmark_summary_line(
+                        self.valid_identity(),
+                        pass_fields,
+                        matrix,
+                    )
+
     def test_benchmark_summary_rejects_unavailable_runtime_identity(self):
         identity = self.valid_identity()
         identity["available"] = "false"

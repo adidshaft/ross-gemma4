@@ -439,6 +439,11 @@ if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev
     FAIL=1
 fi
 
+if ! grep -q "source_token_speed=nil" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary tests do not reject nil token speed metrics."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject pass runtime and identity runtime mismatches."
     FAIL=1
