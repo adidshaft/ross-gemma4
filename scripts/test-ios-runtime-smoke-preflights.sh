@@ -151,6 +151,16 @@ preflight_expect_ok() {
 }
 
 preflight_expect_ok \
+  "GGUF model file" \
+  "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=gemma_local_runtime artifact_kind=local_model_artifact model_path_type=file" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --preflight-only
+
+preflight_expect_ok \
+  "MLX usable directory" \
+  "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=mlx_swift_lm artifact_kind=mlx_directory model_path_type=directory" \
+  "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --preflight-only
+
+preflight_expect_ok \
   "CoreAI system URL sentinel" \
   "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=apple_foundation_models artifact_kind=system_model model_path_type=system model_path=system://apple-foundation-models" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind system_model --model system://apple-foundation-models --preflight-only

@@ -801,8 +801,10 @@ if ! grep -q "Draft acceleration proof is only supported for GGUF/MLX simulator 
 fi
 
 if ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "GGUF model file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "MLX usable directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "CoreAI system URL sentinel" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
-    echo "❌ FAIL: simulator smoke helper cannot prove valid CoreAI system:// preflight without launching Simulator."
+    echo "❌ FAIL: simulator smoke helper cannot prove valid GGUF/MLX/CoreAI preflights without launching Simulator."
     FAIL=1
 fi
 
