@@ -1134,7 +1134,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 executionPathLabel: "MLX standard generation",
                 accelerationMode: .standard,
                 inputChars: pack.inputChars,
-                errorCategory: availability.errorCategory ?? "missing_mlx_artifact"
+                errorCategory: availability.errorCategory ?? "missing_mlx_artifact",
+                runtimeErrorDetail: availability.errorCategory ?? "missing_mlx_artifact"
             )
         }
 
@@ -1151,7 +1152,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 executionPathLabel: "MLX standard generation",
                 accelerationMode: .standard,
                 inputChars: pack.inputChars,
-                errorCategory: "missing_mlx_artifact"
+                errorCategory: "missing_mlx_artifact",
+                runtimeErrorDetail: "missing_mlx_artifact"
             )
         }
 

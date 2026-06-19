@@ -2593,7 +2593,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             omittedSourceCount: pack.omittedSourceRefs.count,
             omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
             inputChars: pack.inputChars,
-            errorCategory: errorCategory
+            errorCategory: errorCategory,
+            runtimeErrorDetail: errorCategory
         )
     }
 
@@ -2821,7 +2822,8 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
                 accelerationMode: .standard,
                 inputChars: promptPack.inputChars,
-                errorCategory: status.lastErrorCategory ?? "unsupported_runtime_on_platform"
+                errorCategory: status.lastErrorCategory ?? "unsupported_runtime_on_platform",
+                runtimeErrorDetail: status.lastErrorCategory ?? "unsupported_runtime_on_platform"
             )
         }
 

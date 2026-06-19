@@ -22165,6 +22165,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "missing_mlx_artifact")
+        XCTAssertEqual(output.runtimeErrorDetail, "missing_mlx_artifact")
         XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNotNil(output.inputChars)
@@ -22204,6 +22205,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(output.runtimeErrorDetail, "invalid_mlx_artifact")
         XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNotNil(output.inputChars)
@@ -22248,6 +22250,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(output.runtimeErrorDetail, "invalid_mlx_artifact")
         XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNotNil(output.inputChars)
@@ -22296,6 +22299,7 @@ final class AlphaExtractionTests: XCTestCase {
 
             XCTAssertFalse(output.schemaValid)
             XCTAssertEqual(output.errorCategory, "unsupported_model_archive")
+            XCTAssertEqual(output.runtimeErrorDetail, "unsupported_model_archive")
             XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
             XCTAssertEqual(output.accelerationMode, .standard)
             XCTAssertNotNil(output.inputChars)
@@ -23979,6 +23983,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "unsupported_runtime_on_platform")
+        XCTAssertEqual(output.runtimeErrorDetail, "unsupported_runtime_on_platform")
         XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNotNil(output.inputChars)
@@ -24062,6 +24067,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(output.runtimeErrorDetail, "missing_coreai_artifact")
         XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNotNil(output.inputChars)
@@ -24115,6 +24121,7 @@ final class AlphaExtractionTests: XCTestCase {
 
             XCTAssertFalse(output.schemaValid)
             XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+            XCTAssertEqual(output.runtimeErrorDetail, "missing_coreai_artifact")
             XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
             XCTAssertEqual(output.accelerationMode, .standard)
             XCTAssertNotNil(output.inputChars)
@@ -24167,6 +24174,7 @@ final class AlphaExtractionTests: XCTestCase {
 
             XCTAssertFalse(output.schemaValid)
             XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+            XCTAssertEqual(output.runtimeErrorDetail, "missing_coreai_artifact")
             XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
             XCTAssertEqual(output.accelerationMode, .standard)
             XCTAssertNotNil(output.inputChars)
