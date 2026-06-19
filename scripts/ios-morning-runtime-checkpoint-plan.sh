@@ -78,14 +78,18 @@ fi
 
 inventory_has_present_lane() {
   local lane="$1"
+  local requested_tier="${2:-$tier}"
   [[ -n "$inventory_output" ]] || return 0
-  grep -Eq "lane=${lane} status=present" <<<"$inventory_output"
+  grep -Eq "lane=${lane} status=present .*tier=${requested_tier}( |$)" <<<"$inventory_output"
 }
 
 inventory_skip_reason() {
   local lane="$1"
+  local requested_tier="${2:-$tier}"
   [[ -n "$inventory_output" ]] || return 1
-  grep -E "lane=${lane} status=missing" <<<"$inventory_output" | head -n 1 | sed -E 's/.* reason=([^ ]+).*/\1/'
+  grep -E "lane=${lane} status=missing .*tier=${requested_tier}( |$)" <<<"$inventory_output" |
+    head -n 1 |
+    sed -E 's/.* reason=([^ ]+).*/\1/'
 }
 
 print_skip() {
@@ -132,7 +136,7 @@ else
   echo "   SKIP reason=missing_local_gguf model=${gguf_model}"
 fi
 
-if inventory_has_present_lane "installed_mtp_draft"; then
+if inventory_has_present_lane "installed_mtp_draft" "$tier"; then
   print_command \
     "3. MTP low-token proof from installed GGUF pack" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -146,10 +150,10 @@ if inventory_has_present_lane "installed_mtp_draft"; then
 else
   print_skip \
     "3. MTP low-token proof from installed GGUF pack" \
-    "$(inventory_skip_reason "installed_mtp_draft" || echo missing_installed_mtp_draft)"
+    "$(inventory_skip_reason "installed_mtp_draft" "$tier" || echo missing_installed_mtp_draft_for_tier)"
 fi
 
-if inventory_has_present_lane "installed_mlx"; then
+if inventory_has_present_lane "installed_mlx" "$tier"; then
   print_command \
     "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -162,10 +166,10 @@ if inventory_has_present_lane "installed_mlx"; then
 else
   print_skip \
     "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
-    "$(inventory_skip_reason "installed_mlx" || echo missing_installed_mlx)"
+    "$(inventory_skip_reason "installed_mlx" "$tier" || echo missing_installed_mlx_for_tier)"
 fi
 
-if inventory_has_present_lane "installed_coreai"; then
+if inventory_has_present_lane "installed_coreai" "$tier"; then
   print_command \
     "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -178,7 +182,7 @@ if inventory_has_present_lane "installed_coreai"; then
 else
   print_skip \
     "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
-    "$(inventory_skip_reason "installed_coreai" || echo missing_installed_coreai)"
+    "$(inventory_skip_reason "installed_coreai" "$tier" || echo missing_installed_coreai_for_tier)"
 fi
 
 echo

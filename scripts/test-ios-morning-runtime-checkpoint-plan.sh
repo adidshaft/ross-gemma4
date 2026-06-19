@@ -52,6 +52,82 @@ grep -q "SKIP reason=missing_installed_mlx" /tmp/ross-morning-plan.out
 grep -q "5. CoreAI/CoreML/Foundation varied document/query full smoke" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=missing_installed_coreai" /tmp/ross-morning-plan.out
 
+wrong_tier_support_root="$tmpdir/RossAlphaWrongTier"
+wrong_tier_packs_root="$wrong_tier_support_root/model-packs"
+mkdir -p "$wrong_tier_packs_root/caseAssociate" "$wrong_tier_packs_root/mlx/gemma-mlx" "$wrong_tier_packs_root/coreai"
+printf 'GGUF%*s' 1000000 '' > "$wrong_tier_packs_root/caseAssociate/main.gguf"
+printf 'GGUF%*s' 1000000 '' > "$wrong_tier_packs_root/caseAssociate/draft.gguf"
+printf '{}' > "$wrong_tier_packs_root/mlx/gemma-mlx/config.json"
+printf '{}' > "$wrong_tier_packs_root/mlx/gemma-mlx/tokenizer.json"
+printf 'weights' > "$wrong_tier_packs_root/mlx/gemma-mlx/model.safetensors"
+python3 - "$wrong_tier_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "caseAssociate" / "case.manifest.json").write_text(json.dumps({
+    "packId": "case-mtp",
+    "tier": "caseAssociate",
+    "fileName": "main.gguf",
+    "relativePath": "model-packs/caseAssociate/main.gguf",
+    "checksumSha256": "abc",
+    "bytes": 1_000_001,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "draft.gguf",
+        "relativePath": "model-packs/caseAssociate/draft.gguf",
+        "checksumSha256": "def",
+        "bytes": 1_000_001,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
+(packs / "mlx" / "mlx.manifest.json").write_text(json.dumps({
+    "packId": "case-mlx",
+    "tier": "caseAssociate",
+    "fileName": "gemma-mlx",
+    "relativePath": "model-packs/mlx/gemma-mlx",
+    "checksumSha256": "abc",
+    "bytes": 1_000_001,
+    "artifactKind": "mlx_directory",
+    "runtimeMode": "mlx_swift_lm",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
+(packs / "coreai" / "coreai.manifest.json").write_text(json.dumps({
+    "packId": "case-coreai",
+    "tier": "caseAssociate",
+    "fileName": "system-model",
+    "relativePath": "system-model",
+    "checksumSha256": "system",
+    "bytes": 0,
+    "artifactKind": "system_model",
+    "runtimeMode": "apple_foundation_models",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$wrong_tier_support_root" --tier quickStart > /tmp/ross-morning-plan.out
+grep -q "SKIP reason=missing_installed_mtp_draft_for_tier" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=missing_installed_mlx_for_tier" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=missing_installed_coreai_for_tier" /tmp/ross-morning-plan.out
+if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out ||
+   grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out ||
+   grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out; then
+  echo "Expected wrong-tier inventory to skip runtime lanes for quickStart" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
 mkdir -p "$packs_root/mlx/gemma-mlx"
 printf '{}' > "$packs_root/mlx/gemma-mlx/config.json"
 printf '{}' > "$packs_root/mlx/gemma-mlx/tokenizer.json"
