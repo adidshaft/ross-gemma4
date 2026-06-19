@@ -339,7 +339,9 @@ struct RossLocalModelSmokeView: View {
 
         guard let activePack else {
             status = RossLocalModelSmokeStatusCopy.missingAssistantStatus
-            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL no_active_pack")
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=unavailable requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") profile=\(smokeProfile.rawValue) stage=active_pack error=no_active_pack"
+            )
             return
         }
 
@@ -401,7 +403,9 @@ struct RossLocalModelSmokeView: View {
             executor: smokeFallbackExecutor
         ), provider.runtimeMode != .deterministicDev else {
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
-            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(activePack.runtimeMode.rawValue)")
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(activePack.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=resolve_provider error=provider_unavailable"
+            )
             return
         }
         let providerHealth = provider.runtimeHealth()

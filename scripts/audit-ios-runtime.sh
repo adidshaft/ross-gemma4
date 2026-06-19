@@ -45,6 +45,16 @@ if ! grep -q "ROSS_RUNTIME_IDENTITY" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
+if ! grep -q "error=no_active_pack" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke no-active-pack failures are not structured with an error field."
+    FAIL=1
+fi
+
+if ! grep -q "stage=resolve_provider error=provider_unavailable" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke provider-unavailable failures are not structured with stage/error fields."
+    FAIL=1
+fi
+
 if ! grep -q "preflightProvider = AlphaLocalModelRuntime.resolveProvider" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: unavailable smoke preflight does not log the actual provider identity."
     FAIL=1
