@@ -90,6 +90,18 @@ case "$tier" in
     ;;
 esac
 
+case "$tier" in
+  quickStart)
+    canonical_tier="quick_start"
+    ;;
+  caseAssociate)
+    canonical_tier="case_associate"
+    ;;
+  seniorDraftingSupport)
+    canonical_tier="senior_drafting_support"
+    ;;
+esac
+
 model_basename="$(basename "$model_path")"
 model_basename_lower="$(printf '%s' "$model_basename" | tr '[:upper:]' '[:lower:]')"
 case "$model_basename_lower" in
@@ -122,7 +134,7 @@ tmpdir="$(mktemp -d /tmp/ross-ios-device-gguf-smoke.XXXXXX)"
 trap 'rm -rf "$tmpdir"' EXIT
 
 probe_dir="$tmpdir/Library/Application Support/RossAlpha"
-seed_dir="$probe_dir/model-packs/$tier"
+seed_dir="$probe_dir/model-packs/$canonical_tier"
 mkdir -p "$seed_dir"
 
 probe_file="$probe_dir/.device-proof-probe"
@@ -132,9 +144,9 @@ cp "$model_path" "$seed_dir/$seed_model_basename"
 cat > "$seed_dir/$manifest_basename" <<EOF
 {
   "packId": "$pack_id",
-  "tier": "$tier",
+  "tier": "$canonical_tier",
   "fileName": "$seed_model_basename",
-  "relativePath": "model-packs/$tier/$seed_model_basename",
+  "relativePath": "model-packs/$canonical_tier/$seed_model_basename",
   "checksumSha256": "$checksum",
   "bytes": $bytes,
   "artifactKind": "local_model_artifact",
@@ -161,7 +173,7 @@ if [[ -z "$probe_device_path" ]]; then
 fi
 
 container_root="${probe_device_path%/Library/Application Support/RossAlpha/.device-proof-probe}"
-device_model_path="$container_root/Library/Application Support/RossAlpha/model-packs/$tier/$seed_model_basename"
+device_model_path="$container_root/Library/Application Support/RossAlpha/model-packs/$canonical_tier/$seed_model_basename"
 
 echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
@@ -172,7 +184,7 @@ xcrun devicectl device copy to \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
   --source "$seed_dir/$seed_model_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$tier/" \
+  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/" \
   > /dev/null
 
 xcrun devicectl device copy to \
@@ -180,7 +192,7 @@ xcrun devicectl device copy to \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
   --source "$seed_dir/$manifest_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$tier/" \
+  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/" \
   > /dev/null
 
 python3 - "$device_id" "$bundle_id" "$device_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'

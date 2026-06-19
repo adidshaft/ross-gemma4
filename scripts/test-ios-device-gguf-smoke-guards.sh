@@ -144,7 +144,7 @@ if [[ -z "$model_copy_line" || -z "$manifest_copy_line" || "$model_copy_line" -g
   exit 1
 fi
 
-manifest_path="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quickStart/$manifest_name"
+manifest_path="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick_start/$manifest_name"
 python3 - "$manifest_path" "$device_model_name" <<'PY'
 import json
 import pathlib
@@ -152,9 +152,11 @@ import sys
 
 manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
 device_model_name = sys.argv[2]
+if manifest.get("tier") != "quick_start":
+    raise SystemExit(f"manifest tier mismatch: {manifest.get('tier')}")
 if manifest.get("fileName") != device_model_name:
     raise SystemExit(f"manifest fileName mismatch: {manifest.get('fileName')}")
-if manifest.get("relativePath") != f"model-packs/quickStart/{device_model_name}":
+if manifest.get("relativePath") != f"model-packs/quick_start/{device_model_name}":
     raise SystemExit(f"manifest relativePath mismatch: {manifest.get('relativePath')}")
 PY
 
