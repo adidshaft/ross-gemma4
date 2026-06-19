@@ -1141,7 +1141,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let draftPath = draftStatus.draftPath,
             let stagedDraft = draftStatus.metadata
         else {
-            return (draftStatus.metadata, draftStatus.status, draftStatus.status)
+            let detail = draftStatus.status == "draft_token_policy_blocked"
+                ? draftTokenPolicyBlockedDetail(tokens: draftStatus.metadata?.tokens)
+                : draftStatus.status
+            return (draftStatus.metadata, draftStatus.status, detail)
         }
 
         do {
@@ -1170,6 +1173,15 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "validator_error=\(nsError.domain):\(nsError.code)"
         }
         return "validator_error=\(String(describing: type(of: error)))"
+    }
+
+    private func draftTokenPolicyBlockedDetail(tokens: Int?) -> String {
+        let requestedTokens = tokens.map(String.init) ?? "nil"
+        let maximumTokens = AlphaLlamaRuntimeProfile.maximumSupportedDraftTokens(
+            forModelPath: modelPath,
+            physicalMemory: Self.physicalMemoryBytesProvider()
+        )
+        return "requested_draft_tokens=\(requestedTokens),max_supported_draft_tokens=\(maximumTokens)"
     }
 
     private static func redactedDraftValidationDetail(_ value: String) -> String {

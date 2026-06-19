@@ -8011,6 +8011,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(health.draftModelPathLabel)
         XCTAssertEqual(health.draftModelPathType, "file")
         XCTAssertEqual(health.draftAccelerationStatus, "draft_token_policy_blocked")
+        XCTAssertEqual(
+            health.draftAccelerationDetail,
+            "requested_draft_tokens=4,max_supported_draft_tokens=2"
+        )
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNil(output.accelerationDraftTokens)
         XCTAssertNil(output.accelerationDraftModelLabel)

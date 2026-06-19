@@ -791,6 +791,14 @@ if ! grep -q "draft_validator_rejected" ios/Ross/AlphaFoundation/AlphaLlamaCppPr
     FAIL=1
 fi
 
+if ! grep -q "requested_draft_tokens" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "max_supported_draft_tokens" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "requested_draft_tokens=4,max_supported_draft_tokens=2" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "requested_draft_tokens=4,max_supported_draft_tokens=2" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP draft token-policy blocks do not preserve safe requested/max token diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "draft_output_degenerate" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not quarantine degenerate draft output."
     FAIL=1
