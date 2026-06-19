@@ -803,7 +803,8 @@ fi
 if ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "GGUF model file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "MLX usable directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
-   ! grep -q "CoreAI system URL sentinel" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+   ! grep -q "CoreAI system URL sentinel" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q -- "--preflight-only.*ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: simulator smoke helper cannot prove valid GGUF/MLX/CoreAI preflights without launching Simulator."
     FAIL=1
 fi
