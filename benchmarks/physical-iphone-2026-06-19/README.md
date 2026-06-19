@@ -89,6 +89,36 @@ Fresh speed highlights:
 | 2B full | Telugu document query | 433 input / 60 output | 10.00 output tok/s |
 | 2B full | General query | 190 input / 190 output | 14.85 output tok/s |
 
+## Final Physical Pause Checkpoint - 2026-06-19 14:30 IST
+
+The current checkout was rebuilt, installed, and revalidated on the same cabled iPhone 15 Pro. Installed storage still resolved to three manifest-backed packs: E4B Quick Start (`5.13 GB` plus the MTP draft companion), Gemma 2 2B proof (`1.71 GB`), and Gemma 4 12B proof (`7.37 GB`). The full benchmark matrix again covered English source-grounded document Q&A, Bengali/Hindi/Tamil/Telugu source-grounded document Q&A, and an English open no-document query.
+
+| Pack / probe | Result | Runtime identity |
+| --- | --- | --- |
+| `gemma-4-e4b-q4`, draft disabled | PASS | `gemma_local_runtime`, `acceleration=standard`, `fallback=none`, `context_tokens=4096`, CPU-only llama.cpp |
+| `gemma-2-2b-it-Q4_K_M-device-proof` | PASS | `gemma_local_runtime`, `acceleration=standard`, `fallback=none`, `context_tokens=10240`, Metal offload enabled |
+| `gemma-4-12b-it-UD-Q4_K_XL-device-proof` | FAIL SAFE | Blocked before generation with `insufficient_device_memory` |
+| E4B strict `mtp_quick` | FAIL SAFE | `draft_status=validator_failed`, `error=draft_acceleration_required`; not benchmark evidence |
+
+Fresh speed highlights from this checkpoint:
+
+| Run | Stage | Tokens processed | Token speed |
+| --- | --- | ---: | ---: |
+| E4B standard full | Source document query | 207 input / 56 output | 9.56 output tok/s |
+| E4B standard full | Bengali document query | 240 input / 59 output | 8.87 output tok/s |
+| E4B standard full | Hindi document query | 246 input / 59 output | 7.92 output tok/s |
+| E4B standard full | Tamil document query | 305 input / 95 output | 7.75 output tok/s |
+| E4B standard full | Telugu document query | 339 input / 96 output | 7.56 output tok/s |
+| E4B standard full | General query | 190 input / 30 output | 9.23 output tok/s |
+| 2B full | Source document query | 207 input / 105 output | 17.02 output tok/s |
+| 2B full | Bengali document query | 328 input / 192 output | 16.45 output tok/s |
+| 2B full | Hindi document query | 278 input / 192 output | 14.91 output tok/s |
+| 2B full | Tamil document query | 382 input / 54 output | 10.68 output tok/s |
+| 2B full | Telugu document query | 433 input / 60 output | 10.44 output tok/s |
+| 2B full | General query | 190 input / 190 output | 17.66 output tok/s |
+
+The pause-state conclusion is unchanged but better evidenced: GGUF standard generation is working on the physical device, storage selection is manifest-backed and runtime-guarded, 12B remains correctly gated on this 7 GB device class, and MTP must stay non-release until a strict draft-acceleration proof passes without validator failure or degenerate output.
+
 ## Installed Packs Observed
 
 | Tier | Pack | Runtime | Artifact | Size | Notes |
@@ -240,3 +270,8 @@ Compact logs are stored in this folder:
 | [`logs/12b-quick.log`](logs/12b-quick.log) | 12B memory-guard block. |
 | [`logs/coreai-request.log`](logs/coreai-request.log) | CoreAI request evidence showing fallback into GGUF-installed state. |
 | [`logs/mlx-request.log`](logs/mlx-request.log) | MLX request evidence showing fallback into GGUF-installed state. |
+| [`logs/current-final-checkpoint/installed-packs.log`](logs/current-final-checkpoint/installed-packs.log) | Final checkpoint installed-pack inventory. |
+| [`logs/current-final-checkpoint/e4b-standard-full.log`](logs/current-final-checkpoint/e4b-standard-full.log) | Final E4B standard full multilingual/source/general pass. |
+| [`logs/current-final-checkpoint/2b-full.log`](logs/current-final-checkpoint/2b-full.log) | Final 2B full multilingual/source/general pass. |
+| [`logs/current-final-checkpoint/12b-quick.log`](logs/current-final-checkpoint/12b-quick.log) | Final 12B memory-guard block. |
+| [`logs/current-final-checkpoint/e4b-mtp-quick-strict.log`](logs/current-final-checkpoint/e4b-mtp-quick-strict.log) | Final strict MTP failure-safe evidence. |
