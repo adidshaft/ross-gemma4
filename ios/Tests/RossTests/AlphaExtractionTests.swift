@@ -3726,6 +3726,48 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testInstalledRuntimeValidationRejectsMislabeledMLXArtifactKind() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let validPack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let mislabeledPack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        XCTAssertTrue(alphaInstalledAssistantPackPassesRuntimeValidation(validPack))
+        XCTAssertFalse(alphaInstalledAssistantPackPassesRuntimeValidation(mislabeledPack))
+    }
+
+    @MainActor
     func testRecoveredInstalledPackFromDiskRejectsTamperedMLXDirectoryArtifact() async throws {
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
