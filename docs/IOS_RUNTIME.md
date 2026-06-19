@@ -104,7 +104,7 @@ Clear unavailable categories for benchmark triage:
 
 - `missing_mlx_artifact`: the requested MLX lane did not receive a usable MLX directory path, including the case where a GGUF file was supplied to `--runtime mlx`.
 - `invalid_mlx_artifact`: the requested MLX directory exists but lacks the required MLX runtime files.
-- `unsupported_gemma4_multimodal`, `unsupported_gemma4_moe`, `unsupported_gemma4_dense_31b`, `unsupported_gemma4_assistant`: the requested MLX directory is structurally present but belongs to a Gemma 4 archive family the current runtime must not load directly. This is a fail-closed guardrail: do not count a crash-prone or non-primary MLX package as generation proof.
+- `unsupported_gemma4_multimodal`, `unsupported_gemma4_moe`, `unsupported_gemma4_dense_31b`, `unsupported_gemma4_assistant`: the requested MLX directory is structurally present but belongs to a Gemma 4 archive family the current runtime must not load directly. The app-side MLX runtime health and failed run output use these same precise categories before generation is attempted. This is a fail-closed guardrail: do not count a crash-prone or non-primary MLX package as generation proof.
 - `invalid_mlx_draft_artifact`: the primary MLX directory is usable, but the configured draft companion is not.
 - `mlx_generation_failed`: the MLX provider was selected with a usable MLX primary artifact, but standard generation failed before returning a usable answer.
 - `mlx_draft_generation_failed`: MLX draft acceleration was requested in smoke proof mode, the primary/draft identity was staged, but speculative draft generation failed before a valid answer. In that mode Ross does not retry standard MLX generation, so a required-draft smoke cannot publish standard MLX numbers.

@@ -857,6 +857,21 @@ private enum AlphaMLXArchiveCompatibility {
     case unsupportedGemma4Multimodal
     case unsupportedGemma4MoE
     case unsupportedGemma4Dense31B
+
+    var runtimeErrorCategory: String? {
+        switch self {
+        case .supported:
+            return nil
+        case .unsupportedGemma4Assistant:
+            return "unsupported_gemma4_assistant"
+        case .unsupportedGemma4Multimodal:
+            return "unsupported_gemma4_multimodal"
+        case .unsupportedGemma4MoE:
+            return "unsupported_gemma4_moe"
+        case .unsupportedGemma4Dense31B:
+            return "unsupported_gemma4_dense_31b"
+        }
+    }
 }
 
 struct AlphaMLXGenerationSnapshot: Sendable {
@@ -1396,8 +1411,12 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         switch Self.archiveCompatibility(for: directoryURL) {
         case .supported:
             break
-        case .unsupportedGemma4Assistant, .unsupportedGemma4Multimodal, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
-            return (false, "unsupported_model_archive", alphaRuntimeHealthStatus(.mlxArchiveUnsupported))
+        case let unsupported:
+            return (
+                false,
+                unsupported.runtimeErrorCategory ?? "unsupported_model_archive",
+                alphaRuntimeHealthStatus(.mlxArchiveUnsupported)
+            )
         }
 
         return (true, nil, alphaRuntimeHealthStatus(.llamaReady))

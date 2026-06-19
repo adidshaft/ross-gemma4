@@ -632,7 +632,11 @@ if ! grep -q "testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration" ios/T
 fi
 
 if ! grep -q "unsupportedGemma4Multimodal" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "runtimeErrorCategory" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksUnsupportedGemma4MultimodalMLXArchiveUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q 'unsupported_gemma4_assistant' ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q 'unsupported_gemma4_moe' ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q 'unsupported_gemma4_multimodal' ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "unsupported_gemma4_multimodal" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: crash-prone Gemma 4 multimodal MLX archives are not fail-closed before generation."
     FAIL=1

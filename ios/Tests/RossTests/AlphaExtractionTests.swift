@@ -22339,12 +22339,21 @@ final class AlphaExtractionTests: XCTestCase {
         }
 
         let unsupportedConfigs = [
-            #"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#,
-            #"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#,
-            #"{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"],"vision_config":{"model_type":"gemma4_vision"}}"#
+            (
+                #"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#,
+                "unsupported_gemma4_moe"
+            ),
+            (
+                #"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#,
+                "unsupported_gemma4_assistant"
+            ),
+            (
+                #"{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"],"vision_config":{"model_type":"gemma4_vision"}}"#,
+                "unsupported_gemma4_multimodal"
+            )
         ]
 
-        for config in unsupportedConfigs {
+        for (config, expectedErrorCategory) in unsupportedConfigs {
             let directory = FileManager.default.temporaryDirectory
                 .appendingPathComponent("ross-unsupported-mlx-run-\(UUID().uuidString)", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -22372,8 +22381,8 @@ final class AlphaExtractionTests: XCTestCase {
             )
 
             XCTAssertFalse(output.schemaValid)
-            XCTAssertEqual(output.errorCategory, "unsupported_model_archive")
-            XCTAssertEqual(output.runtimeErrorDetail, "unsupported_model_archive")
+            XCTAssertEqual(output.errorCategory, expectedErrorCategory)
+            XCTAssertEqual(output.runtimeErrorDetail, expectedErrorCategory)
             XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
             XCTAssertEqual(output.accelerationMode, .standard)
             XCTAssertNotNil(output.inputChars)
@@ -22645,7 +22654,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_gemma4_assistant")
+        XCTAssertEqual(health?.runtimeErrorDetail, "unsupported_gemma4_assistant")
         XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_mlx_archive_unsupported"))
     }
 
@@ -22684,7 +22694,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_gemma4_moe")
+        XCTAssertEqual(health?.runtimeErrorDetail, "unsupported_gemma4_moe")
     }
 
     func testRuntimeHealthMarksUnsupportedGemma4MultimodalMLXArchiveUnavailable() throws {
@@ -22723,7 +22734,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_gemma4_multimodal")
+        XCTAssertEqual(health?.runtimeErrorDetail, "unsupported_gemma4_multimodal")
         XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_mlx_archive_unsupported"))
     }
 
