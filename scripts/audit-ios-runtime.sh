@@ -688,6 +688,13 @@ if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.s
     FAIL=1
 fi
 
+if ! grep -q "draft_model_path_type" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "GGUF MTP draft file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "MLX draft directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator no-launch preflight does not expose draft artifact readiness evidence."
+    FAIL=1
+fi
+
 if ! grep -q "inventory_tier_pattern" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "missing_installed_mlx_for_tier" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "wrong-tier inventory" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then

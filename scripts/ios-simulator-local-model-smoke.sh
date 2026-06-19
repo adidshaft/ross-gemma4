@@ -452,7 +452,25 @@ if [[ "$preflight_only" == "1" ]]; then
   else
     model_path_type="missing"
   fi
-  echo "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=$normalized_runtime artifact_kind=$artifact_kind model_path_type=$model_path_type model_path=$model_path"
+  if [[ -z "$draft_model_path" ]]; then
+    draft_model_path_type="nil"
+    draft_model_label="nil"
+  elif [[ -d "$draft_model_path" ]]; then
+    draft_model_path_type="directory"
+    draft_model_label="$(basename "$draft_model_path")"
+  elif [[ -f "$draft_model_path" ]]; then
+    draft_model_path_type="file"
+    draft_model_label="$(basename "$draft_model_path")"
+  else
+    draft_model_path_type="missing"
+    draft_model_label="$(basename "$draft_model_path")"
+  fi
+  if [[ -z "$draft_tokens" ]]; then
+    preflight_draft_tokens="nil"
+  else
+    preflight_draft_tokens="$draft_tokens"
+  fi
+  echo "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=$normalized_runtime artifact_kind=$artifact_kind model_path_type=$model_path_type model_path=$model_path draft_model_path_type=$draft_model_path_type draft_model=$draft_model_label draft_tokens=$preflight_draft_tokens"
   exit 0
 fi
 

@@ -169,6 +169,21 @@ preflight_expect_ok \
   "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --preflight-only
 
 preflight_expect_ok \
+  "GGUF MTP draft file" \
+  "draft_model_path_type=file draft_model=main.gguf draft_tokens=2" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$main_gguf" --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --preflight-only
+
+usable_mlx_draft="$tmpdir/usable-mlx-draft"
+mkdir -p "$usable_mlx_draft"
+printf '{}' >"$usable_mlx_draft/config.json"
+printf '{}' >"$usable_mlx_draft/tokenizer.json"
+printf 'weights' >"$usable_mlx_draft/model.safetensors"
+preflight_expect_ok \
+  "MLX draft directory" \
+  "draft_model_path_type=directory draft_model=usable-mlx-draft draft_tokens=2" \
+  "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --draft-model "$usable_mlx_draft" --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --preflight-only
+
+preflight_expect_ok \
   "CoreAI system URL sentinel" \
   "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=apple_foundation_models artifact_kind=system_model model_path_type=system model_path=system://apple-foundation-models" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind system_model --model system://apple-foundation-models --preflight-only
