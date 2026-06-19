@@ -960,7 +960,8 @@ struct RossLocalModelSmokeView: View {
         providerName: String,
         actualRuntime: AlphaPackRuntimeMode,
         providerHealth: AlphaLocalRuntimeHealth,
-        requestedRuntime: AlphaPackRuntimeMode?
+        requestedRuntime: AlphaPackRuntimeMode?,
+        forceSimulatorCPUOffload: Bool = runtimeIdentityUsesSimulatorCPUOffload()
     ) -> String {
         let artifactURL = URL(fileURLWithPath: activePack.installPath)
         let resolvedArtifactURL = activePack.installPath.hasPrefix("/")
@@ -983,10 +984,14 @@ struct RossLocalModelSmokeView: View {
         let gpuOffloadInfo: String
         switch actualRuntime {
         case .llamaCppGguf:
-            let gpuLayers = AlphaLlamaRuntimeProfile.gpuLayerCount(forModelPath: activePack.installPath)
-            let offloadKQV = AlphaLlamaRuntimeProfile.shouldOffloadKQV(forModelPath: activePack.installPath)
-            let opOffload = AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(forModelPath: activePack.installPath)
-            gpuOffloadInfo = "n_gpu_layers:\(gpuLayers),offload_kqv:\(offloadKQV),op_offload:\(opOffload)"
+            if forceSimulatorCPUOffload {
+                gpuOffloadInfo = "n_gpu_layers:0,offload_kqv:false,op_offload:false"
+            } else {
+                let gpuLayers = AlphaLlamaRuntimeProfile.gpuLayerCount(forModelPath: activePack.installPath)
+                let offloadKQV = AlphaLlamaRuntimeProfile.shouldOffloadKQV(forModelPath: activePack.installPath)
+                let opOffload = AlphaLlamaRuntimeProfile.shouldOffloadHostOperations(forModelPath: activePack.installPath)
+                gpuOffloadInfo = "n_gpu_layers:\(gpuLayers),offload_kqv:\(offloadKQV),op_offload:\(opOffload)"
+            }
         case .mlxSwiftLm:
             gpuOffloadInfo = "mlx_default"
         case .appleFoundationModels:
@@ -1021,6 +1026,14 @@ struct RossLocalModelSmokeView: View {
             .map { "\($0.0)=\(stableSmokeValue($0.1))" }
             .joined(separator: " ")
         return line
+    }
+
+    nonisolated static func runtimeIdentityUsesSimulatorCPUOffload() -> Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
     }
 
     nonisolated static func preflightProviderName(for runtimeMode: AlphaPackRuntimeMode) -> String {

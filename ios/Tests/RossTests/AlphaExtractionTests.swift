@@ -18118,6 +18118,53 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=nil"))
     }
 
+    func testRuntimeIdentityLineReportsSimulatorGGUFCPUOffload() throws {
+        let modelURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross simulator identity gguf \(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "simulator-gguf",
+            installPath: modelURL.path,
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: modelURL.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 22_000,
+            estimatedContextTokens: 2_048,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            draftAccelerationStatus: "no_draft_configured",
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            providerName: "AlphaLlamaCppProvider",
+            actualRuntime: .llamaCppGguf,
+            providerHealth: health,
+            requestedRuntime: .llamaCppGguf,
+            forceSimulatorCPUOffload: true
+        )
+
+        XCTAssertTrue(line.contains("actual_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:0,offload_kqv:false,op_offload:false"))
+    }
+
     func testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutClaimingAcceleration() throws {
         let modelURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross identity rejected gguf \(UUID().uuidString)")

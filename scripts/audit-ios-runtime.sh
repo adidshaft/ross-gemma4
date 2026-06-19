@@ -87,6 +87,13 @@ if ! grep -q "draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
+if ! grep -q "runtimeIdentityUsesSimulatorCPUOffload" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testRuntimeIdentityLineReportsSimulatorGGUFCPUOffload" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testRuntimeIdentityLineReportsSimulatorGGUFCPUOffload" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator GGUF runtime identity can claim device GPU offload while simulator forces CPU."
+    FAIL=1
+fi
+
 if ! grep -q "draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "draftAccelerationDetail" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: MTP runtime identity does not preserve safe draft validator diagnostics."
