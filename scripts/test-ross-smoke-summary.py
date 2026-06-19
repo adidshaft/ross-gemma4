@@ -151,7 +151,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=4.2s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=false "
-            "source_raw_chars=240 source_parsed_chars=220 source_refs=1 source_native_model=true"
+            "source_raw_chars=240 source_parsed_chars=220 source_refs=1 source_native_model=true "
+            "source_runtime_error_detail=domain:FoundationModels.LanguageModelSession,code:-7"
         )
 
         summary = benchmark_summary_line(identity, pass_fields, matrix)
@@ -160,6 +161,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("source_parsed_chars=220", summary)
         self.assertIn("source_refs=1", summary)
         self.assertIn("source_native_model=true", summary)
+        self.assertIn("source_runtime_error_detail=domain:FoundationModels.LanguageModelSession,code:-7", summary)
 
     def test_benchmark_summary_accepts_coreai_system_url_identity(self):
         identity = self.valid_identity("apple_foundation_models")
@@ -1240,7 +1242,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=7.78 "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
             "tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=7.53 "
-            "tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil"
+            "tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil "
+            "tamil_runtime_error_detail=domain:MLX.Generator,code:-99"
         )
 
         summary = failure_summary_line(identity, fail_fields, matrix)
@@ -1272,6 +1275,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("source_draft_model=mtp.gguf", summary)
         self.assertIn("tamil_acceleration=standard", summary)
         self.assertIn("tamil_draft_model=nil", summary)
+        self.assertIn("tamil_runtime_error_detail=domain:MLX.Generator,code:-99", summary)
 
     def test_failure_summary_survives_missing_runtime_identity(self):
         fail_fields = parse_fields(
