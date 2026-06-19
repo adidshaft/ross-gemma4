@@ -719,6 +719,31 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let surfacedDraftMetadata = surfacedDraftMetadata(for: activeAccelerationMode)
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
+            if activeAccelerationMode == .draftModelSpeculative,
+               Self.isDegenerateDraftOutput(cleanedResponse) {
+                var warnings = pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
+                warnings.append("Draft acceleration produced degenerate output; rerun with draft disabled.")
+                return AlphaLocalModelOutput(
+                    rawText: cleanedResponse,
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: warnings,
+                    sourceRefs: pack.includedSourceRefs,
+                    packedSourceCount: pack.includedSourceRefs.count,
+                    omittedSourceCount: pack.omittedSourceRefs.count,
+                    omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+                    executionPathLabel: activeExecutionPathLabel,
+                    accelerationMode: activeAccelerationMode,
+                    accelerationDraftTokens: surfacedDraftMetadata?.tokens,
+                    accelerationDraftModelLabel: surfacedDraftMetadata?.label,
+                    inputChars: pack.inputChars,
+                    inputTokenCount: promptTokenCount,
+                    outputTokenCount: outputTokenCount,
+                    outputTokensPerSecond: outputTokensPerSecond,
+                    timeToFirstTokenMs: timeToFirstTokenMs,
+                    errorCategory: "draft_output_degenerate"
+                )
+            }
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
                 ? Self.sourceLanguageFallbackIfNeeded(
                     for: taskInput,
@@ -889,6 +914,33 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return true
         }
         return growth >= 24
+    }
+
+    nonisolated static func isDegenerateDraftOutput(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return false }
+        if trimmed.localizedCaseInsensitiveContains("<|channel>") {
+            return true
+        }
+
+        let scalars = trimmed.unicodeScalars.filter { scalar in
+            scalar.properties.isWhitespace == false
+        }
+        guard scalars.count >= 12 else { return false }
+
+        var counts: [UnicodeScalar: Int] = [:]
+        for scalar in scalars {
+            counts[scalar, default: 0] += 1
+        }
+        let mostRepeatedScalarCount = counts.values.max() ?? 0
+        if mostRepeatedScalarCount >= max(10, scalars.count * 3 / 4) {
+            return true
+        }
+
+        if scalars.count >= 20, counts.count <= 3 {
+            return true
+        }
+        return false
     }
 
     private func shouldStopGeneration(afterAppending token: String, fullText: String) -> Bool {
