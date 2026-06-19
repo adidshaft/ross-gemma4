@@ -6,19 +6,27 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-runtime-artifact-inventory.sh [--search-root <path>]...
+  scripts/ios-runtime-artifact-inventory.sh [--search-root <path>]... [--installed-root <path>]...
 
 Scans local filesystem paths for benchmarkable iOS runtime artifacts without
 launching Simulator, devicectl, or the app. Results are advisory preflight
 evidence only; generation proof still requires a guarded smoke pass.
+
+Use --installed-root with either a RossAlpha support root or its model-packs
+directory to inspect manifest-backed installed packs before a device smoke.
 EOF
 }
 
 search_roots=()
+installed_roots=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --search-root)
       search_roots+=("${2:-}")
+      shift 2
+      ;;
+    --installed-root)
+      installed_roots+=("${2:-}")
       shift 2
       ;;
     -h|--help)
@@ -136,3 +144,168 @@ print_present_or_missing \
   "no_mlmodel_or_mlmodelc_adapter_found"
 
 printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke\n'
+
+if [[ "${#installed_roots[@]}" -gt 0 ]]; then
+for installed_root in "${installed_roots[@]}"; do
+  [[ -n "$installed_root" && -e "$installed_root" ]] || {
+    printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=installed_packs status=missing path=%q reason=installed_root_not_found\n' "$installed_root"
+    continue
+  }
+
+  python3 - "$installed_root" <<'PY'
+import json
+import pathlib
+import shlex
+import sys
+
+raw_root = pathlib.Path(sys.argv[1]).expanduser()
+model_packs_root = raw_root if raw_root.name == "model-packs" else raw_root / "model-packs"
+support_root = model_packs_root.parent
+
+def q(value: str) -> str:
+    return shlex.quote(value)
+
+def emit(lane: str, status: str, path: str, reason: str, **fields: object) -> None:
+    extras = " ".join(f"{key}={q(str(value))}" for key, value in fields.items() if value is not None)
+    line = f"ROSS_RUNTIME_ARTIFACT_INVENTORY lane={lane} status={status} path={q(path)} reason={reason}"
+    if extras:
+        line += f" {extras}"
+    print(line)
+
+def artifact_exists(relative_path: str, runtime: str, artifact_kind: str) -> bool:
+    if not relative_path:
+        return False
+    if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
+        return True
+    candidate = support_root / relative_path
+    return candidate.exists()
+
+def expected_path_type(relative_path: str, artifact_kind: str) -> str:
+    if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
+        return "system"
+    return "file_or_directory"
+
+def runtime_lane(runtime: str) -> str:
+    if runtime == "gemma_local_runtime":
+        return "installed_gguf"
+    if runtime == "mlx_swift_lm":
+        return "installed_mlx"
+    if runtime == "apple_foundation_models":
+        return "installed_coreai"
+    return "installed_unknown"
+
+def compatible_primary(runtime: str, artifact_kind: str, relative_path: str) -> tuple[bool, str]:
+    lower_path = relative_path.lower()
+    if runtime == "gemma_local_runtime":
+        if artifact_kind not in {"local_model_artifact", "gguf", "gguf_model"}:
+            return False, "manifest_incompatible_artifact_kind"
+        if not lower_path.endswith(".gguf"):
+            return False, "manifest_non_gguf_primary"
+    elif runtime == "mlx_swift_lm":
+        if artifact_kind != "mlx_directory":
+            return False, "manifest_incompatible_artifact_kind"
+        if lower_path.endswith((".gguf", ".bin")):
+            return False, "manifest_file_like_mlx_primary"
+    elif runtime == "apple_foundation_models":
+        if artifact_kind == "system_model":
+            if relative_path != "system-model" and not relative_path.startswith("system://"):
+                return False, "manifest_invalid_system_model_sentinel"
+        elif artifact_kind not in {"foundation_adapter", "coreai_adapter", "coreml_model"}:
+            return False, "manifest_incompatible_artifact_kind"
+    return True, "manifest_primary_compatible"
+
+def compatible_draft(runtime: str, artifact_kind: str, relative_path: str) -> tuple[bool, str]:
+    lower_path = relative_path.lower()
+    if runtime == "gemma_local_runtime":
+        if artifact_kind not in {"local_model_artifact", "gguf", "gguf_model"}:
+            return False, "manifest_incompatible_draft_artifact_kind"
+        if not lower_path.endswith(".gguf"):
+            return False, "manifest_non_gguf_draft"
+    elif runtime == "mlx_swift_lm":
+        if artifact_kind != "mlx_directory":
+            return False, "manifest_incompatible_draft_artifact_kind"
+        if lower_path.endswith((".gguf", ".bin")):
+            return False, "manifest_file_like_mlx_draft"
+    else:
+        return False, "manifest_runtime_does_not_support_draft"
+    return True, "manifest_draft_compatible"
+
+if not model_packs_root.exists():
+    emit("installed_packs", "missing", str(model_packs_root), "model_packs_root_not_found")
+    sys.exit(0)
+
+manifest_paths = sorted(model_packs_root.rglob("*.manifest.json"))
+if not manifest_paths:
+    emit("installed_packs", "missing", str(model_packs_root), "no_installed_pack_manifests")
+    sys.exit(0)
+
+emit("installed_packs", "present", str(model_packs_root), "manifest_root_found", count=len(manifest_paths))
+
+for manifest_path in manifest_paths:
+    try:
+        payload = json.loads(manifest_path.read_text())
+    except Exception:
+        emit("installed_manifest", "missing", str(manifest_path), "manifest_json_unreadable")
+        continue
+
+    runtime = str(payload.get("runtimeMode") or "")
+    artifact_kind = str(payload.get("artifactKind") or "local_model_artifact")
+    relative_path = str(payload.get("relativePath") or "")
+    pack_id = str(payload.get("packId") or "")
+    tier = str(payload.get("tier") or "")
+    bytes_value = payload.get("bytes")
+    lane = runtime_lane(runtime)
+    primary_ok, primary_reason = compatible_primary(runtime, artifact_kind, relative_path)
+    primary_exists = artifact_exists(relative_path, runtime, artifact_kind)
+    status = "present" if primary_ok and primary_exists else "missing"
+    reason = primary_reason if not primary_ok else ("manifest_primary_reachable" if primary_exists else "manifest_primary_file_missing")
+    emit(
+        lane,
+        status,
+        relative_path or str(manifest_path),
+        reason,
+        pack=pack_id,
+        tier=tier,
+        runtime=runtime,
+        artifact_kind=artifact_kind,
+        bytes=bytes_value,
+        path_type=expected_path_type(relative_path, artifact_kind),
+    )
+
+    draft = payload.get("draftArtifact") or {}
+    if runtime not in {"gemma_local_runtime", "mlx_swift_lm"}:
+        continue
+
+    draft_relative_path = str(draft.get("relativePath") or "")
+    if not draft_relative_path:
+        emit(
+            "installed_mtp_draft" if runtime == "gemma_local_runtime" else "installed_mlx_draft",
+            "missing",
+            str(manifest_path),
+            "manifest_missing_draft_artifact",
+            pack=pack_id,
+            tier=tier,
+            runtime=runtime,
+        )
+        continue
+
+    draft_kind = str(draft.get("artifactKind") or artifact_kind)
+    draft_ok, draft_reason = compatible_draft(runtime, draft_kind, draft_relative_path)
+    draft_exists = artifact_exists(draft_relative_path, runtime, draft_kind)
+    draft_status = "present" if draft_ok and draft_exists else "missing"
+    draft_final_reason = draft_reason if not draft_ok else ("manifest_draft_reachable" if draft_exists else "manifest_draft_file_missing")
+    emit(
+        "installed_mtp_draft" if runtime == "gemma_local_runtime" else "installed_mlx_draft",
+        draft_status,
+        draft_relative_path,
+        draft_final_reason,
+        pack=pack_id,
+        tier=tier,
+        runtime=runtime,
+        artifact_kind=draft_kind,
+        bytes=draft.get("bytes"),
+        draft_tokens=draft.get("draftTokens"),
+    )
+PY
+done
+fi
