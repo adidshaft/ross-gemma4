@@ -3338,6 +3338,8 @@ enum AlphaLocalModelRuntime {
         }
         let artifactKind = rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch artifactKind {
+        case "system_model":
+            return false
         case "coreml_model":
             return modelPath.hasSuffix(".mlmodel") ||
                 modelPath.hasSuffix(".mlmodelc") ||
@@ -3539,7 +3541,7 @@ enum AlphaLocalModelRuntime {
             if alphaPackUsesSystemFoundationModel(activePack) {
                 return nil
             }
-            guard usesBundledAdapterArtifact(activePack) || activePack.artifactKind == "system_model" else { return nil }
+            guard usesBundledAdapterArtifact(activePack) else { return nil }
         case .mediapipeLlm, .llamaCppGguf, .mlxSwiftLm:
             break
         case .deterministicDev, .unavailable:

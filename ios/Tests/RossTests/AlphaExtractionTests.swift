@@ -21693,7 +21693,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotEqual(health?.modelPathLabel, "system-model")
     }
 
-    func testRuntimeHealthDoesNotTreatFileBackedSystemKindAsBuiltInFoundationModel() {
+    func testRuntimeHealthRejectsFileBackedSystemKindBeforeProviderConstruction() {
         let pack = AlphaInstalledModelPack(
             packId: "caseAssociate-mislabeled-system-pack",
             tier: .caseAssociate,
@@ -21718,10 +21718,11 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
-        XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.mlmodelc")
+        XCTAssertNil(health?.modelPathLabel)
         XCTAssertEqual(health?.modelPathPresent, false)
         XCTAssertNotEqual(health?.modelPathLabel, "system-model")
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
     }
 
     func testRuntimeHealthRedactsConfiguredModelPathToBasename() {
