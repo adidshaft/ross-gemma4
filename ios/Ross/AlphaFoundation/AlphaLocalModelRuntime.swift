@@ -2660,7 +2660,7 @@ func alphaFoundationModelOutput(
         executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
         accelerationMode: .standard,
         inputChars: promptPack.inputChars,
-        errorCategory: parsedJson == nil ? "invalid_model_output" : nil
+        errorCategory: parsedJson == nil ? "coreai_invalid_response" : nil
     )
 }
 

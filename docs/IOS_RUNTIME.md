@@ -90,6 +90,7 @@ Clear unavailable categories for benchmark triage:
 - `unsupported_runtime_on_platform`: the Apple built-in/CoreAI runtime is unavailable on the current OS, device, or build.
 - `coreai_generation_failed`: the Apple built-in/CoreAI provider was selected and available, but a generation call failed before returning a usable answer.
 - `coreai_empty_response`: the Apple built-in/CoreAI provider returned no usable plain-text content for a matter answer; treat this as failed generation, not a benchmark pass.
+- `coreai_invalid_response`: the Apple built-in/CoreAI provider returned content for a structured task, but it did not satisfy the required response schema; treat this as failed generation, not a benchmark pass.
 - CoreAI/CoreML failure outputs preserve the CoreAI execution path label, `acceleration=standard`, and packed input size when available. This is lane metadata for triage and Answer Details, not a successful CoreAI benchmark.
 
 Ross now fails closed on malformed or known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:

@@ -22417,7 +22417,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertFalse(invalid.schemaValid)
-        XCTAssertEqual(invalid.errorCategory, "invalid_model_output")
+        XCTAssertEqual(invalid.errorCategory, "coreai_invalid_response")
         XCTAssertEqual(invalid.accelerationMode, .standard)
         XCTAssertNotNil(valid.parsedJson)
         XCTAssertTrue(valid.schemaValid)
