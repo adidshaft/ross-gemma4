@@ -6,6 +6,8 @@ FAIL=0
 echo "Running iOS Runtime Audit..."
 
 if [[ ! -x scripts/test-ios-runtime-swiftpm.sh ]] ||
+   ! grep -q "REQUIRED_TESTS" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
+   ! grep -q "Missing required runtime guardrail test" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
