@@ -546,7 +546,39 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     
     nonisolated(unsafe) private static var cachedContext: (any AlphaLlamaCompletionContext)?
     nonisolated(unsafe) private static var cachedKey: String?
+    nonisolated(unsafe) private static var degenerateDraftKeys: Set<String> = []
     private static let cacheLock = NSLock()
+    private static let degenerateDraftLock = NSLock()
+
+    private func draftHealthKey(path: String, draftPath: String, draftTokens: Int?) -> String {
+        [path, draftPath, draftTokens.map(String.init) ?? "nil"].joined(separator: "|")
+    }
+
+    private func activeDraftHealthKey(path: String) -> String? {
+        guard let draftPath = stagedDraftModelPath() else {
+            return nil
+        }
+        return draftHealthKey(path: path, draftPath: draftPath, draftTokens: effectiveDraftTokenCount())
+    }
+
+    private static func draftOutputPreviouslyDegenerated(_ key: String?) -> Bool {
+        guard let key else { return false }
+        degenerateDraftLock.lock()
+        defer { degenerateDraftLock.unlock() }
+        return degenerateDraftKeys.contains(key)
+    }
+
+    private static func markDraftOutputDegenerated(_ key: String?) {
+        guard let key else { return }
+        degenerateDraftLock.lock()
+        degenerateDraftKeys.insert(key)
+        degenerateDraftLock.unlock()
+
+        cacheLock.lock()
+        cachedContext = nil
+        cachedKey = nil
+        cacheLock.unlock()
+    }
 
     private func contextCacheKey(path: String) -> String {
         let draftKey = effectiveDraftModelPath() ?? ""
@@ -721,6 +753,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             if activeAccelerationMode == .draftModelSpeculative,
                Self.isDegenerateDraftOutput(cleanedResponse) {
+                Self.markDraftOutputDegenerated(activeDraftHealthKey(path: modelPath))
                 var warnings = pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
                 warnings.append("Draft acceleration produced degenerate output; rerun with draft disabled.")
                 return AlphaLocalModelOutput(
@@ -1050,13 +1083,15 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func effectiveDraftModelPath() -> String? {
+        let degenerateDraftKey = modelPath.flatMap { activeDraftHealthKey(path: $0) }
         guard
             let draftPath = stagedDraftModelPath(),
             AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
                 forModelPath: modelPath,
                 physicalMemory: Self.physicalMemoryBytesProvider(),
                 draftTokens: effectiveDraftTokenCount()
-            )
+            ),
+            !Self.draftOutputPreviouslyDegenerated(degenerateDraftKey)
         else {
             return nil
         }
@@ -1084,6 +1119,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             draftTokens: effectiveDraftTokenCount()
         ) else {
             return ("draft_token_policy_blocked", draftPath, metadata)
+        }
+        if Self.draftOutputPreviouslyDegenerated(
+            modelPath.map { draftHealthKey(path: $0, draftPath: draftPath, draftTokens: metadata.tokens) }
+        ) {
+            return ("draft_output_degenerate", draftPath, metadata)
         }
         return ("candidate", draftPath, metadata)
     }
@@ -1132,6 +1172,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "draft_validator_rejected"
         case "validator_failed":
             return "draft_validator_failed"
+        case "draft_output_degenerate":
+            return "draft_output_degenerate"
         default:
             return nil
         }

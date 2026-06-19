@@ -7347,8 +7347,20 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testExperimentalGGUFProviderReturnsDraftDegenerateErrorWithoutDroppingMetrics() async throws {
         actor StubLlamaContext: AlphaLlamaCompletionContext {
-            private let chunks = ["<|channel>", "11111111111111111111111"]
+            private let chunks: [String]
+            private let reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode
+            private let reportedExecutionPathLabel: String
             private var emittedIndex = 0
+
+            init(
+                chunks: [String],
+                reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode,
+                reportedExecutionPathLabel: String
+            ) {
+                self.chunks = chunks
+                self.reportedAccelerationMode = reportedAccelerationMode
+                self.reportedExecutionPathLabel = reportedExecutionPathLabel
+            }
 
             func clear() {
                 emittedIndex = 0
@@ -7373,8 +7385,25 @@ final class AlphaExtractionTests: XCTestCase {
 
             func promptTokenCount() -> Int { 192 }
             func generatedTokenCount() -> Int { emittedIndex * 12 }
-            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .draftModelSpeculative }
-            func executionPathLabel() -> String { "Gemma GGUF with draft acceleration" }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { reportedAccelerationMode }
+            func executionPathLabel() -> String { reportedExecutionPathLabel }
+        }
+
+        final class DraftAttemptCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var draftPaths: [String?] = []
+
+            func record(draftPath: String?) {
+                lock.lock()
+                defer { lock.unlock() }
+                draftPaths.append(draftPath)
+            }
+
+            func snapshot() -> [String?] {
+                lock.lock()
+                defer { lock.unlock() }
+                return draftPaths
+            }
         }
 
         let mainURL = FileManager.default.temporaryDirectory
@@ -7399,7 +7428,22 @@ final class AlphaExtractionTests: XCTestCase {
             AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
         }
 
-        AlphaLlamaCppProvider.contextFactory = { _, _, _ in StubLlamaContext() }
+        let capture = DraftAttemptCapture()
+        AlphaLlamaCppProvider.contextFactory = { _, draftPath, _ in
+            capture.record(draftPath: draftPath)
+            if draftPath == nil {
+                return StubLlamaContext(
+                    chunks: ["Standard answer"],
+                    reportedAccelerationMode: .standard,
+                    reportedExecutionPathLabel: "Gemma GGUF via llama.cpp"
+                )
+            }
+            return StubLlamaContext(
+                chunks: ["<|channel>", "11111111111111111111111"],
+                reportedAccelerationMode: .draftModelSpeculative,
+                reportedExecutionPathLabel: "Gemma GGUF with draft acceleration"
+            )
+        }
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
         AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in true }
 
@@ -7446,6 +7490,47 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.outputTokenCount, 24)
         XCTAssertNotNil(output.outputTokensPerSecond)
         XCTAssertTrue(output.warnings.contains { $0.contains("Draft acceleration produced degenerate output") })
+
+        let healthAfterDegenerateOutput = provider.runtimeHealth()
+        XCTAssertEqual(healthAfterDegenerateOutput.accelerationMode, .standard)
+        XCTAssertEqual(healthAfterDegenerateOutput.draftAccelerationStatus, "draft_output_degenerate")
+        XCTAssertEqual(healthAfterDegenerateOutput.lastErrorCategory, "draft_output_degenerate")
+        XCTAssertEqual(healthAfterDegenerateOutput.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(healthAfterDegenerateOutput.accelerationDraftTokens, 6)
+
+        let followUpOutput = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 24,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        XCTAssertEqual(followUpOutput.rawText, "Standard answer")
+        XCTAssertEqual(followUpOutput.accelerationMode, .standard)
+        XCTAssertNil(followUpOutput.accelerationDraftTokens)
+        XCTAssertNil(followUpOutput.accelerationDraftModelLabel)
+        let draftPaths = capture.snapshot()
+        XCTAssertFalse(draftPaths.isEmpty)
+        XCTAssertEqual(draftPaths[0], draftURL.path)
+        XCTAssertTrue(draftPaths.dropFirst().contains(nil))
     }
 
     func testExperimentalGGUFProviderSurfacesDefaultDraftTokensWhenImplicit() async throws {
