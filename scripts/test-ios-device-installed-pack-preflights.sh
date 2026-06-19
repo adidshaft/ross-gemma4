@@ -110,6 +110,10 @@ pathlib.Path(sys.argv[2]).write_text(json.dumps({"result": {"files": files}}))
 PY
     ;;
   process)
+    if [[ -n "${FAKE_DEVICECTL_PROCESS_LOG:-}" ]]; then
+      cat "$FAKE_DEVICECTL_PROCESS_LOG"
+      exit 0
+    fi
     echo "fake devicectl process launch should not be reached by preflight rejection" >&2
     exit 99
     ;;
@@ -158,6 +162,30 @@ run_expect_exit_2() {
   set -e
   if [[ "$rc" -ne 2 ]]; then
     echo "FAIL: $description expected exit 2, got $rc" >&2
+    cat "$tmpdir/out.txt" >&2 || true
+    return 1
+  fi
+  if ! grep -q "$expected" "$tmpdir/out.txt"; then
+    echo "FAIL: $description did not emit expected message: $expected" >&2
+    cat "$tmpdir/out.txt" >&2 || true
+    return 1
+  fi
+}
+
+run_process_guard_expect_exit_1() {
+  local description="$1"
+  local expected="$2"
+  local process_log="$3"
+  shift 3
+  set +e
+  PATH="$fake_bin:$PATH" \
+    FAKE_DEVICE_ROOT="$fake_device_root" \
+    FAKE_DEVICECTL_PROCESS_LOG="$process_log" \
+    "$@" >"$tmpdir/out.txt" 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 1 ]]; then
+    echo "FAIL: $description expected exit 1, got $rc" >&2
     cat "$tmpdir/out.txt" >&2 || true
     return 1
   fi
@@ -356,5 +384,43 @@ run_expect_exit_1 \
   "seeded device-proof pack excluded by default" \
   "Only seeded device-proof manifests matched" \
   "${base_command[@]}" --runtime gguf
+
+write_manifest '{
+  "packId": "mtp-stage-fallback",
+  "tier": "quick_start",
+  "fileName": "main.gguf",
+  "relativePath": "model-packs/quick/main.gguf",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "draft.gguf",
+    "relativePath": "model-packs/quick/draft.gguf",
+    "checksumSha256": "b",
+    "bytes": 2000000,
+    "artifactKind": "local_model_artifact",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+python3 - "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/main.gguf" \
+  "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/draft.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
+PY
+cat >"$tmpdir/mtp-stage-fallback.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=main.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=draft.gguf draft_model_path_type=file draft_status=active fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_refs=1 source_native_model=true source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=draft.gguf general_input_tokens=80 general_output_tokens=6 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_native_model=true general_acceleration=standard general_draft_tokens=nil general_draft_model=nil
+EOF
+run_process_guard_expect_exit_1 \
+  "installed MTP stage fallback guard" \
+  "benchmark_draft_stage_mismatch" \
+  "$tmpdir/mtp-stage-fallback.log" \
+  "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick
 
 echo "iOS device installed-pack preflight tests: PASS"

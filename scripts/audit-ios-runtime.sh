@@ -852,6 +852,12 @@ if ! grep -q "benchmark_draft_stage_mismatch" scripts/ross_smoke_summary.py 2>/d
     FAIL=1
 fi
 
+if ! grep -q "installed MTP stage fallback guard" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "benchmark_draft_stage_mismatch" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MTP smoke tests do not reject active identity when a benchmark stage falls back to standard."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_runtime_mismatch" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
     echo "❌ FAIL: QA report template does not document runtime mismatch benchmark rejection."
     FAIL=1
