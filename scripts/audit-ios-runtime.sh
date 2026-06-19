@@ -217,6 +217,11 @@ if ! grep -q "testRuntimeIdentityLineMarksDeterministicProviderAsFallback" ios/T
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeIdentityLineIncludesUnavailableMLXDraftCandidate" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not prove unavailable MLX identity preserves draft candidate diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
     FAIL=1

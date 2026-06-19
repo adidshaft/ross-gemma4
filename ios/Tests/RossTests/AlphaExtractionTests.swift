@@ -16910,6 +16910,60 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=invalid_mlx_artifact"))
     }
 
+    func testRuntimeIdentityLineIncludesUnavailableMLXDraftCandidate() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross identity unavailable mlx \(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross identity unavailable mlx draft \(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-unavailable-mlx",
+            installPath: directory.path,
+            checksum: String(repeating: "c", count: 64),
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let provider = AlphaUnavailableRealLocalModelProvider(
+            capabilityTier: .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            modelPathLabel: directory.lastPathComponent,
+            checksumVerified: true,
+            statusMessage: "Needs more memory",
+            plannedTasks: Set(AlphaLocalModelTask.allCases),
+            errorCategory: "insufficient_device_memory",
+            explicitOptInEnabled: true,
+            draftModelPath: draftDirectory.path
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: provider.runtimeHealth(),
+            requestedRuntime: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaUnavailableRealLocalModelProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("actual_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("pack_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_tokens=nil"))
+        XCTAssertTrue(line.contains("draft_model=ross_identity_unavailable_mlx_draft_"))
+        XCTAssertTrue(line.contains("draft_model_path_type=directory"))
+        XCTAssertTrue(line.contains("draft_status=insufficient_device_memory"))
+        XCTAssertTrue(line.contains("fallback=none"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=insufficient_device_memory"))
+    }
+
     func testRuntimeIdentityLineIncludesCoreAISystemFields() throws {
         let activePack = installedPack(
             .quickStart,
