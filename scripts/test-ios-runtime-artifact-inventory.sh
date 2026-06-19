@@ -72,6 +72,36 @@ printf 'weights' > "$mlx_draft_dir/model.safetensors"
 grep -q "lane=mlx status=missing .*reason=no_directory_with_config_tokenizer_and_safetensors" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx_draft status=present .*path=.*gemma-4-E4B-it-qat-assistant-6bit .*reason=draft_like_mlx_directory" /tmp/ross-runtime-inventory.out
 
+unsupported_mlx_root="$tmpdir/unsupported-mlx"
+unsupported_mlx_primary="$unsupported_mlx_root/gemma-4-E4B-it-qat-4bit"
+unsupported_mlx_draft="$unsupported_mlx_root/gemma-4-E4B-it-qat-draft-vision"
+mkdir -p "$unsupported_mlx_primary" "$unsupported_mlx_draft"
+python3 - "$unsupported_mlx_primary" "$unsupported_mlx_draft" <<'PY'
+import json
+import pathlib
+import sys
+
+primary = pathlib.Path(sys.argv[1])
+draft = pathlib.Path(sys.argv[2])
+for directory in (primary, draft):
+    (directory / "tokenizer.json").write_text("{}")
+    (directory / "model.safetensors").write_text("weights")
+
+(primary / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(draft / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+PY
+"$INVENTORY" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx status=missing .*path=.*gemma-4-E4B-it-qat-4bit .*reason=unsupported_model_archive" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=missing .*path=.*gemma-4-E4B-it-qat-draft-vision .*reason=unsupported_model_archive" /tmp/ross-runtime-inventory.out
+
 printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
@@ -256,7 +286,7 @@ grep -q "lane=installed_mtp_draft status=present .*reason=manifest_draft_reachab
 
 bad_support_root="$tmpdir/RossAlphaBad"
 bad_packs_root="$bad_support_root/model-packs"
-mkdir -p "$bad_packs_root/quickStart" "$bad_packs_root/mlx/bad-mlx"
+mkdir -p "$bad_packs_root/quickStart" "$bad_packs_root/mlx/bad-mlx" "$bad_packs_root/mlx/unsupported-mlx" "$bad_packs_root/mlx/unsupported-draft"
 mkdir -p "$bad_packs_root/coreai/empty-adapter.mlmodelc"
 printf 'GGUF' > "$bad_packs_root/quickStart/main.gguf"
 printf 'GGUF' > "$bad_packs_root/quickStart/draft.gguf"
@@ -274,6 +304,10 @@ PY
 printf '{}' > "$bad_packs_root/mlx/bad-mlx/config.json"
 printf '{}' > "$bad_packs_root/mlx/bad-mlx/tokenizer.json"
 : > "$bad_packs_root/mlx/bad-mlx/model.safetensors"
+printf '{}' > "$bad_packs_root/mlx/unsupported-mlx/tokenizer.json"
+printf 'weights' > "$bad_packs_root/mlx/unsupported-mlx/model.safetensors"
+printf '{}' > "$bad_packs_root/mlx/unsupported-draft/tokenizer.json"
+printf 'weights' > "$bad_packs_root/mlx/unsupported-draft/model.safetensors"
 python3 - "$bad_support_root" <<'PY'
 import json
 import pathlib
@@ -315,6 +349,37 @@ wrong_checksum = hashlib.sha256(b"not the installed artifact").hexdigest()
     "artifactKind": "mlx_directory",
     "runtimeMode": "mlx_swift_lm",
     "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
+(packs / "mlx" / "unsupported-mlx" / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(packs / "mlx" / "unsupported-draft" / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(packs / "mlx" / "unsupported.manifest.json").write_text(json.dumps({
+    "packId": "unsupported-mlx",
+    "tier": "quickStart",
+    "fileName": "unsupported-mlx",
+    "relativePath": "model-packs/mlx/unsupported-mlx",
+    "checksumSha256": "abc",
+    "bytes": 10,
+    "artifactKind": "mlx_directory",
+    "runtimeMode": "mlx_swift_lm",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "unsupported-draft",
+        "relativePath": "model-packs/mlx/unsupported-draft",
+        "checksumSha256": "def",
+        "bytes": 10,
+        "artifactKind": "mlx_directory",
+        "draftTokens": 2,
+    },
     "verifiedAt": "2026-06-19T00:00:00Z",
 }))
 
@@ -373,6 +438,8 @@ grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_unusabl
 grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mlx status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mlx" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mlx status=missing .*reason=unsupported_model_archive .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mlx_draft status=missing .*reason=unsupported_model_archive .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-coreai" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_foreign_coreai_adapter .*pack=foreign-coreai" /tmp/ross-runtime-inventory.out
 

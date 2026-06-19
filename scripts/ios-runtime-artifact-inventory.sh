@@ -110,6 +110,48 @@ mlx_directory_looks_usable() {
   find "$directory" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit | grep -q .
 }
 
+mlx_archive_unsupported_reason() {
+  local directory="$1"
+  local mode="${2:-primary}"
+  python3 - "$directory" "$mode" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+mode = sys.argv[2]
+
+try:
+    config = json.loads((directory / "config.json").read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+
+model_type = str(config.get("model_type") or "").lower()
+architectures = [str(value).lower() for value in config.get("architectures") or []]
+name_hints = " ".join(
+    str(value or "").lower()
+    for value in (directory.name, config.get("_name_or_path"), config.get("name_or_path"))
+)
+
+is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
+is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+is_moe = any(
+    key in config
+    for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
+) or "26b-a4b" in name_hints
+is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b", "31b-it"))
+
+if is_assistant and mode != "draft":
+    print("unsupported_gemma4_assistant")
+elif is_multimodal:
+    print("unsupported_model_archive")
+elif is_moe:
+    print("unsupported_model_archive")
+elif is_dense_31b:
+    print("unsupported_model_archive")
+PY
+}
+
 coreai_adapter_looks_usable() {
   local path="$1"
   local lower_path
@@ -139,6 +181,10 @@ first_usable_gguf=""
 first_draft_like_gguf=""
 first_usable_mlx=""
 first_draft_like_mlx=""
+first_unsupported_mlx=""
+first_unsupported_mlx_reason=""
+first_unsupported_mlx_draft=""
+first_unsupported_mlx_draft_reason=""
 first_coreai_adapter=""
 
 for root in "${search_roots[@]}"; do
@@ -158,9 +204,25 @@ for root in "${search_roots[@]}"; do
     candidate_dir="$(dirname "$config_path")"
     if mlx_directory_looks_usable "$candidate_dir"; then
       if mlx_path_is_draft_like "$candidate_dir"; then
-        [[ -n "$first_draft_like_mlx" ]] || first_draft_like_mlx="$candidate_dir"
+        unsupported_reason="$(mlx_archive_unsupported_reason "$candidate_dir" "draft")"
+        if [[ -n "$unsupported_reason" ]]; then
+          if [[ -z "$first_unsupported_mlx_draft" ]]; then
+            first_unsupported_mlx_draft="$candidate_dir"
+            first_unsupported_mlx_draft_reason="$unsupported_reason"
+          fi
+        else
+          [[ -n "$first_draft_like_mlx" ]] || first_draft_like_mlx="$candidate_dir"
+        fi
       else
-        [[ -n "$first_usable_mlx" ]] || first_usable_mlx="$candidate_dir"
+        unsupported_reason="$(mlx_archive_unsupported_reason "$candidate_dir" "primary")"
+        if [[ -n "$unsupported_reason" ]]; then
+          if [[ -z "$first_unsupported_mlx" ]]; then
+            first_unsupported_mlx="$candidate_dir"
+            first_unsupported_mlx_reason="$unsupported_reason"
+          fi
+        else
+          [[ -n "$first_usable_mlx" ]] || first_usable_mlx="$candidate_dir"
+        fi
       fi
     fi
   done < <(find "$root" -maxdepth 5 -type f -name config.json -print 2>/dev/null)
@@ -197,17 +259,21 @@ print_present_or_missing \
   "draft_like_gguf_candidate" \
   "no_draft_like_gguf_filename_found"
 
-print_present_or_missing \
-  "mlx" \
-  "$first_usable_mlx" \
-  "usable_mlx_directory" \
-  "no_directory_with_config_tokenizer_and_safetensors"
+if [[ -n "$first_usable_mlx" ]]; then
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx status=present path=%q reason=usable_mlx_directory\n' "$first_usable_mlx"
+elif [[ -n "$first_unsupported_mlx" ]]; then
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx status=missing path=%q reason=%s\n' "$first_unsupported_mlx" "$first_unsupported_mlx_reason"
+else
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx status=missing path=nil reason=no_directory_with_config_tokenizer_and_safetensors\n'
+fi
 
-print_present_or_missing \
-  "mlx_draft" \
-  "$first_draft_like_mlx" \
-  "draft_like_mlx_directory" \
-  "no_draft_like_mlx_directory_found"
+if [[ -n "$first_draft_like_mlx" ]]; then
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx_draft status=present path=%q reason=draft_like_mlx_directory\n' "$first_draft_like_mlx"
+elif [[ -n "$first_unsupported_mlx_draft" ]]; then
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx_draft status=missing path=%q reason=%s\n' "$first_unsupported_mlx_draft" "$first_unsupported_mlx_draft_reason"
+else
+  printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=mlx_draft status=missing path=nil reason=no_draft_like_mlx_directory_found\n'
+fi
 
 print_present_or_missing \
   "coreai_adapter" \
@@ -454,6 +520,32 @@ def mlx_directory_looks_usable(path: pathlib.Path) -> bool:
         file_size(path) > 0 for path in path.glob("**/*.safetensors.index.json")
     )
 
+def mlx_archive_unsupported_reason(path: pathlib.Path, mode: str = "primary") -> str:
+    try:
+        config = json.loads((path / "config.json").read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+
+    model_type = str(config.get("model_type") or "").lower()
+    architectures = [str(value).lower() for value in config.get("architectures") or []]
+    name_hints = " ".join(
+        str(value or "").lower()
+        for value in (path.name, config.get("_name_or_path"), config.get("name_or_path"))
+    )
+    is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
+    is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+    is_moe = any(
+        key in config
+        for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
+    ) or "26b-a4b" in name_hints
+    is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b", "31b-it"))
+
+    if is_assistant and mode != "draft":
+        return "unsupported_gemma4_assistant"
+    if is_multimodal or is_moe or is_dense_31b:
+        return "unsupported_model_archive"
+    return ""
+
 def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
     lower_path = str(path).lower()
     if lower_path.endswith((".gguf", ".safetensors", ".bin")):
@@ -476,10 +568,16 @@ def artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) 
     if runtime == "gemma_local_runtime":
         return gguf_file_looks_usable(candidate)
     if runtime == "mlx_swift_lm":
-        return mlx_directory_looks_usable(candidate)
+        return mlx_directory_looks_usable(candidate) and not mlx_archive_unsupported_reason(candidate, "primary")
     if runtime == "apple_foundation_models":
         return coreai_adapter_looks_usable(candidate)
     return candidate.exists()
+
+def draft_artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) -> bool:
+    if runtime != "mlx_swift_lm":
+        return artifact_looks_usable(relative_path, runtime, artifact_kind)
+    candidate = support_root / relative_path
+    return mlx_directory_looks_usable(candidate) and not mlx_archive_unsupported_reason(candidate, "draft")
 
 def artifact_checksum_status(relative_path: str, artifact_kind: str, expected_checksum: object) -> str:
     expected = normalized_sha256(expected_checksum)
@@ -572,6 +670,11 @@ for manifest_path in manifest_paths:
     lane = runtime_lane(runtime)
     primary_ok, primary_reason = compatible_primary(runtime, artifact_kind, relative_path)
     primary_exists = artifact_exists(relative_path, runtime, artifact_kind)
+    primary_unsupported_reason = (
+        mlx_archive_unsupported_reason(support_root / relative_path, "primary")
+        if runtime == "mlx_swift_lm" and primary_exists
+        else ""
+    )
     primary_usable = primary_exists and artifact_looks_usable(relative_path, runtime, artifact_kind)
     primary_checksum_status = artifact_checksum_status(relative_path, artifact_kind, payload.get("checksumSha256"))
     status = "present" if primary_ok and primary_usable and primary_checksum_status != "mismatch" else "missing"
@@ -579,6 +682,7 @@ for manifest_path in manifest_paths:
         "manifest_primary_checksum_mismatch" if primary_usable and primary_checksum_status == "mismatch"
         else
         "manifest_primary_reachable" if primary_usable
+        else primary_unsupported_reason if primary_unsupported_reason
         else "manifest_primary_unusable_artifact" if primary_exists
         else "manifest_primary_file_missing"
     )
@@ -616,7 +720,12 @@ for manifest_path in manifest_paths:
     draft_kind = str(draft.get("artifactKind") or artifact_kind)
     draft_ok, draft_reason = compatible_draft(runtime, draft_kind, draft_relative_path)
     draft_exists = artifact_exists(draft_relative_path, runtime, draft_kind)
-    draft_usable = draft_exists and artifact_looks_usable(draft_relative_path, runtime, draft_kind)
+    draft_unsupported_reason = (
+        mlx_archive_unsupported_reason(support_root / draft_relative_path, "draft")
+        if runtime == "mlx_swift_lm" and draft_exists
+        else ""
+    )
+    draft_usable = draft_exists and draft_artifact_looks_usable(draft_relative_path, runtime, draft_kind)
     draft_checksum_status = artifact_checksum_status(draft_relative_path, draft_kind, draft.get("checksumSha256"))
     memory_ok, memory_reason, memory_fields = mtp_memory_policy(
         runtime,
@@ -634,6 +743,7 @@ for manifest_path in manifest_paths:
         memory_reason if draft_usable and not memory_ok
         else
         "manifest_draft_reachable" if draft_usable
+        else draft_unsupported_reason if draft_unsupported_reason
         else "manifest_draft_unusable_artifact" if draft_exists
         else "manifest_draft_file_missing"
     )
