@@ -488,7 +488,7 @@ struct RossLocalModelSmokeView: View {
             }
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(activePack.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=active_pack error=\(activePackHealth?.lastErrorCategory ?? "runtime_unavailable")"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(activePack.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=active_pack error=\(activePackHealth?.lastErrorCategory ?? "runtime_unavailable") runtime_error_detail=\(activePackHealth?.runtimeErrorDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil") draft_error_detail=\(activePackHealth?.draftAccelerationDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil")"
             )
             return
         }
@@ -517,7 +517,7 @@ struct RossLocalModelSmokeView: View {
            requestedRuntime != provider.runtimeMode {
             status = RossLocalModelSmokeStatusCopy.failedStatus
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(requestedRuntime.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=runtime_identity_mismatch"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(requestedRuntime.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=runtime_identity_mismatch runtime_error_detail=\(providerHealth.runtimeErrorDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil") draft_error_detail=\(providerHealth.draftAccelerationDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil")"
             )
             return
         }
@@ -528,14 +528,14 @@ struct RossLocalModelSmokeView: View {
             providerHealth.draftAccelerationStatus != "active" {
             status = RossLocalModelSmokeStatusCopy.failedStatus
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=draft_acceleration_required acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil") draft_model_path_type=\(providerHealth.draftModelPathType ?? "nil") draft_status=\(providerHealth.draftAccelerationStatus ?? "nil")"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=draft_acceleration_required acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil") draft_model_path_type=\(providerHealth.draftModelPathType ?? "nil") draft_status=\(providerHealth.draftAccelerationStatus ?? "nil") runtime_error_detail=\(providerHealth.runtimeErrorDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil") draft_error_detail=\(providerHealth.draftAccelerationDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil")"
             )
             return
         }
         guard providerHealth.available else {
             status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=provider_health error=\(providerHealth.lastErrorCategory ?? "runtime_unavailable")"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=provider_health error=\(providerHealth.lastErrorCategory ?? "runtime_unavailable") runtime_error_detail=\(providerHealth.runtimeErrorDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil") draft_error_detail=\(providerHealth.draftAccelerationDetail.map(RossLocalModelSmokeView.stableSmokeValue) ?? "nil")"
             )
             return
         }

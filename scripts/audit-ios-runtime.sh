@@ -72,6 +72,13 @@ if ! grep -q "stage=provider_health error=.*requested_runtime" ios/Ross/App/Scre
     FAIL=1
 fi
 
+if ! grep -q "stage=provider_health.*runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "stage=provider_health.*draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "stage=active_pack.*runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: early smoke runtime failures do not preserve runtime/draft diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "preflightProvider = AlphaLocalModelRuntime.resolveProvider" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: unavailable smoke preflight does not log the actual provider identity."
     FAIL=1
@@ -164,6 +171,12 @@ fi
 
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
+    FAIL=1
+fi
+
+if ! grep -q "error=draft_acceleration_required.*runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "error=draft_acceleration_required.*draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: MTP-required smoke failures do not preserve runtime/draft diagnostics."
     FAIL=1
 fi
 
