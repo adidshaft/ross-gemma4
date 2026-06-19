@@ -407,6 +407,10 @@ else:
         and row.get("status") == "expected"
         and row_tier_matches(row)
     ]
+    mlx_primary_blocked = any(
+        row.get("lane") == "catalog_mlx" and row.get("release_ready") == "false"
+        for row in catalog_rows
+    )
     for row in catalog_rows:
         file_name = row.get("file") or pathlib.PurePosixPath(row.get("path", "mlx-model")).name
         target_dir = target_root / file_name
@@ -433,6 +437,17 @@ else:
             )
             continue
         if lane == "mlx_draft":
+            if mlx_primary_blocked:
+                emit(
+                    lane,
+                    "blocked",
+                    "waiting_for_primary",
+                    repo=repo,
+                    target_dir=target_dir,
+                    reason="missing_compatible_mlx_primary",
+                    compatibility_hint="runtime_requires_supported_text_mlx_archive",
+                )
+                continue
             emit(
                 lane,
                 "missing",

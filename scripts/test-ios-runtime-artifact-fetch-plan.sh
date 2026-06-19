@@ -43,8 +43,12 @@ if grep -q "lane=mlx status=missing action=download .*repo=mlx-community/gemma-4
   cat /tmp/ross-runtime-fetch-plan.out >&2
   exit 1
 fi
-grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out
-grep -q "lane=mlx_draft status=missing action=waiting_for_primary_after_download .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*reason=missing_compatible_mlx_primary" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=blocked action=waiting_for_primary .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*reason=missing_compatible_mlx_primary .*compatibility_hint=runtime_requires_supported_text_mlx_archive" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect standalone MLX draft download while compatible primary MLX is blocked." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
 if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/ross-runtime-fetch-plan.out; then
   echo "Did not expect standalone MLX draft preflight when no compatible primary MLX is available." >&2
   cat /tmp/ross-runtime-fetch-plan.out >&2

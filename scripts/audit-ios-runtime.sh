@@ -785,12 +785,12 @@ fi
 if ! grep -q "mlx_path_is_draft_like" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=mlx_draft status=present" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
-   ! grep -q "waiting_for_primary_after_download" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "status=blocked action=waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "missing_compatible_mlx_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair_after_download" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair" docs/IOS_RUNTIME.md 2>/dev/null ||
-   ! grep -q "waiting_for_primary_after_download" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "status=blocked action=waiting_for_primary" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "lane=mlx_draft status=present" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: local MLX inventory can still treat assistant/draft directories as primary MLX artifacts."
     FAIL=1
