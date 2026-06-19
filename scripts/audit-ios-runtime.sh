@@ -248,8 +248,8 @@ fi
 if ! grep -q "benchmark_runtime_identity_missing" scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "runtime_identity_resource_error" scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "test_benchmark_summary_rejects_missing_runtime_resource_identity" scripts/test-ross-smoke-summary.py 2>/dev/null ||
-   ! grep -q "benchmark_runtime_identity_missing" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: shared benchmark summary parser does not require provider/context/offload identity evidence."
+   ! grep -q "checksum_verified=true|false" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not require provider/checksum/context/offload identity evidence."
     FAIL=1
 fi
 
