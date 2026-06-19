@@ -9,6 +9,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
+    benchmark_matrix_shape_error,
     benchmark_stage_metric_error,
     benchmark_stage_draft_error,
 )
@@ -189,6 +190,55 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_input_tokens=nil",
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime"},
+                pass_fields,
+                matrix,
+            )
+
+    def test_benchmark_summary_rejects_matrix_case_stage_mismatch(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa,english_open_no_document_query",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        self.assertEqual(benchmark_matrix_shape_error(matrix), "cases=2 stages=1")
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime"},
+                pass_fields,
+                matrix,
+            )
+
+    def test_benchmark_summary_rejects_duplicate_matrix_stages(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa,english_open_no_document_query",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192,"
+            "source:open_query:en:no_source_refs:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        self.assertEqual(benchmark_matrix_shape_error(matrix), "duplicate_stages=source,source")
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
             benchmark_summary_line(
                 {"actual_runtime": "gemma_local_runtime"},
                 pass_fields,

@@ -114,6 +114,21 @@ def benchmark_matrix_stage_names(matrix_fields):
     return names
 
 
+def benchmark_matrix_case_names(matrix_fields):
+    cases = matrix_fields.get("cases") or ""
+    return [case.strip() for case in cases.split(",") if case.strip()]
+
+
+def benchmark_matrix_shape_error(matrix_fields):
+    cases = benchmark_matrix_case_names(matrix_fields)
+    stages = benchmark_matrix_stage_names(matrix_fields)
+    if len(cases) != len(stages):
+        return f"cases={len(cases)} stages={len(stages)}"
+    if len(set(stages)) != len(stages):
+        return "duplicate_stages=" + ",".join(stages)
+    return None
+
+
 def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
     if identity.get("acceleration") != "draftModelSpeculative":
         return None
@@ -203,6 +218,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"benchmark_profile_mismatch pass_profile={summary_value(pass_fields, 'profile')} "
             f"matrix_profile={summary_value(matrix_fields, 'profile')}"
         )
+    matrix_shape_error = benchmark_matrix_shape_error(matrix_fields)
+    if matrix_shape_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_matrix_shape_mismatch {matrix_shape_error}")
     draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
     if draft_stage_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")
