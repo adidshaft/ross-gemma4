@@ -625,6 +625,14 @@ if ! grep -q "manifest_primary_unusable_artifact" scripts/ios-runtime-artifact-i
     FAIL=1
 fi
 
+if ! grep -q "manifest_draft_memory_policy_blocked" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "manifest_draft_memory_policy_blocked" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "manifest_draft_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q -- "--physical-memory-bytes" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: installed MTP inventory/planning does not gate constrained E4B draft pairs by memory fit."
+    FAIL=1
+fi
+
 if ! grep -q "manifest_primary_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "manifest_draft_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "checksum_status=mismatch" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||

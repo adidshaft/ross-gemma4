@@ -7,6 +7,17 @@ INVENTORY="$ROOT_DIR/scripts/ios-runtime-artifact-inventory.sh"
 tmpdir="$(mktemp -d /tmp/ross-runtime-inventory.XXXXXX)"
 trap 'rm -rf "$tmpdir" /tmp/ross-runtime-inventory.out' EXIT
 
+set +e
+"$INVENTORY" --physical-memory-bytes nope > /tmp/ross-runtime-inventory.out 2>&1
+invalid_memory_rc=$?
+set -e
+if [[ "$invalid_memory_rc" -ne 2 ]]; then
+  echo "Expected invalid physical memory inventory argument to exit 2" >&2
+  cat /tmp/ross-runtime-inventory.out >&2 || true
+  exit 1
+fi
+grep -q "Physical memory bytes must be a positive integer" /tmp/ross-runtime-inventory.out
+
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=gguf status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=missing" /tmp/ross-runtime-inventory.out
@@ -164,6 +175,54 @@ grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_missing_draft
 grep -q "lane=installed_mlx status=present .*pack=mlx-pack" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mlx_draft status=missing .*reason=manifest_draft_file_missing .*pack=mlx-pack" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=present .*path_type=system" /tmp/ross-runtime-inventory.out
+
+memory_blocked_support_root="$tmpdir/RossAlphaMemoryBlocked"
+memory_blocked_packs_root="$memory_blocked_support_root/model-packs"
+mkdir -p "$memory_blocked_packs_root/quickStart"
+printf 'GGUF' > "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+truncate -s 5130000000 "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
+truncate -s 79000000 "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
+python3 - "$memory_blocked_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "quickStart" / "memory-blocked.manifest.json").write_text(json.dumps({
+    "packId": "quick-e4b-memory-blocked",
+    "tier": "quickStart",
+    "fileName": "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    "relativePath": "model-packs/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    "checksumSha256": "abc",
+    "bytes": 5_130_000_000,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "mtp-gemma-4-E4B-it.gguf",
+        "relativePath": "model-packs/quickStart/mtp-gemma-4-E4B-it.gguf",
+        "checksumSha256": "def",
+        "bytes": 79_000_000,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$memory_blocked_support_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_gguf status=present .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_memory_policy_blocked .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
+grep -q "physical_memory=7200000000" /tmp/ross-runtime-inventory.out
+grep -q "main_bytes=5130000000" /tmp/ross-runtime-inventory.out
+grep -q "draft_bytes=79000000" /tmp/ross-runtime-inventory.out
+grep -q "max_combined_bytes=5184000000" /tmp/ross-runtime-inventory.out
+
+"$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$memory_blocked_support_root" --physical-memory-bytes 12000000000 > /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mtp_draft status=present .*reason=manifest_draft_reachable .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
 
 bad_support_root="$tmpdir/RossAlphaBad"
 bad_packs_root="$bad_support_root/model-packs"
