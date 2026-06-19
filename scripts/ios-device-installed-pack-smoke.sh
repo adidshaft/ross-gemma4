@@ -946,6 +946,31 @@ def validate_identity_guard(identity, *, require_identity):
             )
             sys.exit(1)
 
+        expected_artifact = (
+            "system-model"
+            if artifact_kind == "system_model"
+            else os.path.basename(device_model_path.rstrip("/"))
+        )
+        identity_artifact = identity.get("artifact_path") or ""
+        if artifact_kind == "system_model":
+            if identity_artifact != "system-model" and not identity_artifact.startswith("system://"):
+                print(
+                    "ROSS_SMOKE_GUARD_FAIL "
+                    f"reason=runtime_identity_artifact_path_mismatch requested={runtime_mode} "
+                    f"expected_artifact=system-model identity_artifact={identity_artifact or 'nil'}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        elif os.path.basename(identity_artifact.rstrip("/")) != expected_artifact:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                f"reason=runtime_identity_artifact_path_mismatch requested={runtime_mode} "
+                f"expected_artifact={expected_artifact} "
+                f"identity_artifact={os.path.basename(identity_artifact.rstrip('/')) or 'nil'}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     if require_draft_acceleration == "1":
         acceleration = identity.get("acceleration")
         draft_tokens = identity.get("draft_tokens")
