@@ -404,6 +404,21 @@ if ! grep -q "benchmark_draft_stage_mismatch" scripts/ross_smoke_summary.py 2>/d
     FAIL=1
 fi
 
+if ! grep -q "benchmark_runtime_mismatch" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: QA report template does not document runtime mismatch benchmark rejection."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_stage_metrics_missing" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: QA report template does not document per-stage metric benchmark rejection."
+    FAIL=1
+fi
+
+if ! grep -q "Product surfaces use the same distinction" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: iOS runtime docs do not document CoreML adapter vs built-in CoreAI distinction."
+    FAIL=1
+fi
+
 for smoke_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
     if ! grep -q "MissingBenchmarkMatrixError as error" "$smoke_helper" 2>/dev/null; then
         echo "❌ FAIL: $smoke_helper does not preserve specific benchmark summary guard errors."

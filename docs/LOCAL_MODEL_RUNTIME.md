@@ -72,7 +72,14 @@ Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity
 - MLX requires `actual_runtime=mlx_swift_lm`.
 - CoreAI/Foundation Models requires `actual_runtime=apple_foundation_models`.
 - MTP requires identity `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and draft model metadata. Smoke benchmark summaries must also prove every matrix stage used draft acceleration with matching `*_acceleration`, `*_draft_tokens`, and `*_draft_model` fields.
+- Benchmark summaries must also prove the pass runtime matches identity `actual_runtime`, identity `requested_runtime` does not disagree, and every matrix stage reports token count, token speed, first-token latency, and measured/estimated status.
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
+
+Installed-pack validation is runtime-specific before reuse:
+
+- GGUF packs require `local_model_artifact`; MTP draft companions must be `.gguf` local-model artifacts.
+- MLX packs and MLX draft companions require `mlx_directory` and a usable MLX directory shape.
+- CoreAI/CoreML/Foundation adapters require adapter artifact kinds; built-in `system_model` is reserved for system sentinel paths.
 
 ## Backend Catalog Modes
 
