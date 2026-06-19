@@ -23090,7 +23090,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
     }
 
-    func testExperimentalMLXProviderRetriesWithoutDraftWhenSpeculativeGenerationFails() async throws {
+    func testExperimentalMLXProviderFailsClosedWhenExplicitDraftGenerationFails() async throws {
         enum DraftFailure: Error {
             case speculativeGenerationFailed
         }
@@ -23125,17 +23125,10 @@ final class AlphaExtractionTests: XCTestCase {
         let capture = AttemptCapture()
         AlphaMLXLocalProvider.streamGenerator = { _, draftURL, draftTokens, _, _, _, onChunk in
             await capture.record(draftPath: draftURL?.path, draftTokens: draftTokens)
-            if draftURL != nil {
-                throw DraftFailure.speculativeGenerationFailed
+            if draftURL == nil {
+                XCTFail("Explicit MLX draft configuration must not recover into standard generation.")
             }
-            onChunk?("Recovered standard answer")
-            return AlphaMLXGenerationSnapshot(
-                text: "Recovered standard answer",
-                promptTokenCount: 320,
-                generationTokenCount: 24,
-                outputTokensPerSecond: 12.5,
-                timeToFirstTokenMs: 700
-            )
+            throw DraftFailure.speculativeGenerationFailed
         }
 
         let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
@@ -23181,22 +23174,16 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         let attempts = await capture.attempts
-        XCTAssertEqual(attempts.count, 2)
+        XCTAssertEqual(attempts.count, 1)
         XCTAssertEqual(attempts.first?.draftPath, draftDirectory.path)
         XCTAssertEqual(attempts.first?.draftTokens, 4)
-        XCTAssertNil(attempts.last?.draftPath)
-        XCTAssertNil(attempts.last?.draftTokens)
-        XCTAssertEqual(output?.rawText, "Recovered standard answer")
-        XCTAssertEqual(output?.accelerationMode, .standard)
-        XCTAssertNil(output?.accelerationDraftTokens)
-        XCTAssertNil(output?.accelerationDraftModelLabel)
-        XCTAssertEqual(output?.executionPathLabel, "MLX standard generation")
-        XCTAssertEqual(output?.inputTokenCount, 320)
-        XCTAssertEqual(output?.outputTokenCount, 24)
-        XCTAssertEqual(output?.outputTokensPerSecond ?? 0, 12.5, accuracy: 0.001)
-        XCTAssertEqual(output?.timeToFirstTokenMs, 700)
-        XCTAssertTrue(output?.usesMeasuredTokenCounts == true)
-        XCTAssertNil(output?.errorCategory)
+        XCTAssertEqual(output?.rawText, "")
+        XCTAssertFalse(output?.schemaValid ?? true)
+        XCTAssertEqual(output?.errorCategory, "mlx_draft_generation_failed")
+        XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output?.accelerationDraftTokens, 4)
+        XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
     }
 
     func testExperimentalMLXProviderDoesNotFallbackWhenSmokeRequiresDraftAcceleration() async throws {

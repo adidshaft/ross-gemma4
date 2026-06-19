@@ -1365,7 +1365,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                     error: error
                 )
                 guard draftDirectoryURL != nil else { throw error }
-                if Self.smokeRequiresDraftAcceleration() {
+                if Self.smokeRequiresDraftAcceleration() || draftModelPath != nil {
                     return AlphaLocalModelOutput(
                         rawText: "",
                         parsedJson: nil,
