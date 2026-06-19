@@ -65,7 +65,7 @@ Existing compatibility:
 
 ## Runtime Proof Guardrails
 
-Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, active pack runtime, artifact kind/path type, acceleration mode, draft model metadata, `draft_status`, context size, GPU/offload summary, fallback status, and availability.
+Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, active pack runtime, artifact kind/path type, acceleration mode, draft model metadata, `draft_status`, safe `draft_error_detail`, safe `runtime_error_detail`, context size, GPU/offload summary, fallback status, and availability.
 
 Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity marker proves that exact lane:
 
@@ -74,6 +74,7 @@ Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity
 - MTP requires identity `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and draft model metadata. Smoke benchmark summaries must also prove every matrix stage used draft acceleration with matching `*_acceleration`, `*_draft_tokens`, and `*_draft_model` fields.
 - Benchmark summaries must also prove the pass runtime matches a known benchmark lane, matches identity `actual_runtime`, identity `requested_runtime` does not disagree, identity `pack_runtime` is present and does not disagree, every matrix stage is one of the supported smoke stages, and every matrix stage reports token count, token speed, first-token latency, and measured/estimated status.
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
+- `draft_error_detail` and `runtime_error_detail` are triage fields only. They help explain inactive MTP, missing MLX artifacts, or unsupported CoreAI/CoreML paths, but they do not make a failed or fallback run benchmark evidence.
 - A GGUF+MTP draft pair that produces degenerate output is reported as `draft_output_degenerate` and quarantined for the current process, so follow-up runs use standard GGUF instead of repeatedly treating the same bad MTP pair as active.
 - In required draft-acceleration smoke mode, MLX speculative generation failure is reported as `mlx_draft_generation_failed` instead of retrying standard generation, so a draft-proof run cannot publish standard MLX numbers.
 
@@ -82,6 +83,7 @@ Installed-pack validation is runtime-specific before reuse:
 - GGUF packs require `local_model_artifact`; MTP draft companions must be `.gguf` local-model artifacts.
 - MLX packs and MLX draft companions require `mlx_directory` and a usable MLX directory shape.
 - CoreAI/CoreML/Foundation adapters require adapter artifact kinds; built-in `system_model` is reserved for system sentinel paths.
+- Pre-device installed-pack inventory also rejects malformed reachable artifacts: tiny or wrong-header GGUF primary/draft files and incomplete MLX directories are reported as unusable instead of ready.
 
 ## Backend Catalog Modes
 

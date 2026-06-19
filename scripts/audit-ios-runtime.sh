@@ -666,6 +666,13 @@ if ! grep -q "benchmark_stage_metrics_missing" docs/REAL_MODEL_QA_REPORT_TEMPLAT
     FAIL=1
 fi
 
+if ! grep -q "runtime_error_detail" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
+   ! grep -q "draft_error_detail" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
+   ! grep -q "manifest_primary_unusable_artifact" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: runtime docs do not document diagnostic identity fields and unusable installed artifacts."
+    FAIL=1
+fi
+
 if ! grep -q "Product surfaces use the same distinction" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: iOS runtime docs do not document CoreML adapter vs built-in CoreAI distinction."
     FAIL=1
