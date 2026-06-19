@@ -1169,6 +1169,7 @@ else
     scripts/test-ios-device-installed-pack-preflights.sh
     scripts/test-ios-device-assistant-download-smoke-guards.sh
     scripts/test-ios-morning-runtime-checkpoint-plan.sh
+    scripts/test-ios-runtime-artifact-inventory.sh
     scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
