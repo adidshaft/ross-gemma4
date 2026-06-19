@@ -1693,6 +1693,36 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("failure_mtp_proof_status=draft_identity_active", summary)
         self.assertIn("failure_mtp_proof_error=nil", summary)
 
+    def test_failure_summary_rejects_active_mtp_failure_with_invalid_stage_draft_metrics(self):
+        identity = self.valid_identity()
+        identity.update(
+            {
+                "acceleration": "draftModelSpeculative",
+                "draft_tokens": "2",
+                "draft_model": "mtp.gguf",
+                "draft_model_path_type": "file",
+                "draft_status": "active",
+            }
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=24"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime "
+            "profile=mtp_quick elapsed=18.00s "
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "source_draft_attempted=7 source_draft_accepted=0"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, matrix)
+
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_valid", summary)
+        self.assertIn("failure_mtp_proof_status=draft_stage_invalid", summary)
+        self.assertIn("failure_mtp_proof_error=source_draft_accepted=0", summary)
+
     def test_failure_summary_marks_inactive_mtp_failure_separately(self):
         identity = self.valid_identity()
         matrix = parse_fields(
