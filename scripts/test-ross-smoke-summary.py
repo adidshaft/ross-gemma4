@@ -24,6 +24,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         expected_labels = [
             "missing_benchmark_*",
             "benchmark_runtime_mismatch",
+            "benchmark_requested_runtime_missing",
             "benchmark_requested_runtime_mismatch",
             "benchmark_pass_requested_runtime_mismatch",
             "benchmark_pack_runtime_missing",
@@ -198,7 +199,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix_cases"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
                 {"runtime": "gemma_local_runtime", "profile": "quick"},
                 incomplete_matrix,
             )
@@ -206,7 +207,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_mismatched_benchmark_profile_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_profile_mismatch"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
                 {"runtime": "gemma_local_runtime", "profile": "quick"},
                 {
                     "profile": "full",
@@ -218,7 +219,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_missing_pass_profile_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_pass_profile"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
                 {"runtime": "gemma_local_runtime"},
                 {
                     "profile": "quick",
@@ -391,34 +392,30 @@ class RossSmokeSummaryTests(unittest.TestCase):
                         matrix,
                     )
 
-    def test_present_identity_with_missing_optional_fields_reports_nil(self):
+    def test_benchmark_summary_rejects_missing_identity_requested_runtime(self):
         identity = self.valid_identity()
         identity.pop("requested_runtime")
 
-        summary = benchmark_summary_line(
-            identity,
-            {
-                "runtime": "gemma_local_runtime",
-                "profile": "quick",
-                "source_input_tokens": "120",
-                "source_output_tokens": "32",
-                "source_token_speed": "11.0",
-                "source_first_token_ms": "900",
-                "source_measured_tokens": "false",
-                "source_refs": "1",
-                "source_native_model": "true",
-            },
-            {
-                "profile": "quick",
-                "cases": "english_source_bound_document_qa",
-                "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
-            },
-        )
-
-        self.assertIn("runtime=gemma_local_runtime", summary)
-        self.assertIn("requested_runtime=nil", summary)
-        self.assertIn("matrix_cases=english_source_bound_document_qa", summary)
-        self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_requested_runtime_missing"):
+            benchmark_summary_line(
+                identity,
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                    "source_refs": "1",
+                    "source_native_model": "true",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
 
     def test_benchmark_summary_rejects_missing_stage_metrics(self):
         matrix = {

@@ -931,8 +931,9 @@ if ! grep -q "installedPackPassesRuntimeValidation(currentPack)" ios/Ross/AlphaF
     FAIL=1
 fi
 
-if ! grep -q "benchmark_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
-    echo "❌ FAIL: benchmark summary guard does not reject requested/runtime identity mismatches."
+if ! grep -q "benchmark_requested_runtime_missing" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "benchmark_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject missing or mismatched requested/runtime identity."
     FAIL=1
 fi
 

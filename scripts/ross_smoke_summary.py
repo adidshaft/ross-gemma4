@@ -397,7 +397,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"identity_runtime={summary_value(identity, 'actual_runtime')}"
         )
     identity_requested_runtime = identity.get("requested_runtime")
-    if identity_requested_runtime not in (None, "nil", actual_runtime):
+    if identity_requested_runtime in (None, "nil", ""):
+        raise MissingBenchmarkMatrixError("benchmark_requested_runtime_missing requested_runtime=nil")
+    if identity_requested_runtime != actual_runtime:
         raise MissingBenchmarkMatrixError(
             f"benchmark_requested_runtime_mismatch requested_runtime={identity_requested_runtime} "
             f"identity_runtime={actual_runtime}"
