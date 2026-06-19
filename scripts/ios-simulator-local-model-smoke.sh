@@ -254,6 +254,20 @@ gguf_file_looks_usable() {
   [[ "$(LC_ALL=C dd if="$file" bs=4 count=1 2>/dev/null)" == "GGUF" ]]
 }
 
+coreai_adapter_looks_usable() {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    local size
+    size="$(file_size_bytes "$path")"
+    [[ "$size" =~ ^[0-9]+$ ]] || return 1
+    [[ "$size" -gt 0 ]]
+    return
+  fi
+
+  [[ -d "$path" ]] || return 1
+  find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
+}
+
 case "$normalized_runtime" in
   gemma_local_runtime)
     case "$artifact_kind" in
@@ -317,6 +331,10 @@ case "$normalized_runtime" in
     fi
     if [[ "$coreai_system_model_path" != "1" && ! -e "$model_path" ]]; then
       echo "CoreAI/CoreML adapter path not found: $model_path" >&2
+      exit 2
+    fi
+    if [[ "$coreai_system_model_path" != "1" ]] && ! coreai_adapter_looks_usable "$model_path"; then
+      echo "CoreAI/CoreML adapter smoke requires a non-empty adapter artifact: $model_path" >&2
       exit 2
     fi
     ;;

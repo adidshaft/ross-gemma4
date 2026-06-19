@@ -94,8 +94,21 @@ run_expect_exit_2 \
   "CoreAI draft proof requested" \
   "$SIM_SMOKE" --runtime coreai --draft-model "$gguf_as_mlx" --require-draft-acceleration
 
+empty_coreml_dir="$tmpdir/empty-foundation-adapter.mlmodelc"
+mkdir -p "$empty_coreml_dir"
+run_expect_exit_2 \
+  "empty CoreAI adapter directory" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$empty_coreml_dir"
+
+empty_coreml_file="$tmpdir/empty-foundation-adapter.mlmodel"
+: > "$empty_coreml_file"
+run_expect_exit_2 \
+  "empty CoreAI adapter file" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$empty_coreml_file"
+
 coreml_file="$tmpdir/foundation-adapter.mlmodelc"
-printf 'adapter' >"$coreml_file"
+mkdir -p "$coreml_file"
+printf 'adapter' >"$coreml_file/model.bin"
 run_expect_exit_2 \
   "system_model artifact with adapter path" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind system_model --model "$coreml_file"

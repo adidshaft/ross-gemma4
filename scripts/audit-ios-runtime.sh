@@ -592,6 +592,13 @@ if ! grep -q "Selected CoreAI/CoreML adapter manifest reports an empty artifact"
     FAIL=1
 fi
 
+if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator CoreAI adapter smoke does not reject empty adapter artifacts before launch."
+    FAIL=1
+fi
+
 if ! grep -q "Selected GGUF manifest reports an implausibly small artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack GGUF smoke does not reject implausibly small primary artifacts before launch."
     FAIL=1
