@@ -451,6 +451,33 @@ class RossSmokeSummaryTests(unittest.TestCase):
                         matrix,
                     )
 
+    def test_benchmark_summary_rejects_stage_output_above_matrix_token_cap(self):
+        matrix = {
+            "profile": "mtp_quick",
+            "cases": "english_source_bound_document_qa_low_token",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=8",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "mtp_quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "16",
+            "source_token_speed": "1.45",
+            "source_first_token_ms": "82386",
+            "source_measured_tokens": "false",
+        }
+
+        self.assertEqual(
+            benchmark_stage_metric_error(pass_fields, matrix),
+            "source_output_tokens=16>max_tokens=8",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+            benchmark_summary_line(
+                self.valid_identity(),
+                pass_fields,
+                matrix,
+            )
+
     def test_benchmark_summary_rejects_unavailable_runtime_identity(self):
         identity = self.valid_identity()
         identity["available"] = "false"
@@ -717,10 +744,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         pass_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
-            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
-            "general_input_tokens=80 general_output_tokens=16 general_token_speed=10.5 "
+            "general_input_tokens=80 general_output_tokens=6 general_token_speed=10.5 "
             "general_first_token_ms=850 general_measured_tokens=true "
             "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf"
         )

@@ -133,6 +133,26 @@ def benchmark_matrix_stage_names(matrix_fields):
     return names
 
 
+def benchmark_matrix_stage_max_tokens(matrix_fields):
+    stages = matrix_fields.get("stages") or ""
+    max_tokens_by_stage = {}
+    for stage_spec in stages.split(","):
+        parts = [part.strip() for part in stage_spec.split(":") if part.strip()]
+        if not parts:
+            continue
+        stage_name = parts[0]
+        for part in parts[1:]:
+            if not part.startswith("max_tokens="):
+                continue
+            raw_value = part.split("=", 1)[1]
+            try:
+                max_tokens_by_stage[stage_name] = int(raw_value)
+            except (TypeError, ValueError):
+                max_tokens_by_stage[stage_name] = None
+            break
+    return max_tokens_by_stage
+
+
 def benchmark_matrix_case_names(matrix_fields):
     cases = matrix_fields.get("cases") or ""
     return [case.strip() for case in cases.split(",") if case.strip()]
@@ -182,6 +202,7 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
         "first_token_ms",
         "measured_tokens",
     ]
+    matrix_max_tokens = benchmark_matrix_stage_max_tokens(matrix_fields)
     for stage in benchmark_matrix_stage_names(matrix_fields):
         for metric in required_metrics:
             key = f"{stage}_{metric}"
@@ -199,8 +220,14 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
         except (TypeError, ValueError):
             return f"{stage}_input_tokens={summary_value(pass_fields, f'{stage}_input_tokens')}"
         try:
-            if int(output_tokens) <= 0:
+            parsed_output_tokens = int(output_tokens)
+            if parsed_output_tokens <= 0:
                 return f"{stage}_output_tokens={output_tokens}"
+            matrix_stage_max_tokens = matrix_max_tokens.get(stage)
+            if matrix_stage_max_tokens is None:
+                return f"{stage}_max_tokens=nil"
+            if parsed_output_tokens > matrix_stage_max_tokens:
+                return f"{stage}_output_tokens={output_tokens}>max_tokens={matrix_stage_max_tokens}"
         except (TypeError, ValueError):
             return f"{stage}_output_tokens={summary_value(pass_fields, f'{stage}_output_tokens')}"
         try:
