@@ -252,6 +252,33 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
             )
 
+    def test_benchmark_summary_rejects_missing_pack_runtime(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_pack_runtime_missing"):
+            benchmark_summary_line(
+                {
+                    "actual_runtime": "mlx_swift_lm",
+                    "requested_runtime": "mlx_swift_lm",
+                    "model_format": "mlx_directory",
+                    "artifact_path_type": "directory",
+                    "available": "true",
+                    "fallback": "none",
+                },
+                {
+                    "runtime": "mlx_swift_lm",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
     def test_benchmark_summary_rejects_unsupported_runtime_identity(self):
         matrix = {
             "profile": "quick",

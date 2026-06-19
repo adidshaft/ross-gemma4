@@ -563,6 +563,16 @@ if ! grep -q "benchmark_pack_runtime_mismatch" scripts/ross_smoke_summary.py 2>/
     FAIL=1
 fi
 
+if ! grep -q "benchmark_pack_runtime_missing" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not require active pack runtime identity."
+    FAIL=1
+fi
+
+if ! grep -q "test_benchmark_summary_rejects_missing_pack_runtime" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not cover missing active pack runtime identity."
+    FAIL=1
+fi
+
 if ! grep -q '"pack_runtime": summary_value(identity, "pack_runtime")' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summaries do not preserve active pack runtime identity."
     FAIL=1
@@ -605,6 +615,11 @@ fi
 
 if ! grep -q "benchmark_pack_runtime_mismatch" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
     echo "❌ FAIL: QA report template does not document active pack/runtime mismatch benchmark rejection."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_pack_runtime_missing" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: QA report template does not document missing active pack runtime benchmark rejection."
     FAIL=1
 fi
 

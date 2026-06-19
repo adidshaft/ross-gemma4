@@ -52,11 +52,11 @@
 ## Runtime Evidence Rules
 
 - Do not record a benchmark unless the requested runtime and actual runtime match the lane under test.
-- Prefer `ROSS_SMOKE_BENCHMARK_SUMMARY` over raw pass logs. The summary is valid only when the pass runtime, identity `actual_runtime`, identity `requested_runtime`, identity `pack_runtime`, benchmark matrix profile, known smoke-stage names, and per-stage token/speed metrics agree.
+- Prefer `ROSS_SMOKE_BENCHMARK_SUMMARY` over raw pass logs. The summary is valid only when the pass runtime, identity `actual_runtime`, identity `requested_runtime`, required identity `pack_runtime`, benchmark matrix profile, known smoke-stage names, and per-stage token/speed metrics agree.
 - MLX requires `actual_runtime=mlx_swift_lm`.
 - CoreAI/CoreML/Foundation Models requires `actual_runtime=apple_foundation_models`.
 - MTP requires `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and a `.gguf` draft model label in `ROSS_RUNTIME_IDENTITY`. Smoke benchmark summaries also require every matrix stage to report matching `*_acceleration=draftModelSpeculative`, `*_draft_tokens`, and `*_draft_model`.
-- `benchmark_runtime_mismatch`, `benchmark_requested_runtime_mismatch`, `benchmark_pack_runtime_mismatch`, `benchmark_runtime_unsupported`, `benchmark_stage_metrics_missing`, or `benchmark_draft_stage_mismatch` means the entry is not benchmark evidence for the requested lane.
+- `benchmark_runtime_mismatch`, `benchmark_requested_runtime_mismatch`, `benchmark_pack_runtime_missing`, `benchmark_pack_runtime_mismatch`, `benchmark_runtime_unsupported`, `benchmark_stage_metrics_missing`, or `benchmark_draft_stage_mismatch` means the entry is not benchmark evidence for the requested lane.
 - Any fallback to GGUF, deterministic development output, or unavailable runtime makes the entry routing-only or failed-load, not a benchmark for the requested lane.
 
 ## Recommended Variety Matrix

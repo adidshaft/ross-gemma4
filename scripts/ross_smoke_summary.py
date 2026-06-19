@@ -314,6 +314,8 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     matrix_shape_error = benchmark_matrix_shape_error(matrix_fields)
     if matrix_shape_error:
         raise MissingBenchmarkMatrixError(f"benchmark_matrix_shape_mismatch {matrix_shape_error}")
+    if identity_pack_runtime in (None, "nil", ""):
+        raise MissingBenchmarkMatrixError("benchmark_pack_runtime_missing pack_runtime=nil")
     availability_error = runtime_identity_availability_error(identity)
     if availability_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_unavailable {availability_error}")
