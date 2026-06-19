@@ -344,6 +344,8 @@ import time
 sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
     MissingBenchmarkMatrixError,
+    METRICS,
+    STAGES,
     benchmark_summary_line,
     failure_summary_line,
     parse_fields,
@@ -408,6 +410,7 @@ pass_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"\bROSS_RUNTIME_IDENTITY\b")
 matrix_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX\b")
+stage_done_re = re.compile(r"\bROSS_LOCAL_MODEL_SMOKE_STAGE_DONE\b")
 
 def print_benchmark_summary(identity, pass_fields, matrix_fields):
     print(benchmark_summary_line(identity, pass_fields, matrix_fields))
@@ -475,6 +478,7 @@ identity = None
 matrix_fields = None
 pass_fields = None
 fail_fields = None
+completed_stage_fields = {}
 outcome = None
 deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
@@ -495,6 +499,13 @@ try:
             identity = parse_fields(line)
         if matrix_re.search(line):
             matrix_fields = parse_fields(line)
+        if stage_done_re.search(line):
+            stage_fields = parse_fields(line)
+            for stage in STAGES:
+                for metric in METRICS:
+                    key = f"{stage}_{metric}"
+                    if key in stage_fields:
+                        completed_stage_fields[key] = stage_fields[key]
         if pass_re.search(line):
             outcome = "pass"
             pass_fields = parse_fields(line)
@@ -514,6 +525,14 @@ try:
         if time.time() > deadline:
             outcome = "timeout"
             print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)
+            fail_fields = {
+                "runtime": runtime,
+                "requested_runtime": runtime,
+                "profile": smoke_profile,
+                "stage": "helper_timeout",
+                "error": "helper_timeout",
+                **completed_stage_fields,
+            }
             process.kill()
             break
 finally:
@@ -533,6 +552,11 @@ if outcome == "pass" and pass_fields is not None:
     sys.exit(0)
 
 if outcome == "fail":
+    validate_identity_guard(identity, require_identity=False)
+    print(failure_summary_line(identity, fail_fields, matrix_fields))
+    sys.exit(1)
+
+if outcome == "timeout":
     validate_identity_guard(identity, require_identity=False)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)

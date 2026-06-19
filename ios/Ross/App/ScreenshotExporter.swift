@@ -1013,6 +1013,11 @@ struct RossLocalModelSmokeView: View {
             .joined(separator: " ")
     }
 
+    nonisolated static func stageDoneLine(stage: String, durationMs: Int, output: AlphaLocalModelOutput) -> String {
+        let safeStage = stableSmokeValue(stage)
+        return "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(safeStage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil") \(benchmarkFields(stage: stage, output: output))"
+    }
+
     nonisolated static func stageTimeoutSeconds() -> TimeInterval {
         let rawValue = ProcessInfo.processInfo.environment["ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS"] ?? ""
         guard let seconds = TimeInterval(rawValue), seconds > 0 else {
@@ -1047,9 +1052,7 @@ struct RossLocalModelSmokeView: View {
                 let output = await providerTask.value
                 let durationMs = max(Int(Date.now.timeIntervalSince(startedAt) * 1_000), 0)
                 RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_done"))
-                RossLocalModelSmokeView.log(
-                    "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(stage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil")"
-                )
+                RossLocalModelSmokeView.log(stageDoneLine(stage: stage, durationMs: durationMs, output: output))
                 _ = gate.resumeIfNeeded(continuation, output: output)
             }
             Task {
