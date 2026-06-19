@@ -376,6 +376,21 @@ if [ ! -x scripts/ios-morning-runtime-checkpoint-plan.sh ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/ios-runtime-artifact-inventory.sh ]; then
+    echo "❌ FAIL: executable local runtime artifact inventory missing."
+    FAIL=1
+fi
+
+if [ ! -x scripts/test-ios-runtime-artifact-inventory.sh ]; then
+    echo "❌ FAIL: executable local runtime artifact inventory test missing."
+    FAIL=1
+fi
+
+if ! grep -q '"mtp_draft"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: local runtime artifact inventory does not report MTP draft readiness."
+    FAIL=1
+fi
+
 if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not include guarded MTP proof."
     FAIL=1
