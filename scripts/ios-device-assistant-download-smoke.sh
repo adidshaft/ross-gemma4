@@ -211,6 +211,52 @@ def validate_identity_guard(identity):
         )
         sys.exit(1)
 
+def validate_failure_identity_guard(identity, *, outcome):
+    if expected_runtime == "auto":
+        return
+    missing_reason = (
+        "missing_runtime_identity_on_failure"
+        if outcome == "failure"
+        else "missing_runtime_identity_on_exit"
+    )
+    mismatch_reason = (
+        "runtime_identity_mismatch_on_failure"
+        if outcome == "failure"
+        else "runtime_identity_mismatch_on_exit"
+    )
+    artifact_reason = (
+        "runtime_identity_artifact_mismatch_on_failure"
+        if outcome == "failure"
+        else "runtime_identity_artifact_mismatch_on_exit"
+    )
+    if identity is None:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={missing_reason} requested={expected_runtime}",
+            file=sys.stderr,
+        )
+        return
+
+    actual_runtime = identity.get("actual_runtime")
+    requested_runtime = identity.get("requested_runtime")
+    if actual_runtime != expected_runtime or requested_runtime not in (expected_runtime, "nil"):
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={mismatch_reason} requested={expected_runtime} "
+            f"identity_requested={requested_runtime} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        return
+
+    artifact_error = runtime_identity_artifact_error(identity, expected_runtime)
+    if artifact_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={artifact_reason} requested={expected_runtime} "
+            f"{artifact_error}",
+            file=sys.stderr,
+        )
+
 outcome = None
 pass_fields = None
 identity = None
@@ -259,6 +305,8 @@ if outcome == "pass":
             sys.exit(1)
     sys.exit(0)
 if outcome == "fail":
+    validate_failure_identity_guard(identity, outcome="failure")
     sys.exit(1)
+validate_failure_identity_guard(identity, outcome="exit")
 sys.exit(process.returncode or 1)
 PY
