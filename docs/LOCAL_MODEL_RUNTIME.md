@@ -74,6 +74,7 @@ Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity
 - MTP requires identity `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and draft model metadata. Smoke benchmark summaries must also prove every matrix stage used draft acceleration with matching `*_acceleration`, `*_draft_tokens`, and `*_draft_model` fields.
 - Benchmark summaries must also prove the pass runtime matches a known benchmark lane, matches identity `actual_runtime`, identity `requested_runtime` does not disagree, every matrix stage is one of the supported smoke stages, and every matrix stage reports token count, token speed, first-token latency, and measured/estimated status.
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
+- In required draft-acceleration smoke mode, MLX speculative generation failure is reported as `mlx_draft_generation_failed` instead of retrying standard generation, so a draft-proof run cannot publish standard MLX numbers.
 
 Installed-pack validation is runtime-specific before reuse:
 
