@@ -962,6 +962,11 @@ if ! grep -q "benchmark_stage_quality_missing" docs/REAL_MODEL_QA_REPORT_TEMPLAT
     FAIL=1
 fi
 
+if ! grep -q "benchmark_draft_profile_mismatch" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: QA report template does not document MTP profile/draft identity benchmark rejection."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_error_detail" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
    ! grep -q "draft_error_detail" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
    ! grep -q "manifest_primary_unusable_artifact" docs/IOS_RUNTIME.md 2>/dev/null; then
