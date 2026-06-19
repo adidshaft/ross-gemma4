@@ -134,6 +134,7 @@ if [[ -n "$installed_root" ]]; then
 fi
 echo
 echo "Order: list installed packs first, run GGUF/MTP as short smokes, then run installed MLX/CoreAI with the full varied document/query matrix when available. Stop on memory pressure, thermal issues, instability, or fallback."
+echo "Pre-device sanity: use scripts/ios-simulator-local-model-smoke.sh --preflight-only for any local GGUF/MLX/CoreAI artifact or system:// sentinel you plan to reference; this emits ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK without launching Simulator or touching the cabled iPhone."
 echo "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query."
 echo
 

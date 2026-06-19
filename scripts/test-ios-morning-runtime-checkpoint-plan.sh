@@ -16,6 +16,9 @@ grep -q "not draft_output_degenerate" /tmp/ross-morning-plan.out
 grep -q "per-stage token/speed metrics" /tmp/ross-morning-plan.out
 grep -q "native-model markers" /tmp/ross-morning-plan.out
 grep -q "source refs for source-bound stages" /tmp/ross-morning-plan.out
+grep -q -- "--preflight-only" /tmp/ross-morning-plan.out
+grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" /tmp/ross-morning-plan.out
+grep -q "without launching Simulator or touching the cabled iPhone" /tmp/ross-morning-plan.out
 grep -q "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query." /tmp/ross-morning-plan.out
 
 support_root="$tmpdir/RossAlpha"

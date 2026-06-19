@@ -621,6 +621,13 @@ if ! grep -q "Full matrix cases: English source-bound document QA, Bengali sourc
     FAIL=1
 fi
 
+if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "without launching Simulator or touching the cabled iPhone" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan does not remind operators to use no-launch artifact preflights before device work."
+    FAIL=1
+fi
+
 if ! grep -q "inventory_tier_pattern" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "missing_installed_mlx_for_tier" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "wrong-tier inventory" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
