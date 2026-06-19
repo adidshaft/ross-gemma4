@@ -864,6 +864,7 @@ struct AlphaMLXGenerationSnapshot: Sendable {
     var generationTokenCount: Int?
     var outputTokensPerSecond: Double?
     var timeToFirstTokenMs: Int?
+    var usesMeasuredTokenCounts: Bool = false
 }
 
 final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
@@ -933,12 +934,15 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         }
                     }
                     alphaLocalModelSmokeMemoryLog("mlx_after_generate_draft")
+                    let measuredPromptTokens = completionInfo?.promptTokenCount ?? promptTokenCount
+                    let measuredGenerationTokens = completionInfo?.generationTokenCount
                     return AlphaMLXGenerationSnapshot(
                         text: generated,
-                        promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
-                        generationTokenCount: completionInfo?.generationTokenCount,
+                        promptTokenCount: measuredPromptTokens,
+                        generationTokenCount: measuredGenerationTokens,
                         outputTokensPerSecond: completionInfo?.tokensPerSecond,
-                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) }
+                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) },
+                        usesMeasuredTokenCounts: measuredGenerationTokens != nil
                     )
                 }
             } else {
@@ -960,12 +964,15 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         }
                     }
                     alphaLocalModelSmokeMemoryLog("mlx_after_generate_standard")
+                    let measuredPromptTokens = completionInfo?.promptTokenCount ?? promptTokenCount
+                    let measuredGenerationTokens = completionInfo?.generationTokenCount
                     return AlphaMLXGenerationSnapshot(
                         text: generated,
-                        promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
-                        generationTokenCount: completionInfo?.generationTokenCount,
+                        promptTokenCount: measuredPromptTokens,
+                        generationTokenCount: measuredGenerationTokens,
                         outputTokensPerSecond: completionInfo?.tokensPerSecond,
-                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) }
+                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) },
+                        usesMeasuredTokenCounts: measuredGenerationTokens != nil
                     )
                 }
             }
@@ -1204,7 +1211,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 inputTokenCount: generation.promptTokenCount,
                 outputTokenCount: generation.generationTokenCount,
                 outputTokensPerSecond: generation.outputTokensPerSecond,
-                timeToFirstTokenMs: generation.timeToFirstTokenMs
+                timeToFirstTokenMs: generation.timeToFirstTokenMs,
+                usesMeasuredTokenCounts: generation.usesMeasuredTokenCounts ||
+                    (generation.promptTokenCount != nil && generation.generationTokenCount != nil)
             )
         }
 

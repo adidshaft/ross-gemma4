@@ -22066,6 +22066,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.outputTokenCount, 24)
         XCTAssertEqual(output?.outputTokensPerSecond ?? 0, 12.5, accuracy: 0.001)
         XCTAssertEqual(output?.timeToFirstTokenMs, 700)
+        XCTAssertTrue(output?.usesMeasuredTokenCounts == true)
         XCTAssertNil(output?.errorCategory)
     }
 
@@ -22309,6 +22310,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.outputTokenCount, 52)
         XCTAssertEqual(output?.outputTokensPerSecond, 17.8)
         XCTAssertEqual(output?.timeToFirstTokenMs, 720)
+        XCTAssertTrue(output?.usesMeasuredTokenCounts == true)
     }
 
     func testExperimentalMLXProviderDefaultsDraftTokensByTier() async throws {
