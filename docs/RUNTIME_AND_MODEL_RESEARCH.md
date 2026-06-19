@@ -76,15 +76,17 @@ Legacy compatibility note:
 - package URLs:
   - `https://github.com/ml-explore/mlx-swift`
   - `https://github.com/ml-explore/mlx-swift-lm`
-- status: active secondary runtime lane
+- status: wired secondary runtime lane; physical benchmark proof is still pending
 - chosen: yes, but not as the only delivery path
 - role in Ross: iPhone/macOS runtime option for MLX model directories, with packaged MLX companions for Quick Start and Case Associate and iPhone-specific speed heuristics
 - limitation: it requires MLX-native model directories instead of direct GGUF execution
+- benchmark rule: do not publish MLX numbers unless `ROSS_RUNTIME_IDENTITY actual_runtime=mlx_swift_lm` and generation succeeds without GGUF fallback
 
 ### Built-in CoreAI lane
 - runtime raw value: `apple_foundation_models`
-- status: active fallback/instant-setup lane on supported devices
+- status: wired fallback/instant-setup lane on supported devices; physical benchmark proof is still pending
 - role in Ross: lets supported iPhones prefer the built-in model when no download or faster recent runs make that the better UX choice
+- benchmark rule: do not publish CoreAI/CoreML/Foundation numbers unless `ROSS_RUNTIME_IDENTITY actual_runtime=apple_foundation_models` and generation succeeds
 
 ## Part 3 — Current iPhone tuning
 
@@ -108,8 +110,8 @@ Legacy compatibility note:
 - The visible setup ladder is already the intended 3-pack lineup: Quick Start, Case Associate, and Senior Drafting Support.
 - `gemma-4-12b-q4` is the middle visible tier and current recommended quality target.
 - GGUF remains the most stable cross-platform delivery path.
-- MLX is now a real runtime lane for supported iPhones instead of a future-only idea.
-- CoreAI is now a real runtime lane for supported devices instead of only a brainstorm.
+- MLX is now a wired runtime lane for supported iPhones instead of a future-only idea, but it remains unproven as a physical benchmark lane until a matching identity and successful generation are recorded.
+- CoreAI is now a wired runtime lane for supported devices instead of only a brainstorm, but it remains unproven as a benchmark lane until a matching Foundation Models identity and successful generation are recorded.
 - The answer-details UX for `Tokens processed` and `Token speed` already exists behind hidden response actions instead of adding noise to the main answer body.
 
 ## Part 5 — Next validation focus

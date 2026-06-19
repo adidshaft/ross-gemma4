@@ -89,8 +89,8 @@ Embedding model:
   - Case Associate: about 20k to 40k tokens on capable iPhones
   - Senior Drafting Support: about 10k to 24k tokens
 - Input budgets are widened per tier so longer matter files can stay on-device instead of being truncated to the old fixed limits.
-- Supported iPhone runtime selection can choose GGUF, MLX, or built-in CoreAI depending on device support and recent runtime performance.
-- MLX is currently supported only for the visible Quick Start and Case Associate tiers; Senior Drafting Support remains GGUF/CoreAI-only because the current 26B-A4B MLX main archive is still blocked.
+- Supported iPhone runtime selection can choose GGUF, MLX, or built-in CoreAI depending on device support and recent runtime performance, but MLX/CoreAI benchmark claims require their own matching `ROSS_RUNTIME_IDENTITY` and successful generation.
+- MLX is currently wired only for the visible Quick Start and Case Associate tiers; Senior Drafting Support remains GGUF/CoreAI-only because the current 26B-A4B MLX main archive is still blocked. The MLX lane is not physical-benchmark-proven until the installed MLX directory generates under `actual_runtime=mlx_swift_lm`.
 
 ## Not Implemented Yet
 

@@ -36,20 +36,20 @@ Gemma/Gemma 3n generative paths are optional future or experimental paths, not R
 
 - download: about 5.2 GB in the current iOS catalog
 - role: lighter everyday work, short summaries, and quicker local matter Q&A
-- runtime priority: GGUF on all supported platforms, with MLX and CoreAI eligible on supported iPhones
+- runtime priority: GGUF on all supported platforms, with MLX and CoreAI eligible on supported iPhones only when their own runtime identity and generation proof are present
 
 ### Case Associate
 
 - recommended
 - download: about 7.8 GB in the current iOS catalog
 - role: most matters, larger files, chronology work, hearing notes, and source-backed Ask Ross answers
-- runtime priority: GGUF by default, with MLX preferred on supported iPhones when it remains the faster lane
+- runtime priority: GGUF by default, with MLX preferred on supported iPhones only after `actual_runtime=mlx_swift_lm` generation is proven for the installed MLX directory
 
 ### Senior Drafting Support
 
 - download: about 17.5 GB in the current iOS catalog
 - role: larger bundles, deeper review, longer local reasoning, chronology refinement, and drafting support
-- runtime priority: GGUF first, with CoreAI eligible where instant built-in setup is preferred
+- runtime priority: GGUF first, with CoreAI eligible where instant built-in setup is preferred only after `actual_runtime=apple_foundation_models` generation is proven
 
 ### Legacy compatibility tier
 
@@ -99,5 +99,5 @@ Supported artifact-kind values:
 - normal UI uses assistant levels, not model names
 - private matter data never goes to cloud AI
 - deterministic dev remains available for tests and fallback
-- iPhone runtime selection may choose GGUF, MLX, or built-in CoreAI depending on support and recent performance
+- iPhone runtime selection may choose GGUF, MLX, or built-in CoreAI depending on support and recent performance, but benchmark rows must use the selected lane's own `ROSS_RUNTIME_IDENTITY` rather than fallback GGUF evidence
 - source-backed answers require the separate retrieval model path

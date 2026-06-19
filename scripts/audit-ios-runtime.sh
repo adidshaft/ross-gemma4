@@ -138,6 +138,15 @@ if ! grep -q "iOS GGUF/.*current proven real local inference lane" docs/RUNTIME_
     FAIL=1
 fi
 
+if ! grep -q "physical benchmark proof is still pending" docs/RUNTIME_AND_MODEL_RESEARCH.md 2>/dev/null ||
+   ! grep -q "actual_runtime=mlx_swift_lm.*generation succeeds" docs/RUNTIME_AND_MODEL_RESEARCH.md 2>/dev/null ||
+   ! grep -q "actual_runtime=apple_foundation_models.*generation succeeds" docs/RUNTIME_AND_MODEL_RESEARCH.md 2>/dev/null ||
+   ! grep -q "MLX/CoreAI benchmark claims require their own matching" docs/GEMMA4_ARCHITECTURE.md 2>/dev/null ||
+   ! grep -q "benchmark rows must use the selected lane's own" docs/MODEL_REGISTRY.md 2>/dev/null; then
+    echo "❌ FAIL: runtime docs overclaim MLX/CoreAI readiness without benchmark identity/generation proof."
+    FAIL=1
+fi
+
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
     FAIL=1
