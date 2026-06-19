@@ -799,6 +799,18 @@ if ! grep -q "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration" 
     FAIL=1
 fi
 
+for coreai_runtime_guard in \
+    "testFoundationProviderReportsSpecificGenerationFailure" \
+    "testFoundationProviderReportsMissingAdapterArtifactBeforeGeneration" \
+    "testFoundationProviderReportsEmptyAdapterArtifactsBeforeGeneration" \
+    "testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration" \
+    "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration"; do
+    if ! grep -q "$coreai_runtime_guard" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+        echo "❌ FAIL: standard SwiftPM runtime guardrail suite omits CoreAI proof: $coreai_runtime_guard"
+        FAIL=1
+    fi
+done
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
