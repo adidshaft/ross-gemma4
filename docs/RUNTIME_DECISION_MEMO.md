@@ -18,7 +18,7 @@ Ross Real Local Model Proof & QA Alpha
 
 - iOS GGUF Quick Start has physical-device benchmark evidence on Aman's iPhone from June 19, 2026.
 - The 12B GGUF lane is correctly blocked as `insufficient_device_memory` on the 7 GB iPhone class.
-- MTP draft artifacts are discoverable, but a benchmark is invalid unless runtime identity reports `acceleration=draftModelSpeculative`, `draft_status=active`, non-`nil` draft tokens, and a non-`nil` draft model.
+- MTP draft artifacts are discoverable and can reach `draftModelSpeculative` on some stages, but the June 19 physical full-matrix attempt failed quality gates with `draft_output_degenerate`. A benchmark is invalid unless runtime identity reports `acceleration=draftModelSpeculative`, `draft_status=active`, non-`nil` draft tokens, a non-`nil` draft model, and every requested benchmark stage reports matching draft metadata without degenerate output.
 - MLX and CoreAI/CoreML requests are not valid benchmarks unless `ROSS_RUNTIME_IDENTITY actual_runtime` proves `mlx_swift_lm` or `apple_foundation_models` respectively.
 - Runtime resolution now rejects incompatible active/debug artifact shapes before provider construction, so a requested MLX/CoreAI lane cannot borrow a GGUF artifact and become benchmark evidence.
 

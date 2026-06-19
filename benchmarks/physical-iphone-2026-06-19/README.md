@@ -19,7 +19,7 @@ This report records the physical-device benchmark evidence captured on Aman's at
 | Runtime path | Status | Evidence |
 | --- | --- | --- |
 | GGUF / `llama.cpp` / `llama.swift` | Benchmarked and passing | E4B Quick Start and 2B baseline generated local source-grounded and general answers. |
-| MTP draft acceleration | Artifact detected, not active | E4B pack included `mtp-gemma-4-E4B-it.gguf`, but runtime health reported `acceleration=standard`, `draft_tokens=nil`, and `draft_model=nil`. |
+| MTP draft acceleration | Artifact detected, not release-safe | E4B pack included `mtp-gemma-4-E4B-it.gguf`. Strict validation failed in one run, and a later full-matrix draft run produced `draft_output_degenerate` on Bengali. Do not publish MTP numbers from these runs. |
 | MLX / `mlx_swift_lm` | Requested, not benchmarked | The smoke request entered `runtime=mlx_swift_lm`, but the installed state resolved through GGUF files and loader logs. No MLX artifact-backed generation result was produced. |
 | CoreAI / Foundation Models | Requested, not benchmarked | The smoke request entered `runtime=apple_foundation_models`, but the installed state resolved through GGUF files and loader logs. No CoreAI artifact-backed generation result was produced. |
 | Gemma 4 12B GGUF | Blocked safely | The app refused generation with `insufficient_device_memory` on this 7 GB device class. |
@@ -33,6 +33,24 @@ The 2B proof pack passed the full physical-device benchmark matrix after the fre
 The E4B Quick Start GGUF pack still loads on the physical device, but the fresh full-matrix run with a 90s stage timeout did not produce a benchmark summary: the first source-bound stage timed out after real generation started. Treat this checkpoint as load/routing evidence, not a fresh E4B benchmark.
 
 The E4B MTP proof attempt failed safely. Strict draft validation required active speculative acceleration, but the run reported `draft_status=validator_failed`, `error=draft_validator_failed`, `acceleration=standard`, and `draft_tokens=nil` after `llama_model_load` failed with `mmap failed: Cannot allocate memory`. This is not MTP benchmark evidence.
+
+## Fresh Standard E4B Full-Matrix Checkpoint - 2026-06-19 13:55 IST
+
+A later installed-pack smoke used the same E4B Quick Start pack with draft explicitly disabled:
+
+```bash
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --pack-id gemma-4-e4b-q4 \
+  --runtime gguf \
+  --smoke-profile full \
+  --stage-timeout 180 \
+  --disable-draft
+```
+
+This run passed the full benchmark matrix with `ROSS_RUNTIME_IDENTITY actual_runtime=gemma_local_runtime`, `acceleration=standard`, `draft_status=no_draft_configured`, `fallback=none`, `available=true`, `context_tokens=4096`, and `gpu_offload=n_gpu_layers:0,offload_kqv:false,op_offload:false`.
+
+The companion draft-enabled full-matrix run is intentionally not a benchmark pass. It produced useful failure evidence: source/general/Bengali stages initially reported `draftModelSpeculative`, but Bengali failed with `bengali_error=draft_output_degenerate`. The same draft pair must remain blocked until a future MTP proof passes the low-token `mtp_quick` profile and any requested full matrix without degenerate output.
 
 ## Installed Packs Observed
 
@@ -82,6 +100,14 @@ scripts/ios-device-installed-pack-smoke.sh \
 
 scripts/ios-device-installed-pack-smoke.sh \
   --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
+  --pack-id gemma-4-e4b-q4 \
+  --runtime gguf \
+  --smoke-profile full \
+  --stage-timeout 180 \
+  --disable-draft
+
+scripts/ios-device-installed-pack-smoke.sh \
+  --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B \
   --pack-id gemma-2-2b-it-Q4_K_M-device-proof \
   --allow-device-proof-pack \
   --smoke-profile quick \
@@ -116,7 +142,8 @@ The MLX and CoreAI requests were stopped after they resolved into the existing G
 | Pack | Profile | Result | Document/query coverage | Runtime |
 | --- | --- | --- | --- | --- |
 | Gemma 4 E4B Quick Start, 5.13 GB | quick | PASS | Source-grounded document query plus general query. | `gemma_local_runtime` |
-| Gemma 4 E4B Quick Start, 5.13 GB | full | PASS | Source, general, Bengali, Hindi, Tamil, and Telugu queries. | `gemma_local_runtime` |
+| Gemma 4 E4B Quick Start, 5.13 GB | full, standard only | PASS | Source, general, Bengali, Hindi, Tamil, and Telugu queries. | `gemma_local_runtime`, `acceleration=standard` |
+| Gemma 4 E4B Quick Start + MTP draft, 5.13 GB + 79 MB | full, draft enabled | FAIL | Source, general, Bengali, Hindi, Tamil, and Telugu queries; Bengali failed as `draft_output_degenerate`. | Not valid MTP evidence |
 | Gemma 2 2B baseline, 1.71 GB | quick | PASS | Source-grounded document query plus general query. | Seeded proof pack |
 | Gemma 4 12B Case Associate, 7.37 GB | quick | BLOCKED | Generation did not run because the device failed the memory guard. | `insufficient_device_memory` |
 
@@ -128,6 +155,12 @@ The MLX and CoreAI requests were stopped after they resolved into the existing G
 | E4B current app | General query | 382 scheduled tokens | 8.76s | 21.92 output tok/s, 43.62 total tok/s |
 | E4B full | Source document query | 399 scheduled tokens | 13.04s | 14.72 output tok/s, 30.59 total tok/s |
 | E4B full | General query | 382 scheduled tokens | 8.08s | 23.78 output tok/s, 47.31 total tok/s |
+| E4B full standard-only | Source document query | 207 input / 56 output tokens | 14.75s | 6.75 output tok/s |
+| E4B full standard-only | General query | 190 input / 30 output tokens | 10.40s | 6.56 output tok/s |
+| E4B full standard-only | Bengali document query | 240 input / 59 output tokens | 126.32s | 0.49 output tok/s |
+| E4B full standard-only | Hindi document query | 246 input / 59 output tokens | 16.43s | 6.30 output tok/s |
+| E4B full standard-only | Tamil document query | 305 input / 95 output tokens | 25.43s | 5.96 output tok/s |
+| E4B full standard-only | Telugu document query | 339 input / 96 output tokens | 25.25s | 6.28 output tok/s |
 | E4B full | Bengali | 432 scheduled tokens | 12.51s | 15.34 output tok/s, 34.52 total tok/s |
 | E4B full | Hindi | 438 scheduled tokens | 14.77s | 13.00 output tok/s, 29.66 total tok/s |
 | E4B full | Tamil | 445 scheduled tokens | 15.39s | 12.47 output tok/s, 28.91 total tok/s |

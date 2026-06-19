@@ -76,6 +76,7 @@ Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
 - `draft_error_detail` and `runtime_error_detail` are triage fields only. They help explain inactive MTP, missing MLX artifacts, or unsupported CoreAI/CoreML paths, but they do not make a failed or fallback run benchmark evidence.
 - A GGUF+MTP draft pair that produces degenerate output is reported as `draft_output_degenerate` and quarantined for the current process, so follow-up runs use standard GGUF instead of repeatedly treating the same bad MTP pair as active.
+- A standard GGUF rerun after draft quarantine is valid only as a standard GGUF benchmark. It does not repair or prove the MTP lane, even if it uses the same primary model artifact.
 - In required draft-acceleration smoke mode, MLX speculative generation failure is reported as `mlx_draft_generation_failed` instead of retrying standard generation, so a draft-proof run cannot publish standard MLX numbers.
 
 Installed-pack validation is runtime-specific before reuse:
@@ -121,7 +122,7 @@ Not yet proven:
 
 - Android native Q4 inference
 - MLX and CoreAI/Foundation Models generation on physical iPhone without routing through GGUF
-- MTP draft acceleration on physical iPhone
+- MTP draft acceleration on physical iPhone with non-degenerate output across the requested benchmark matrix
 - separate embedding model install and lifecycle
 - hardware proof of every visible Gemma 4 tier
 - production model delivery for large artifacts
