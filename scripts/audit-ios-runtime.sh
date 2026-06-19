@@ -624,6 +624,12 @@ if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present"
     FAIL=1
 fi
 
+if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
+   ! grep -q "every benchmark summary stage must keep draft acceleration active" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
+    echo "❌ FAIL: model artifact status does not reflect paired MTP inventory and per-stage draft proof requirements."
+    FAIL=1
+fi
+
 if grep -q -- "--allow-device-proof-pack" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan should not allow seeded proof packs for MTP proof."
     FAIL=1
