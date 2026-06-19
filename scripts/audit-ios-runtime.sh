@@ -228,6 +228,12 @@ if ! grep -q "system_model_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     FAIL=1
 fi
 
+if ! grep -q "artifactPathLabel = alphaPackUsesSystemFoundationModel" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "artifact_path=system://apple-foundation-models" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: CoreAI system-model runtime identity does not preserve system:// sentinel artifact paths."
+    FAIL=1
+fi
+
 if ! grep -q "mlx_directory_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not reject file-like MLX directory labels."
     FAIL=1

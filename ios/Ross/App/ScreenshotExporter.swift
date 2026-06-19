@@ -930,6 +930,9 @@ struct RossLocalModelSmokeView: View {
         } else {
             artifactPathType = "missing"
         }
+        let artifactPathLabel = alphaPackUsesSystemFoundationModel(activePack)
+            ? activePack.installPath
+            : (artifactURL.lastPathComponent.isEmpty ? activePack.installPath : artifactURL.lastPathComponent)
 
         let gpuOffloadInfo: String
         switch actualRuntime {
@@ -953,7 +956,7 @@ struct RossLocalModelSmokeView: View {
             ("pack_runtime", activePack.runtimeMode.rawValue),
             ("model_format", activePack.artifactKind),
             ("artifact_path_type", artifactPathType),
-            ("artifact_path", artifactURL.lastPathComponent.isEmpty ? activePack.installPath : artifactURL.lastPathComponent),
+            ("artifact_path", artifactPathLabel),
             ("acceleration", providerHealth.accelerationMode?.rawValue ?? "nil"),
             ("draft_tokens", providerHealth.accelerationDraftTokens.map(String.init) ?? "nil"),
             ("draft_model", providerHealth.draftModelPathLabel ?? "nil"),

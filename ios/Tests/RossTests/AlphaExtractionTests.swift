@@ -18401,7 +18401,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(line.contains("artifact_path_type=system"))
-        XCTAssertTrue(line.contains("artifact_path=apple-foundation-models"))
+        XCTAssertTrue(line.contains("artifact_path=system://apple-foundation-models"))
         XCTAssertTrue(line.contains("actual_runtime=apple_foundation_models"))
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
