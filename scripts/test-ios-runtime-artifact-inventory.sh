@@ -36,6 +36,11 @@ mkdir -p "$tmpdir/foundation-adapter.mlmodelc"
 grep -q "lane=gguf status=present" /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=present" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=present" /tmp/ross-runtime-inventory.out
+grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
+
+printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
+
+"$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=present" /tmp/ross-runtime-inventory.out
 
 tiny="$tmpdir/tiny-draft.gguf"

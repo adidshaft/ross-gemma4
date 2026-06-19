@@ -74,6 +74,20 @@ mlx_directory_looks_usable() {
   find "$directory" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -print -quit | grep -q .
 }
 
+coreai_adapter_looks_usable() {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    local size
+    size="$(file_size_bytes "$path")"
+    [[ "$size" =~ ^[0-9]+$ ]] || return 1
+    [[ "$size" -gt 0 ]]
+    return
+  fi
+
+  [[ -d "$path" ]] || return 1
+  find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
+}
+
 first_usable_gguf=""
 first_draft_like_gguf=""
 first_usable_mlx=""
@@ -102,7 +116,9 @@ for root in "${search_roots[@]}"; do
   done < <(find "$root" -maxdepth 5 -type f -name config.json -print 2>/dev/null)
 
   while IFS= read -r adapter_path; do
-    [[ -n "$first_coreai_adapter" ]] || first_coreai_adapter="$adapter_path"
+    if coreai_adapter_looks_usable "$adapter_path"; then
+      [[ -n "$first_coreai_adapter" ]] || first_coreai_adapter="$adapter_path"
+    fi
   done < <(find "$root" -maxdepth 5 \( -type d \( -name '*.mlmodelc' -o -name '*.mlpackage' \) -o -type f \( -name '*.mlmodel' -o -name '*.mlpackage' \) \) -print 2>/dev/null)
 done
 
