@@ -811,6 +811,13 @@ if ! grep -q "draft_validator_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProv
     FAIL=1
 fi
 
+if ! grep -q "strictDraftSetup: true" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "couldNotInitializeDraftContext" ios/Ross/AlphaFoundation/AlphaLlamaCppEngine.swift 2>/dev/null ||
+   ! grep -q "MTP validation uses strict draft setup" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP validator can silently downgrade failed draft setup to standard generation."
+    FAIL=1
+fi
+
 if ! grep -q "draft_validator_rejected" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not surface draft validator rejection categories."
     FAIL=1

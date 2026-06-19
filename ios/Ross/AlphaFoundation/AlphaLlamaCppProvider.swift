@@ -486,7 +486,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         try LlamaContext.create_context(
             path: path,
             draftPath: draftPath,
-            draftTokens: draftTokens
+            draftTokens: draftTokens,
+            strictDraftSetup: true
         ).configuredAccelerationMode == .draftModelSpeculative
     }
 

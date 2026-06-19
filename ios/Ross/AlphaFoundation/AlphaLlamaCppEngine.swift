@@ -3,6 +3,7 @@ import llama
 
 enum LlamaError: Error {
     case couldNotInitializeContext
+    case couldNotInitializeDraftContext
     case couldNotInitializeSampler
     case missingPromptState
 }
@@ -130,7 +131,8 @@ actor LlamaContext: AlphaLlamaCompletionContext {
     static func create_context(
         path: String,
         draftPath: String? = nil,
-        draftTokens: Int? = nil
+        draftTokens: Int? = nil,
+        strictDraftSetup: Bool = false
     ) throws -> LlamaContext {
         backendLock.lock()
         if !backendInitialized {
@@ -206,6 +208,9 @@ actor LlamaContext: AlphaLlamaCompletionContext {
                     llama_set_embeddings_nextn_bridge(context, true, false)
                 } catch {
                     print("Speculative draft setup failed for \(draftConfiguration.path): \(error)")
+                    if strictDraftSetup {
+                        throw LlamaError.couldNotInitializeDraftContext
+                    }
                     draftState = nil
                 }
             } else {
