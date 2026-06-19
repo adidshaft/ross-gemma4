@@ -20113,16 +20113,22 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.mlmodelc")
+        XCTAssertEqual(health?.modelPathPresent, false)
         XCTAssertNotEqual(health?.modelPathLabel, "system-model")
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
     func testRuntimeHealthRedactsConfiguredModelPathToBasename() {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foundation-adapter-\(UUID().uuidString).bundle")
+        FileManager.default.createFile(atPath: adapterURL.path, contents: Data("adapter".utf8))
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let environment = AlphaLocalRuntimeEnvironment(
             enableRealInference: true,
             runtimeModeOverride: .appleFoundationModels,
-            modelPath: "/tmp/private/device/debug/foundation-adapter.bundle",
+            modelPath: adapterURL.path,
             modelChecksum: String(repeating: "a", count: 64),
             modelKind: "foundation_adapter"
         )
@@ -20133,7 +20139,8 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeEnvironment: environment
         )
 
-        XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.bundle")
+        XCTAssertEqual(health?.modelPathLabel, adapterURL.lastPathComponent)
+        XCTAssertEqual(health?.modelPathPresent, true)
     }
 
     func testRuntimeHealthRedactsConfiguredMLXDirectoryToBasename() throws {
@@ -20182,6 +20189,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 

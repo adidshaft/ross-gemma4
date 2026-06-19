@@ -2731,7 +2731,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: status.available,
-            modelPathPresent: modelPath != nil || modelPathLabel == "system-model",
+            modelPathPresent: coreAIModelPathPresent(),
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: status.available ? Array(plannedTasks) : [],
@@ -2743,6 +2743,13 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             userFacingStatus: status.userFacingStatus,
             explicitOptInEnabled: true
         )
+    }
+
+    private func coreAIModelPathPresent() -> Bool {
+        if modelPathLabel == "system-model" { return true }
+        guard let modelPath, !modelPath.isEmpty else { return false }
+        return FileManager.default.fileExists(atPath: modelPath) &&
+            FileManager.default.isReadableFile(atPath: modelPath)
     }
 
     func contextWindowEstimate() -> Int? {
