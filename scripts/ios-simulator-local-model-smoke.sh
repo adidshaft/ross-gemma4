@@ -346,8 +346,8 @@ case "$normalized_runtime" in
     fi
     lower_model_path="$(printf '%s' "$model_path" | tr '[:upper:]' '[:lower:]')"
     case "$lower_model_path" in
-      *.gguf|*.bin)
-        echo "MLX simulator smoke requires an MLX directory, not a GGUF/bin file: $model_path" >&2
+      *.gguf|*.safetensors|*.bin)
+        echo "MLX simulator smoke requires an MLX directory, not a file-like model artifact: $model_path" >&2
         exit 2
         ;;
     esac
@@ -423,8 +423,8 @@ if [[ -n "$draft_model_path" ]]; then
     mlx_swift_lm)
       lower_draft_model_path="$(printf '%s' "$draft_model_path" | tr '[:upper:]' '[:lower:]')"
       case "$lower_draft_model_path" in
-        *.gguf|*.bin)
-          echo "MLX simulator draft proof requires an MLX draft directory, not a GGUF/bin file: $draft_model_path" >&2
+        *.gguf|*.safetensors|*.bin)
+          echo "MLX simulator draft proof requires an MLX draft directory, not a file-like model artifact: $draft_model_path" >&2
           exit 2
           ;;
       esac

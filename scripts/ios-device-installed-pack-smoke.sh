@@ -521,7 +521,7 @@ if runtime == "apple_foundation_models":
         )
         sys.exit(1)
 
-if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin")):
+if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".safetensors", ".bin")):
     print(
         "Selected MLX manifest points at a file-like model artifact instead of an MLX directory: "
         f"relativePath={relative_path}",
@@ -588,7 +588,7 @@ if draft_artifact_kind not in allowed:
     )
     sys.exit(1)
 
-if runtime == "mlx_swift_lm" and draft_relative_path.lower().endswith((".gguf", ".bin")):
+if runtime == "mlx_swift_lm" and draft_relative_path.lower().endswith((".gguf", ".safetensors", ".bin")):
     print(
         "Selected MLX manifest points its draft companion at a file-like artifact instead of an MLX directory: "
         f"draftArtifact.relativePath={draft_relative_path} pack={pack_id} tier={tier}",

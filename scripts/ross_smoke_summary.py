@@ -144,7 +144,7 @@ def runtime_identity_artifact_error(identity, expected_runtime):
             return f"gguf_file_path={summary_value(identity, 'artifact_path')}"
     if expected_runtime == "mlx_swift_lm":
         artifact_path = (identity.get("artifact_path") or "").lower()
-        if artifact_path.endswith(".gguf") or artifact_path.endswith(".bin"):
+        if artifact_path.endswith((".gguf", ".safetensors", ".bin")):
             return f"mlx_directory_path={summary_value(identity, 'artifact_path')}"
     if expected_runtime == "apple_foundation_models":
         if model_format == "system_model" and artifact_path_type != "system":
@@ -217,7 +217,7 @@ def runtime_identity_draft_artifact_error(identity, expected_runtime):
             return f"draft_model_format={summary_value(identity, 'draft_model')}"
     if expected_runtime == "mlx_swift_lm":
         draft_model = (identity.get("draft_model") or "").lower()
-        if draft_model.endswith(".gguf") or draft_model.endswith(".bin"):
+        if draft_model.endswith((".gguf", ".safetensors", ".bin")):
             return f"draft_model_format={summary_value(identity, 'draft_model')}"
     return None
 

@@ -362,6 +362,20 @@ write_manifest '{
 run_expect_exit_1 "tiny MLX installed manifest" "implausibly small artifact" "${base_command[@]}" --runtime mlx
 
 write_manifest '{
+  "packId": "safetensors-mlx",
+  "tier": "quick_start",
+  "fileName": "model.safetensors",
+  "relativePath": "model-packs/quick/model.safetensors",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+run_expect_exit_1 "safetensors MLX installed manifest" "file-like model artifact" "${base_command[@]}" --runtime mlx
+
+write_manifest '{
   "packId": "malformed-mlx",
   "tier": "quick_start",
   "fileName": "mlx-model",
@@ -377,6 +391,28 @@ mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/qu
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/config.json"
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/tokenizer.json"
 run_expect_exit_1 "malformed installed MLX directory" "Installed MLX artifact directory is missing required files" "${base_command[@]}" --runtime mlx
+
+write_manifest '{
+  "packId": "safetensors-mlx-draft",
+  "tier": "quick_start",
+  "fileName": "mlx-model",
+  "relativePath": "model-packs/quick/mlx-model",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "draft.safetensors",
+    "relativePath": "model-packs/quick/draft.safetensors",
+    "checksumSha256": "b",
+    "bytes": 2000000,
+    "artifactKind": "mlx_directory",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+run_expect_exit_1 "safetensors MLX draft installed manifest" "file-like artifact" "${base_command[@]}" --runtime mlx --require-draft-acceleration --smoke-profile mtp_quick
 
 write_manifest '{
   "packId": "malformed-mlx-draft",

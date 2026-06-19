@@ -75,6 +75,12 @@ run_expect_exit_2 \
   "GGUF file passed as MLX" \
   "$SIM_SMOKE" --runtime mlx --model "$gguf_as_mlx"
 
+safetensors_as_mlx="$tmpdir/wrong-runtime.safetensors"
+printf 'weights' >"$safetensors_as_mlx"
+run_expect_exit_2 \
+  "safetensors file passed as MLX" \
+  "$SIM_SMOKE" --runtime mlx --model "$safetensors_as_mlx"
+
 empty_weight_mlx="$tmpdir/empty-weight-mlx"
 mkdir -p "$empty_weight_mlx"
 printf '{}' >"$empty_weight_mlx/config.json"

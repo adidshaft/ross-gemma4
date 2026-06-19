@@ -831,6 +831,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "mlx_directory_path=gemma-4-12b-it.gguf",
         )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "mlx_directory",
+                    "artifact_path_type": "directory",
+                    "artifact_path": "model.safetensors",
+                },
+                "mlx_swift_lm",
+            ),
+            "mlx_directory_path=model.safetensors",
+        )
         self.assertIsNone(
             runtime_identity_artifact_error(
                 {
@@ -1034,6 +1045,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "mlx_swift_lm",
             ),
             "draft_model_format=mlx-draft.gguf",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**active_mlx, "draft_model": "draft.safetensors"},
+                "mlx_swift_lm",
+            ),
+            "draft_model_format=draft.safetensors",
         )
         self.assertEqual(
             runtime_identity_draft_artifact_error(
