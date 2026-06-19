@@ -10,7 +10,8 @@ if [[ ! -x scripts/test-ios-runtime-swiftpm.sh ]] ||
    ! grep -q "Missing required runtime guardrail test" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
-   ! grep -q "testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+   ! grep -q "testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
+   ! grep -q "testAnswerDetailOverviewMetricsPreferMeasuredTokenCountLabel" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
     echo "❌ FAIL: SwiftPM runtime guardrail test helper is missing MLX/CoreAI/MTP coverage."
     FAIL=1
 fi
