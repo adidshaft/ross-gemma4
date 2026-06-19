@@ -551,6 +551,11 @@ if ! grep -q "benchmark_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/n
     FAIL=1
 fi
 
+if ! grep -q "installedPackPassesRuntimeValidation(currentPack)" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null; then
+    echo "❌ FAIL: preferred-runtime Ask routing can reuse current packs without runtime artifact validation."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject requested/runtime identity mismatches."
     FAIL=1

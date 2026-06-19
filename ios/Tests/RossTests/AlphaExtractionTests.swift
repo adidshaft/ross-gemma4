@@ -12788,6 +12788,19 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testRuntimeValidationRejectsMislabeledMLXInstalledPack() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx-mislabeled",
+            installPath: "model-packs/case_associate/gemma-4-12b-it.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        XCTAssertFalse(alphaInstalledAssistantPackPassesRuntimeValidation(pack))
+    }
+
     func testDoNotReuseInstalledAssistantPackWhenCapablePhonePrefersMLXOverExistingGGUF() {
         let pack = installedPack(
             .caseAssociate,

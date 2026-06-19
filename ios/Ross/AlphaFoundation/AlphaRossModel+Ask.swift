@@ -245,7 +245,8 @@ extension AlphaRossModel {
         func runtimeCandidatePack(for runtimeMode: AlphaPackRuntimeMode) -> AlphaInstalledModelPack? {
             if let currentPack,
                AlphaCapabilityTier.assistantSelectionsMatch(currentPack.tier, requestedTier),
-               currentPack.runtimeMode == runtimeMode {
+               currentPack.runtimeMode == runtimeMode,
+               installedPackPassesRuntimeValidation(currentPack) {
                 return currentPack
             }
 
