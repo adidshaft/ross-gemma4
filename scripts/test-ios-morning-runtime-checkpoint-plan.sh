@@ -306,6 +306,48 @@ if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
   exit 1
 fi
 
+unsupported_mlx_support_root="$tmpdir/RossAlphaUnsupportedMLX"
+unsupported_mlx_packs_root="$unsupported_mlx_support_root/model-packs"
+mkdir -p "$unsupported_mlx_packs_root/mlx/gemma-4-E4B-it-qat-4bit"
+printf '{}' > "$unsupported_mlx_packs_root/mlx/gemma-4-E4B-it-qat-4bit/tokenizer.json"
+printf 'weights' > "$unsupported_mlx_packs_root/mlx/gemma-4-E4B-it-qat-4bit/model.safetensors"
+python3 - "$unsupported_mlx_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+mlx_dir = packs / "mlx" / "gemma-4-E4B-it-qat-4bit"
+(mlx_dir / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+
+(packs / "mlx" / "mlx.manifest.json").write_text(json.dumps({
+    "packId": "quick-unsupported-mlx",
+    "tier": "quick_start",
+    "fileName": "gemma-4-E4B-it-qat-4bit",
+    "relativePath": "model-packs/mlx/gemma-4-E4B-it-qat-4bit",
+    "checksumSha256": "abc",
+    "bytes": 1_000_001,
+    "artifactKind": "mlx_directory",
+    "runtimeMode": "mlx_swift_lm",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$unsupported_mlx_support_root" --tier quickStart > /tmp/ross-morning-plan.out
+grep -q "4. MLX identity and varied document/query full smoke" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=unsupported_gemma4_multimodal" /tmp/ross-morning-plan.out
+if grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out; then
+  echo "Expected unsupported installed MLX archive to suppress MLX device smoke command" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
 mkdir -p "$packs_root/mlx/gemma-mlx"
 printf '{}' > "$packs_root/mlx/gemma-mlx/config.json"
 printf '{}' > "$packs_root/mlx/gemma-mlx/tokenizer.json"
