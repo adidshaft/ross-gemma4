@@ -757,6 +757,14 @@ if ! grep -q "catalog_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 
     FAIL=1
 fi
 
+if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "catalog_mlx" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "catalog_mlx status=expected" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: local runtime artifact inventory tests/docs do not cover catalog MLX primary and draft expectations."
+    FAIL=1
+fi
+
 if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not include guarded MTP proof."
     FAIL=1

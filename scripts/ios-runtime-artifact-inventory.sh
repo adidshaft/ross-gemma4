@@ -184,12 +184,13 @@ print_present_or_missing \
 
 printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke\n'
 
-python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" <<'PY'
+python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel+PrivateAI.swift" <<'PY'
 import re
 import shlex
 import sys
 
 catalog_path = sys.argv[1]
+private_ai_path = sys.argv[2]
 
 def q(value: str) -> str:
     return shlex.quote(value)
@@ -236,6 +237,38 @@ for artifact_match in artifact_pattern.finditer(source):
         "reason=configured_catalog_draft "
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(draft_file)} "
         f"artifact_kind={q(draft_kind)} bytes={q(draft_bytes)} checksum={q(draft_checksum)}"
+    )
+
+try:
+    private_ai_source = open(private_ai_path, encoding="utf-8").read()
+except OSError:
+    private_ai_source = ""
+
+download_descriptor_pattern = re.compile(
+    r"AlphaAssistantDownloadDescriptor\((?P<body>.*?)(?=\n\))",
+    re.DOTALL,
+)
+
+for descriptor_match in download_descriptor_pattern.finditer(private_ai_source):
+    body = descriptor_match.group("body")
+    runtime = enum_field(body, "runtimeMode")
+    artifact_kind = field(body, "artifactKind")
+    if runtime != "mlxSwiftLm" or artifact_kind != "mlx_directory":
+        continue
+    pack = field(body, "packId") or "unknown"
+    tier = enum_field(body, "tier") or "unknown"
+    file_name = field(body, "fileName") or "unknown"
+    url = field(body, "downloadURLString") or "nil"
+    bytes_value = int_field(body, "sizeBytes") or "nil"
+    checksum = field(body, "checksumSha256") or "nil"
+    lane = "catalog_mlx_draft" if "assistant" in pack.lower() or "assistant" in file_name.lower() else "catalog_mlx"
+    reason = "configured_catalog_mlx_draft" if lane == "catalog_mlx_draft" else "configured_catalog_mlx"
+    print(
+        "ROSS_RUNTIME_ARTIFACT_INVENTORY "
+        f"lane={lane} status=expected path={q(url)} "
+        f"reason={reason} "
+        f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
+        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)}"
     )
 PY
 
