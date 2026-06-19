@@ -237,6 +237,12 @@ if ! grep -q "testRuntimeIdentityLineIncludesUnavailableMLXDraftCandidate" ios/T
     FAIL=1
 fi
 
+if ! grep -q "alphaDebugSmokeArtifactKind" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: debug smoke packs do not fail closed on missing or mismatched artifact kinds."
+    FAIL=1
+fi
+
 if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
     FAIL=1

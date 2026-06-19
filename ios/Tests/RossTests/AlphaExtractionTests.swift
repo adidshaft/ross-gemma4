@@ -16509,6 +16509,72 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.checksumVerified)
     }
 
+    func testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let modelURL = root.appendingPathComponent("case.gguf")
+        try Data("debug".utf8).write(to: modelURL)
+
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .llamaCppGguf,
+            tierOverride: .caseAssociate,
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "c", count: 64),
+            modelKind: nil
+        )
+
+        XCTAssertNil(alphaDebugLocalModelSmokePack(environment: environment))
+    }
+
+    func testDebugLocalModelSmokePackAllowsGGUFArtifactKindAlias() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let modelURL = root.appendingPathComponent("case.gguf")
+        try Data("debug".utf8).write(to: modelURL)
+
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .llamaCppGguf,
+            tierOverride: .caseAssociate,
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "c", count: 64),
+            modelKind: "gguf"
+        )
+
+        let pack = try XCTUnwrap(alphaDebugLocalModelSmokePack(environment: environment))
+
+        XCTAssertEqual(pack.artifactKind, "gguf")
+        XCTAssertEqual(pack.runtimeMode, .llamaCppGguf)
+    }
+
+    func testDebugLocalModelSmokePackRejectsCrossRuntimeArtifactKind() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let modelURL = root.appendingPathComponent("mlx-model", isDirectory: true)
+        try FileManager.default.createDirectory(at: modelURL, withIntermediateDirectories: true)
+
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "d", count: 64),
+            modelKind: "local_model_artifact"
+        )
+
+        XCTAssertNil(alphaDebugLocalModelSmokePack(environment: environment))
+    }
+
     func testDebugLocalModelSmokePackAllowsFoundationSystemModelSentinel() throws {
         let environment = AlphaLocalRuntimeEnvironment(
             enableRealInference: true,
@@ -16527,6 +16593,24 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(pack.artifactKind, "system_model")
         XCTAssertEqual(pack.runtimeMode, .appleFoundationModels)
         XCTAssertFalse(pack.checksumVerified)
+    }
+
+    func testDebugLocalModelSmokePackDefaultsFoundationSystemSentinelKind() throws {
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            tierOverride: .quickStart,
+            packIDOverride: "system-foundation-smoke-default-kind",
+            modelPath: "system-model",
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let pack = try XCTUnwrap(alphaDebugLocalModelSmokePack(environment: environment))
+
+        XCTAssertEqual(pack.installPath, "system-model")
+        XCTAssertEqual(pack.artifactKind, "system_model")
+        XCTAssertEqual(pack.runtimeMode, .appleFoundationModels)
     }
 
     func testDebugLocalModelSmokePackAllowsFoundationSystemURLSentinel() throws {

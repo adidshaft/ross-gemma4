@@ -272,19 +272,57 @@ func alphaDebugLocalModelSmokePack(
     guard usesSystemFoundationModel || fileManager.fileExists(atPath: modelPath) else {
         return nil
     }
+    guard let artifactKind = alphaDebugSmokeArtifactKind(
+        runtimeMode: runtimeMode,
+        modelKind: nonEmpty(environment.modelKind),
+        usesSystemFoundationModel: usesSystemFoundationModel
+    ) else {
+        return nil
+    }
     let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"
     return AlphaInstalledModelPack(
         packId: nonEmpty(environment.packIDOverride) ?? "debug-local-smoke-\(runtimeMode.rawValue)",
         tier: environment.tierOverride ?? .quickStart,
         installPath: modelPath,
         checksumSha256: checksum,
-        artifactKind: nonEmpty(environment.modelKind) ?? "debug_local_model",
+        artifactKind: artifactKind,
         runtimeMode: runtimeMode,
         developmentOnly: false,
         checksumVerified: nonEmpty(environment.modelChecksum) != nil,
         minimumAppVersion: "0.1.0-alpha",
         isActive: true
     )
+}
+
+func alphaDebugSmokeArtifactKind(
+    runtimeMode: AlphaPackRuntimeMode,
+    modelKind: String?,
+    usesSystemFoundationModel: Bool
+) -> String? {
+    let normalizedKind = modelKind?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    switch runtimeMode {
+    case .llamaCppGguf:
+        switch normalizedKind {
+        case "local_model_artifact", "gguf", "gguf_model":
+            return normalizedKind
+        default:
+            return nil
+        }
+    case .mlxSwiftLm:
+        return normalizedKind == "mlx_directory" ? "mlx_directory" : nil
+    case .appleFoundationModels:
+        if usesSystemFoundationModel {
+            return normalizedKind == nil || normalizedKind == "system_model" ? "system_model" : nil
+        }
+        switch normalizedKind {
+        case "foundation_adapter", "coreai_adapter", "coreml_model":
+            return normalizedKind
+        default:
+            return nil
+        }
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        return nil
+    }
 }
 
 func alphaDebugSmokePathUsesSystemFoundationModel(
