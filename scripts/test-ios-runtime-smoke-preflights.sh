@@ -33,6 +33,10 @@ run_expect_exit_2 \
   "invalid simulator launch timeout" \
   "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --launch-timeout nope
 
+run_expect_exit_2 \
+  "invalid simulator physical memory" \
+  "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --physical-memory-bytes nope
+
 malformed_mlx="$tmpdir/malformed-mlx"
 mkdir -p "$malformed_mlx"
 printf '{}' >"$malformed_mlx/config.json"
@@ -102,6 +106,16 @@ run_expect_exit_2 \
 run_expect_exit_2 \
   "large non-GGUF draft model placeholder" \
   "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$large_non_gguf" --require-draft-acceleration
+
+e4b_main_gguf="$tmpdir/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+e4b_draft_gguf="$tmpdir/mtp-gemma-4-E4B-it.gguf"
+printf 'GGUF' > "$e4b_main_gguf"
+truncate -s 5130000000 "$e4b_main_gguf"
+printf 'GGUF' > "$e4b_draft_gguf"
+truncate -s 79000000 "$e4b_draft_gguf"
+run_expect_exit_2 \
+  "memory-blocked E4B simulator MTP proof" \
+  "$SIM_SMOKE" --runtime gguf --model "$e4b_main_gguf" --draft-model "$e4b_draft_gguf" --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
 
 run_expect_exit_2 \
   "GGUF file passed as MLX draft proof" \

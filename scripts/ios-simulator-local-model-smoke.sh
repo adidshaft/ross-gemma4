@@ -19,6 +19,8 @@ Options:
   --smoke-profile <mode>  quick | full | mtp | mtp-quick | mtp_quick | source-only. Default: quick
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 60
   --launch-timeout <sec>  Overall helper timeout. Default: auto-sized from smoke profile and stage timeout.
+  --physical-memory-bytes <bytes>
+                          Optional target memory used for preflight MTP memory-fit gating.
   --draft-model <path>    Draft model artifact/directory for MTP or MLX speculative decoding.
   --draft-tokens <count>  Draft token count to request.
   --disable-draft         Force standard acceleration.
@@ -43,6 +45,7 @@ smoke_profile="quick"
 stage_timeout="60"
 launch_timeout=""
 launch_timeout_overridden="0"
+physical_memory_bytes=""
 draft_model_path=""
 draft_tokens=""
 disable_draft="0"
@@ -90,6 +93,10 @@ while [[ $# -gt 0 ]]; do
     --launch-timeout)
       launch_timeout="${2:-}"
       launch_timeout_overridden="1"
+      shift 2
+      ;;
+    --physical-memory-bytes)
+      physical_memory_bytes="${2:-}"
       shift 2
       ;;
     --draft-model)
@@ -191,6 +198,19 @@ else
   launch_timeout=$((stage_timeout * smoke_stage_count + 120))
   if [[ "$launch_timeout" -lt 240 ]]; then
     launch_timeout="240"
+  fi
+fi
+
+if [[ -n "$physical_memory_bytes" ]]; then
+  case "$physical_memory_bytes" in
+    ''|*[!0-9]*)
+      echo "Physical memory bytes must be a positive integer: $physical_memory_bytes" >&2
+      exit 2
+      ;;
+  esac
+  if [[ "$physical_memory_bytes" -le 0 ]]; then
+    echo "Physical memory bytes must be a positive integer: $physical_memory_bytes" >&2
+    exit 2
   fi
 fi
 
@@ -418,6 +438,39 @@ if [[ -n "$draft_model_path" ]]; then
       fi
       ;;
   esac
+fi
+
+if [[ -n "$physical_memory_bytes" && "$require_draft_acceleration" == "1" && "$normalized_runtime" == "gemma_local_runtime" ]]; then
+  python3 - "$model_path" "$draft_model_path" "$physical_memory_bytes" <<'PY'
+import pathlib
+import sys
+
+main_path = pathlib.Path(sys.argv[1])
+draft_path = pathlib.Path(sys.argv[2])
+physical_memory = int(sys.argv[3])
+constrained_e4b_memory_ceiling = 8_500_000_000
+constrained_e4b_draft_artifact_budget_ratio = 0.72
+
+if "e4b" not in str(main_path).lower() or physical_memory >= constrained_e4b_memory_ceiling:
+    sys.exit(0)
+
+try:
+    main_bytes = main_path.stat().st_size
+    draft_bytes = draft_path.stat().st_size
+except OSError:
+    sys.exit(0)
+
+max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
+if main_bytes + draft_bytes > max_combined_bytes:
+    print(
+        "GGUF/MTP simulator draft proof exceeds the constrained E4B draft memory budget: "
+        f"main_bytes={main_bytes} draft_bytes={draft_bytes} "
+        f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
+        f"main={main_path.name} draft={draft_path.name}",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+PY
 fi
 
 if [[ "$model_path" != "system-model" && "$model_path" != system://* ]]; then

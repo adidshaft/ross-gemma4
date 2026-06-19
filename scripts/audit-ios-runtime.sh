@@ -1247,6 +1247,13 @@ if ! grep -q "draft_memory_policy_blocked" ios/Ross/AlphaFoundation/AlphaLlamaCp
     FAIL=1
 fi
 
+if ! grep -q "GGUF/MTP simulator draft proof exceeds the constrained E4B draft memory budget" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "memory-blocked E4B simulator MTP proof" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "constrained E4B GGUF+MTP pair exceeds the app's draft memory budget" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP preflight can bypass constrained E4B memory-fit checks."
+    FAIL=1
+fi
+
 if ! grep -q "draft_output_degenerate" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not quarantine degenerate draft output."
     FAIL=1
