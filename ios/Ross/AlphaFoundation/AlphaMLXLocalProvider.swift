@@ -1265,6 +1265,24 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                     error: error
                 )
                 guard draftDirectoryURL != nil else { throw error }
+                if Self.smokeRequiresDraftAcceleration() {
+                    return AlphaLocalModelOutput(
+                        rawText: "",
+                        parsedJson: nil,
+                        schemaValid: false,
+                        warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
+                        sourceRefs: activePromptPack?.includedSourceRefs ?? [],
+                        packedSourceCount: activePromptPack?.includedSourceRefs.count,
+                        omittedSourceCount: activePromptPack?.omittedSourceRefs.count,
+                        omittedSourceLabels: activePromptPack?.omittedSourceRefs.map(\.label),
+                        executionPathLabel: executionPathLabel,
+                        accelerationMode: accelerationMode,
+                        accelerationDraftTokens: draftTokens,
+                        accelerationDraftModelLabel: draftModelLabel,
+                        inputChars: activePromptPack?.inputChars,
+                        errorCategory: "mlx_draft_generation_failed"
+                    )
+                }
                 let fallbackGeneration = try await Self.streamGenerator(
                     directoryURL,
                     nil,
@@ -1305,6 +1323,15 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 errorCategory: "inference_failed"
             )
         }
+    }
+
+    private nonisolated static func smokeRequiresDraftAcceleration(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        let rawValue = environment["ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return ["1", "true", "yes", "on"].contains(rawValue)
     }
 
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {

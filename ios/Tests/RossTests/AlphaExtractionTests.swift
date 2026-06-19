@@ -21291,6 +21291,110 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(output?.errorCategory)
     }
 
+    func testExperimentalMLXProviderDoesNotFallbackWhenSmokeRequiresDraftAcceleration() async throws {
+        enum DraftFailure: Error {
+            case speculativeGenerationFailed
+        }
+
+        actor AttemptCapture {
+            var attempts: [(draftPath: String?, draftTokens: Int?)] = []
+
+            func record(draftPath: String?, draftTokens: Int?) {
+                attempts.append((draftPath, draftTokens))
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-no-retry-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-draft-no-retry-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        for folder in [directory, draftDirectory] {
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: folder.appendingPathComponent("model.safetensors"))
+        }
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        let previousRequireDraft = ProcessInfo.processInfo.environment["ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"]
+        setenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION", "1", 1)
+        defer {
+            AlphaMLXLocalProvider.streamGenerator = previousGenerator
+            if let previousRequireDraft {
+                setenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION", previousRequireDraft, 1)
+            } else {
+                unsetenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION")
+            }
+        }
+
+        let capture = AttemptCapture()
+        AlphaMLXLocalProvider.streamGenerator = { _, draftURL, draftTokens, _, _, _, _ in
+            await capture.record(draftPath: draftURL?.path, draftTokens: draftTokens)
+            if draftURL == nil {
+                XCTFail("Smoke require-draft mode must not retry MLX generation without the draft model.")
+            }
+            throw DraftFailure.speculativeGenerationFailed
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "1", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        let attempts = await capture.attempts
+        XCTAssertEqual(attempts.count, 1)
+        XCTAssertEqual(attempts.first?.draftPath, draftDirectory.path)
+        XCTAssertEqual(attempts.first?.draftTokens, 4)
+        XCTAssertEqual(output?.errorCategory, "mlx_draft_generation_failed")
+        XCTAssertFalse(output?.schemaValid ?? true)
+        XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output?.accelerationDraftTokens, 4)
+        XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
+    }
+
     func testExperimentalMLXProviderPreservesMeasuredGenerationMetrics() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-metrics-\(UUID().uuidString)", isDirectory: true)
