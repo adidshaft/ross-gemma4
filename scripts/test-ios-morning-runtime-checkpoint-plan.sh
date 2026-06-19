@@ -13,6 +13,9 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
 grep -q "not draft_output_degenerate" /tmp/ross-morning-plan.out
+grep -q "per-stage token/speed metrics" /tmp/ross-morning-plan.out
+grep -q "native-model markers" /tmp/ross-morning-plan.out
+grep -q "source refs for source-bound stages" /tmp/ross-morning-plan.out
 grep -q "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query." /tmp/ross-morning-plan.out
 
 support_root="$tmpdir/RossAlpha"
