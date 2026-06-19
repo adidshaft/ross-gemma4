@@ -864,6 +864,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let activeExecutionPathLabel = await context.executionPathLabel()
             let activeAccelerationMode = await context.accelerationMode()
             let surfacedDraftMetadata = surfacedDraftMetadata(for: activeAccelerationMode)
+            let speculativeDraftMetrics = await context.speculativeDraftMetrics()
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             if activeAccelerationMode == .draftModelSpeculative,
@@ -884,6 +885,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                     accelerationMode: activeAccelerationMode,
                     accelerationDraftTokens: surfacedDraftMetadata?.tokens,
                     accelerationDraftModelLabel: surfacedDraftMetadata?.label,
+                    speculativeDraftTokenAttempts: speculativeDraftMetrics?.attemptedTokens,
+                    speculativeDraftTokenAccepts: speculativeDraftMetrics?.acceptedTokens,
                     inputChars: pack.inputChars,
                     inputTokenCount: promptTokenCount,
                     outputTokenCount: outputTokenCount,
@@ -922,6 +925,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 accelerationMode: activeAccelerationMode,
                 accelerationDraftTokens: surfacedDraftMetadata?.tokens,
                 accelerationDraftModelLabel: surfacedDraftMetadata?.label,
+                speculativeDraftTokenAttempts: speculativeDraftMetrics?.attemptedTokens,
+                speculativeDraftTokenAccepts: speculativeDraftMetrics?.acceptedTokens,
                 inputChars: pack.inputChars,
                 inputTokenCount: promptTokenCount,
                 outputTokenCount: outputTokenCount,

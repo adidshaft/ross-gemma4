@@ -102,6 +102,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=full elapsed=12.34s "
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 "
             "source_first_token_ms=17392 source_measured_tokens=false "
+            "source_draft_attempted=5 source_draft_accepted=3 "
             "source_refs=1 source_native_model=true "
             "bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=8.84 "
             "bengali_first_token_ms=24339 bengali_measured_tokens=false "
@@ -142,6 +143,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("general_task=open_query", summary)
         self.assertIn("general_source_refs_policy=no_source_refs", summary)
         self.assertIn("source_token_speed=9.00", summary)
+        self.assertIn("source_draft_attempted=5", summary)
+        self.assertIn("source_draft_accepted=3", summary)
         self.assertIn("bengali_token_speed=8.84", summary)
         self.assertIn("general_token_speed=8.57", summary)
         self.assertNotIn("source_output_chars=", summary)

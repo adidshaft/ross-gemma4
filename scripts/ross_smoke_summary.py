@@ -11,6 +11,8 @@ METRICS = [
     "acceleration",
     "draft_tokens",
     "draft_model",
+    "draft_attempted",
+    "draft_accepted",
 ]
 STAGE_AUX_METRICS = [
     "raw_chars",

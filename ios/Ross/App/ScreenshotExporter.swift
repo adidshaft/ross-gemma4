@@ -1133,6 +1133,8 @@ struct RossLocalModelSmokeView: View {
             ("\(prefix)_acceleration", output.accelerationMode?.rawValue ?? "nil"),
             ("\(prefix)_draft_tokens", output.accelerationDraftTokens.map(String.init) ?? "nil"),
             ("\(prefix)_draft_model", output.accelerationDraftModelLabel.map(stableSmokeValue) ?? "nil"),
+            ("\(prefix)_draft_attempted", output.speculativeDraftTokenAttempts.map(String.init) ?? "nil"),
+            ("\(prefix)_draft_accepted", output.speculativeDraftTokenAccepts.map(String.init) ?? "nil"),
             ("\(prefix)_runtime_error_detail", output.runtimeErrorDetail.map(stableSmokeValue) ?? "nil"),
         ]
         return fields

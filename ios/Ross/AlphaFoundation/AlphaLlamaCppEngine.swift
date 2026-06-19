@@ -8,6 +8,11 @@ enum LlamaError: Error {
     case missingPromptState
 }
 
+struct AlphaSpeculativeDraftMetrics: Codable, Hashable, Sendable {
+    var attemptedTokens: Int
+    var acceptedTokens: Int
+}
+
 @_silgen_name("_Z26llama_set_embeddings_nextnP13llama_contextbb")
 private func llama_set_embeddings_nextn_bridge(_ ctx: OpaquePointer?, _ value: Bool, _ masked: Bool)
 
@@ -50,6 +55,11 @@ protocol AlphaLlamaCompletionContext: Sendable {
     func generatedTokenCount() async -> Int
     func accelerationMode() async -> AlphaLocalRuntimeAccelerationMode
     func executionPathLabel() async -> String
+    func speculativeDraftMetrics() async -> AlphaSpeculativeDraftMetrics?
+}
+
+extension AlphaLlamaCompletionContext {
+    func speculativeDraftMetrics() async -> AlphaSpeculativeDraftMetrics? { nil }
 }
 
 private struct LlamaSpeculativeDraftConfiguration: Sendable {
@@ -83,6 +93,8 @@ actor LlamaContext: AlphaLlamaCompletionContext {
     private var currentAccelerationMode: AlphaLocalRuntimeAccelerationMode = .standard
     private var currentExecutionPathLabel = "Gemma GGUF via llama.cpp"
     private var lastAcceptedToken: llama_token?
+    private var speculativeDraftTokenAttempts = 0
+    private var speculativeDraftTokenAccepts = 0
 
     var n_len: Int32 = 1024
     private let defaultMaxNewTokens: Int32 = 96
@@ -347,6 +359,8 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         temporaryInvalidCChars.removeAll()
         pendingNextnEmbedding.removeAll(keepingCapacity: true)
         lastAcceptedToken = nil
+        speculativeDraftTokenAttempts = 0
+        speculativeDraftTokenAccepts = 0
         currentAccelerationMode = .standard
         currentExecutionPathLabel = "Gemma GGUF via llama.cpp"
         hasDecodableLogits = false
@@ -394,6 +408,8 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         hasDecodableLogits = false
         n_decode = 0
         lastAcceptedToken = nil
+        speculativeDraftTokenAttempts = 0
+        speculativeDraftTokenAccepts = 0
         currentAccelerationMode = draftState == nil ? .standard : .draftModelSpeculative
         currentExecutionPathLabel = draftState == nil
             ? "Gemma GGUF via llama.cpp"
@@ -502,6 +518,16 @@ actor LlamaContext: AlphaLlamaCompletionContext {
 
     func executionPathLabel() -> String {
         currentExecutionPathLabel
+    }
+
+    func speculativeDraftMetrics() -> AlphaSpeculativeDraftMetrics? {
+        guard speculativeDraftTokenAttempts > 0 || speculativeDraftTokenAccepts > 0 else {
+            return nil
+        }
+        return AlphaSpeculativeDraftMetrics(
+            attemptedTokens: speculativeDraftTokenAttempts,
+            acceptedTokens: speculativeDraftTokenAccepts
+        )
     }
 
     func model_info() -> String {
@@ -627,6 +653,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
             seedToken: lastAcceptedToken,
             maxDraftTokens: maxDraftTokens
         )
+        speculativeDraftTokenAttempts += draftedTokens.count
         self.draftState = draftState
 
         let firstTargetToken = llama_sampler_sample(sampling, context, -1)
@@ -771,6 +798,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
 
     private func acceptVerifiedDraftTokens(_ tokens: [llama_token]) -> String {
         var emitted = ""
+        speculativeDraftTokenAccepts += tokens.count
         for token in tokens {
             emitted += appendDecodedToken(token)
             lastAcceptedToken = token
