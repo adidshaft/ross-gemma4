@@ -199,6 +199,48 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("source_token_speed=11.0", summary)
         self.assertIn("general_token_speed=12.0", summary)
 
+    def test_benchmark_summary_accepts_complete_full_multilingual_matrix(self):
+        identity = self.valid_identity("mlx_swift_lm")
+        identity["provider"] = "AlphaMLXLocalProvider"
+        identity["artifact_path"] = "gemma-mlx"
+        identity["gpu_offload"] = "mlx_default"
+        identity["context_tokens"] = "12288"
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
+            "cases=english_source_bound_document_qa,bengali_source_bound_document_qa,"
+            "hindi_source_bound_document_qa,tamil_source_bound_document_qa,"
+            "telugu_source_bound_document_qa,english_open_no_document_query "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192,"
+            "bengali:document_qa:bn:source_refs_required:max_tokens=192,"
+            "hindi:document_qa:hi:source_refs_required:max_tokens=192,"
+            "tamil:document_qa:ta:source_refs_required:max_tokens=96,"
+            "telugu:document_qa:te:source_refs_required:max_tokens=96,"
+            "general:open_query:en:no_source_refs:max_tokens=192"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=mlx_swift_lm requested_runtime=mlx_swift_lm profile=full elapsed=44.00s "
+            "source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 source_first_token_ms=17392 source_measured_tokens=true source_refs=1 source_native_model=true "
+            "bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=8.84 bengali_first_token_ms=24339 bengali_measured_tokens=true bengali_source_refs=1 bengali_native_model=true "
+            "hindi_input_tokens=318 hindi_output_tokens=112 hindi_token_speed=8.21 hindi_first_token_ms=23800 hindi_measured_tokens=true hindi_source_refs=1 hindi_native_model=true "
+            "tamil_input_tokens=290 tamil_output_tokens=80 tamil_token_speed=7.92 tamil_first_token_ms=21000 tamil_measured_tokens=true tamil_source_refs=1 tamil_native_model=true "
+            "telugu_input_tokens=286 telugu_output_tokens=82 telugu_token_speed=7.88 telugu_first_token_ms=21250 telugu_measured_tokens=true telugu_source_refs=1 telugu_native_model=true "
+            "general_input_tokens=190 general_output_tokens=120 general_token_speed=8.57 general_first_token_ms=14781 general_measured_tokens=true general_native_model=true"
+        )
+
+        summary = benchmark_summary_line(identity, pass_fields, matrix)
+
+        self.assertIn("runtime=mlx_swift_lm", summary)
+        self.assertIn("matrix_profile=full", summary)
+        self.assertIn("source_case=english_source_bound_document_qa", summary)
+        self.assertIn("bengali_case=bengali_source_bound_document_qa", summary)
+        self.assertIn("hindi_case=hindi_source_bound_document_qa", summary)
+        self.assertIn("tamil_case=tamil_source_bound_document_qa", summary)
+        self.assertIn("telugu_case=telugu_source_bound_document_qa", summary)
+        self.assertIn("general_case=english_open_no_document_query", summary)
+        self.assertIn("tamil_max_tokens=96", summary)
+        self.assertIn("telugu_token_speed=7.88", summary)
+        self.assertIn("general_measured_tokens=true", summary)
+
     def test_missing_benchmark_matrix_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix"):
             benchmark_summary_line({}, {}, {})
