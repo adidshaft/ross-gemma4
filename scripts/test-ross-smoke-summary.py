@@ -1390,6 +1390,49 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("tamil_draft_model=nil", summary)
         self.assertIn("tamil_runtime_error_detail=domain:MLX.Generator,code:-99", summary)
 
+    def test_failure_summary_preserves_full_matrix_stage_metadata(self):
+        identity = self.valid_identity("apple_foundation_models")
+        identity["provider"] = "AlphaFoundationModelsLocalProvider"
+        identity["artifact_path"] = "system://apple-foundation-models"
+        identity["gpu_offload"] = "system_managed"
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
+            "cases=english_source_bound_document_qa,bengali_source_bound_document_qa,"
+            "hindi_source_bound_document_qa,tamil_source_bound_document_qa,"
+            "telugu_source_bound_document_qa,english_open_no_document_query "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192,"
+            "bengali:document_qa:bn:source_refs_required:max_tokens=192,"
+            "hindi:document_qa:hi:source_refs_required:max_tokens=192,"
+            "tamil:document_qa:ta:source_refs_required:max_tokens=96,"
+            "telugu:document_qa:te:source_refs_required:max_tokens=96,"
+            "general:open_query:en:no_source_refs:max_tokens=192"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=apple_foundation_models "
+            "requested_runtime=apple_foundation_models profile=full elapsed=30.00s "
+            "source_error=nil bengali_error=coreai_generation_failed "
+            "source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 source_first_token_ms=17392 source_measured_tokens=true source_refs=1 source_native_model=true "
+            "bengali_input_tokens=328 bengali_output_tokens=0 bengali_token_speed=nil bengali_first_token_ms=24339 bengali_measured_tokens=true bengali_source_refs=0 bengali_native_model=true bengali_runtime_error_detail=domain:FoundationModels.LanguageModelSession,code:-7"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, matrix)
+
+        self.assertIn("matrix_profile=full", summary)
+        self.assertIn("source_case=english_source_bound_document_qa", summary)
+        self.assertIn("source_task=document_qa", summary)
+        self.assertIn("source_language=en", summary)
+        self.assertIn("source_source_refs_policy=source_refs_required", summary)
+        self.assertIn("source_max_tokens=192", summary)
+        self.assertIn("bengali_case=bengali_source_bound_document_qa", summary)
+        self.assertIn("hindi_case=hindi_source_bound_document_qa", summary)
+        self.assertIn("tamil_case=tamil_source_bound_document_qa", summary)
+        self.assertIn("tamil_max_tokens=96", summary)
+        self.assertIn("telugu_case=telugu_source_bound_document_qa", summary)
+        self.assertIn("general_case=english_open_no_document_query", summary)
+        self.assertIn("general_task=open_query", summary)
+        self.assertIn("general_source_refs_policy=no_source_refs", summary)
+        self.assertIn("bengali_runtime_error_detail=domain:FoundationModels.LanguageModelSession,code:-7", summary)
+
     def test_failure_summary_survives_missing_runtime_identity(self):
         fail_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm profile=quick "

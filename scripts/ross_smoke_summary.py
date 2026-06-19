@@ -613,7 +613,22 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "elapsed": summary_value(fail_fields, "elapsed"),
     }
 
+    stage_specs = benchmark_matrix_stage_specs_by_name(matrix_fields or {})
+    stage_cases = {
+        spec.get("stage"): case_name
+        for case_name, spec in zip(
+            benchmark_matrix_case_names(matrix_fields or {}),
+            benchmark_matrix_stage_specs(matrix_fields or {}),
+        )
+    }
     for stage in STAGES:
+        stage_spec = stage_specs.get(stage)
+        if stage_spec:
+            summary[f"{stage}_case"] = stage_cases.get(stage, "nil")
+            summary[f"{stage}_task"] = summary_value(stage_spec, "task")
+            summary[f"{stage}_language"] = summary_value(stage_spec, "language")
+            summary[f"{stage}_source_refs_policy"] = summary_value(stage_spec, "source_refs")
+            summary[f"{stage}_max_tokens"] = summary_value(stage_spec, "max_tokens")
         for metric in METRICS:
             key = f"{stage}_{metric}"
             if key in fail_fields:
