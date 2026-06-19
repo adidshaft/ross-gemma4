@@ -538,8 +538,8 @@ if coreai_system:
         ),
     )
 
-coreai_adapter = next((row for row in rows if row.get("lane") == "coreai_adapter" and row.get("status") == "present"), None)
-if coreai_adapter:
+coreai_adapter = next((row for row in rows if row.get("lane") == "coreai_adapter"), None)
+if coreai_adapter and coreai_adapter.get("status") == "present":
     adapter_path = coreai_adapter.get("path", "")
     emit(
         "coreai_adapter",
@@ -553,5 +553,16 @@ if coreai_adapter:
             "--model", adapter_path,
             "--preflight-only",
         ),
+    )
+else:
+    emit(
+        "coreai_adapter",
+        "missing",
+        "await_adapter",
+        reason=(coreai_adapter or {}).get("reason", "no_mlmodel_or_mlmodelc_adapter_found"),
+        compatibility_hint="requires_nonempty_foundation_or_coreml_adapter_not_gguf_or_mlx",
+        accepted_artifact_kinds="foundation_adapter,coreai_adapter,coreml_model",
+        accepted_path_shapes=".bundle,.mlmodel,.mlmodelc,.mlpackage",
+        system_model_hint="use_coreai_system_lane_for_system-model_or_system_url",
     )
 PY

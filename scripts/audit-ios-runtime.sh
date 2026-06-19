@@ -765,6 +765,13 @@ if [ ! -x scripts/test-ios-runtime-artifact-fetch-plan.sh ]; then
     FAIL=1
 fi
 
+if ! grep -q '"coreai_adapter"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q '"await_adapter"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "requires_nonempty_foundation_or_coreml_adapter_not_gguf_or_mlx" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: CoreAI/CoreML fetch plan does not make missing adapter requirements actionable."
+    FAIL=1
+fi
+
 if ! grep -q '"mtp_draft"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory does not report MTP draft readiness."
     FAIL=1

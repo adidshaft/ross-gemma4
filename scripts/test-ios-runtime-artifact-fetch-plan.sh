@@ -55,6 +55,7 @@ if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/
   exit 1
 fi
 grep -q "lane=coreai_system status=unknown action=preflight .*system://apple-foundation-models" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=coreai_adapter status=missing action=await_adapter .*reason=no_mlmodel_or_mlmodelc_adapter_found .*compatibility_hint=requires_nonempty_foundation_or_coreml_adapter_not_gguf_or_mlx .*accepted_artifact_kinds=foundation_adapter,coreai_adapter,coreml_model .*accepted_path_shapes=.bundle,.mlmodel,.mlmodelc,.mlpackage .*system_model_hint=use_coreai_system_lane_for_system-model_or_system_url" /tmp/ross-runtime-fetch-plan.out
 
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/empty" > /tmp/ross-runtime-fetch-plan.out
