@@ -73,6 +73,9 @@ case "$command" in
   process)
     printf 'DEVICE_MODEL_PATH=%s\n' "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_PATH:-}" >>"$FAKE_ENV_LOG"
     artifact="$(basename "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_PATH:-model.gguf}")"
+    if [[ -n "${FAKE_IDENTITY_ARTIFACT:-}" ]]; then
+      artifact="$FAKE_IDENTITY_ARTIFACT"
+    fi
     cat <<EOF
 Launched application with com.ross.ios bundle identifier.
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true
@@ -159,5 +162,32 @@ if manifest.get("fileName") != device_model_name:
 if manifest.get("relativePath") != f"model-packs/quick_start/{device_model_name}":
     raise SystemExit(f"manifest relativePath mismatch: {manifest.get('relativePath')}")
 PY
+
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  FAKE_IDENTITY_ARTIFACT="different-installed-model.gguf" \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --tier quickStart \
+    --pack-id unit-pack \
+    --stage-timeout 5 \
+    >"$tmpdir/gguf-mismatch.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]]; then
+  echo "FAIL: mismatched GGUF runtime identity artifact should exit 1, got $rc" >&2
+  cat "$tmpdir/gguf-mismatch.out" >&2 || true
+  exit 1
+fi
+if ! grep -q "runtime_identity_artifact_path_mismatch" "$tmpdir/gguf-mismatch.out"; then
+  echo "FAIL: mismatched GGUF runtime identity artifact did not hit exact artifact guard." >&2
+  cat "$tmpdir/gguf-mismatch.out" >&2 || true
+  exit 1
+fi
 
 echo "iOS device GGUF smoke guard tests: PASS"

@@ -315,6 +315,17 @@ def validate_identity_guard(identity, *, require_identity):
             )
             sys.exit(1)
 
+        expected_artifact_name = os.path.basename(device_model_path)
+        identity_artifact_name = os.path.basename(identity.get("artifact_path") or "")
+        if identity_artifact_name != expected_artifact_name:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                "reason=runtime_identity_artifact_path_mismatch requested=gemma_local_runtime "
+                f"expected_artifact={expected_artifact_name} identity_artifact={identity_artifact_name or 'nil'}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
 outcome = None
 identity = None
 matrix_fields = None
