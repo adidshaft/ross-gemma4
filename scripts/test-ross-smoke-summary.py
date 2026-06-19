@@ -708,7 +708,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
     def test_failure_summary_survives_missing_runtime_identity(self):
         fail_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm profile=quick "
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm profile=quick "
             "stage=runtime_health error=missing_runtime_identity elapsed=2.4s"
         )
 
@@ -717,7 +717,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
         self.assertIn("runtime=nil", summary)
         self.assertIn("fail_runtime=mlx_swift_lm", summary)
-        self.assertIn("requested_runtime=nil", summary)
+        self.assertIn("requested_runtime=mlx_swift_lm", summary)
         self.assertIn("draft_status=nil", summary)
         self.assertIn("profile=quick", summary)
         self.assertIn("stage=runtime_health", summary)

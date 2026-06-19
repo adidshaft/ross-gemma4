@@ -297,10 +297,11 @@ def benchmark_summary_line(identity, pass_fields, matrix_fields):
 
 
 def failure_summary_fields(identity, fail_fields, matrix_fields=None):
+    requested_runtime = identity.get("requested_runtime") or fail_fields.get("requested_runtime")
     summary = {
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
-        "requested_runtime": summary_value(identity, "requested_runtime"),
+        "requested_runtime": requested_runtime if requested_runtime not in (None, "") else "nil",
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),
         "artifact_path": summary_value(identity, "artifact_path"),

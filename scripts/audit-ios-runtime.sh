@@ -55,6 +55,12 @@ if ! grep -q "stage=resolve_provider error=provider_unavailable" ios/Ross/App/Sc
     FAIL=1
 fi
 
+if ! grep -q "stage=provider_health error=.*requested_runtime" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null &&
+   ! grep -q "requested_runtime=.*stage=provider_health" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke provider-health failures do not preserve requested runtime."
+    FAIL=1
+fi
+
 if ! grep -q "preflightProvider = AlphaLocalModelRuntime.resolveProvider" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: unavailable smoke preflight does not log the actual provider identity."
     FAIL=1
@@ -162,6 +168,11 @@ fi
 
 if ! grep -q '"fail_runtime"' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: failure summaries do not preserve the raw failure-marker runtime."
+    FAIL=1
+fi
+
+if ! grep -q 'fail_fields.get("requested_runtime")' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: failure summaries do not preserve requested runtime from failure markers."
     FAIL=1
 fi
 
