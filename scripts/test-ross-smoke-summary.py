@@ -16,6 +16,30 @@ from ross_smoke_summary import (
 
 
 class RossSmokeSummaryTests(unittest.TestCase):
+    def valid_identity(self, runtime="gemma_local_runtime"):
+        defaults = {
+            "gemma_local_runtime": ("local_model_artifact", "file"),
+            "mlx_swift_lm": ("mlx_directory", "directory"),
+            "apple_foundation_models": ("system_model", "system"),
+        }
+        model_format, artifact_path_type = defaults[runtime]
+        return {
+            "provider": "TestProvider",
+            "requested_runtime": runtime,
+            "actual_runtime": runtime,
+            "model_format": model_format,
+            "artifact_path_type": artifact_path_type,
+            "artifact_path": "model",
+            "acceleration": "standard",
+            "draft_tokens": "nil",
+            "draft_model": "nil",
+            "draft_model_path_type": "nil",
+            "draft_status": "no_draft_configured",
+            "fallback": "none",
+            "available": "true",
+            "error": "nil",
+        }
+
     def test_benchmark_summary_includes_runtime_matrix_and_stage_metrics(self):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
@@ -154,8 +178,11 @@ class RossSmokeSummaryTests(unittest.TestCase):
             )
 
     def test_present_identity_with_missing_optional_fields_reports_nil(self):
+        identity = self.valid_identity()
+        identity.pop("requested_runtime")
+
         summary = benchmark_summary_line(
-            {"actual_runtime": "gemma_local_runtime"},
+            identity,
             {
                 "runtime": "gemma_local_runtime",
                 "profile": "quick",
@@ -191,7 +218,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                self.valid_identity(),
                 pass_fields,
                 matrix,
             )
@@ -215,7 +242,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertEqual(benchmark_matrix_shape_error(matrix), "cases=2 stages=1")
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                self.valid_identity(),
                 pass_fields,
                 matrix,
             )
@@ -240,7 +267,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertEqual(benchmark_matrix_shape_error(matrix), "duplicate_stages=source,source")
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                self.valid_identity(),
                 pass_fields,
                 matrix,
             )
@@ -267,9 +294,75 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
             benchmark_summary_line(
-                {"actual_runtime": "gemma_local_runtime"},
+                self.valid_identity(),
                 pass_fields,
                 matrix,
+            )
+
+    def test_benchmark_summary_rejects_unavailable_runtime_identity(self):
+        identity = self.valid_identity()
+        identity["available"] = "false"
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_unavailable"):
+            benchmark_summary_line(
+                identity,
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_benchmark_summary_rejects_fallback_runtime_identity(self):
+        identity = self.valid_identity()
+        identity["fallback"] = "deterministic_dev"
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_unavailable"):
+            benchmark_summary_line(
+                identity,
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_benchmark_summary_rejects_runtime_artifact_mismatch(self):
+        identity = self.valid_identity("mlx_swift_lm")
+        identity["model_format"] = "local_model_artifact"
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_artifact_mismatch"):
+            benchmark_summary_line(
+                identity,
+                {
+                    "runtime": "mlx_swift_lm",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
             )
 
     def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):

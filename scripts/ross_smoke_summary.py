@@ -221,6 +221,15 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     matrix_shape_error = benchmark_matrix_shape_error(matrix_fields)
     if matrix_shape_error:
         raise MissingBenchmarkMatrixError(f"benchmark_matrix_shape_mismatch {matrix_shape_error}")
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_runtime_unavailable {availability_error}")
+    artifact_error = runtime_identity_artifact_error(identity, actual_runtime)
+    if artifact_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_runtime_artifact_mismatch {artifact_error}")
+    draft_artifact_error = runtime_identity_draft_artifact_error(identity, actual_runtime)
+    if draft_artifact_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_draft_artifact_mismatch {draft_artifact_error}")
     draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
     if draft_stage_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")
