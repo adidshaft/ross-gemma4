@@ -401,6 +401,11 @@ if ! grep -q "installed_mtp_draft" scripts/test-ios-runtime-artifact-inventory.s
     FAIL=1
 fi
 
+if ! grep -q "catalog_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: local runtime artifact inventory tests do not cover catalog MTP draft expectations."
+    FAIL=1
+fi
+
 if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not include guarded MTP proof."
     FAIL=1

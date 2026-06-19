@@ -145,6 +145,61 @@ print_present_or_missing \
 
 printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke\n'
 
+python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" <<'PY'
+import re
+import shlex
+import sys
+
+catalog_path = sys.argv[1]
+
+def q(value: str) -> str:
+    return shlex.quote(value)
+
+try:
+    source = open(catalog_path, encoding="utf-8").read()
+except OSError:
+    sys.exit(0)
+
+artifact_pattern = re.compile(
+    r"(?P<tier>\.\w+):\s*AlphaAssistantModelArtifact\((?P<body>.*?)(?=\n\s*\.\w+:\s*AlphaAssistantModelArtifact\(|\n\])",
+    re.DOTALL,
+)
+
+def field(body: str, name: str) -> str | None:
+    match = re.search(rf"{re.escape(name)}:\s*\"([^\"]+)\"", body)
+    return match.group(1) if match else None
+
+def enum_field(body: str, name: str) -> str | None:
+    match = re.search(rf"{re.escape(name)}:\s*\.([A-Za-z0-9_]+)", body)
+    return match.group(1) if match else None
+
+def int_field(body: str, name: str) -> str | None:
+    match = re.search(rf"{re.escape(name)}:\s*([0-9_]+)", body)
+    return match.group(1).replace("_", "") if match else None
+
+for artifact_match in artifact_pattern.finditer(source):
+    body = artifact_match.group("body")
+    draft_index = body.find("draftArtifact: AlphaAssistantDraftArtifactDescriptor(")
+    if draft_index < 0:
+        continue
+    draft_body = body[draft_index:]
+    tier = enum_field(body, "tier") or artifact_match.group("tier").lstrip(".")
+    pack = field(body, "packId") or "unknown"
+    runtime = enum_field(body, "runtimeMode") or "llamaCppGguf"
+    draft_file = field(draft_body, "fileName") or "unknown"
+    draft_url = field(draft_body, "downloadURLString") or "nil"
+    draft_bytes = int_field(draft_body, "sizeBytes") or "nil"
+    draft_checksum = field(draft_body, "checksumSha256") or "nil"
+    draft_kind = field(draft_body, "artifactKind") or "nil"
+    print(
+        "ROSS_RUNTIME_ARTIFACT_INVENTORY "
+        f"lane=catalog_mtp_draft status=expected path={q(draft_url)} "
+        "reason=configured_catalog_draft "
+        f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(draft_file)} "
+        f"artifact_kind={q(draft_kind)} bytes={q(draft_bytes)} checksum={q(draft_checksum)}"
+    )
+PY
+
 if [[ "${#installed_roots[@]}" -gt 0 ]]; then
 for installed_root in "${installed_roots[@]}"; do
   [[ -n "$installed_root" && -e "$installed_root" ]] || {

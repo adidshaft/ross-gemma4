@@ -13,6 +13,8 @@ grep -q "lane=mtp_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_system status=unknown path=system-model" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mtp_draft status=expected .*tier=quickStart .*file=mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mtp_draft status=expected .*tier=caseAssociate .*file=mtp-gemma-4-12b-it.gguf" /tmp/ross-runtime-inventory.out
 
 python3 - "$tmpdir/main.gguf" "$tmpdir/gemma-draft.gguf" <<'PY'
 import pathlib
