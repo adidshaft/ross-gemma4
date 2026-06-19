@@ -6830,6 +6830,124 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testRuntimeHealthUsesInstalledGGUFDraftManifestWithoutEnvironmentOverride() async throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 0 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .draftModelSpeculative }
+            func executionPathLabel() -> String { "Gemma GGUF with draft acceleration" }
+        }
+
+        final class DraftCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var contextDraftPath: String?
+            private(set) var contextDraftTokens: Int?
+            private(set) var validatorDraftPath: String?
+            private(set) var validatorDraftTokens: Int?
+
+            func recordContext(draftPath: String?, draftTokens: Int?) {
+                lock.lock()
+                defer { lock.unlock() }
+                contextDraftPath = draftPath
+                contextDraftTokens = draftTokens
+            }
+
+            func recordValidator(draftPath: String, draftTokens: Int?) {
+                lock.lock()
+                defer { lock.unlock() }
+                validatorDraftPath = draftPath
+                validatorDraftTokens = draftTokens
+            }
+        }
+
+        let store = AlphaRossStore()
+        let mainData = Data("GGUF-main-manifest-runtime".utf8)
+        let draftData = Data("GGUF-draft-manifest-runtime".utf8)
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "case-associate-mtp-manifest",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: Int64(draftData.count),
+                checksumSha256: sha256Hex(draftData),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            ),
+            draftArtifactData: draftData
+        )
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "case-associate-mtp-manifest",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+        }
+
+        let capture = DraftCapture()
+        AlphaLlamaCppProvider.contextFactory = { _, draftPath, draftTokens in
+            capture.recordContext(draftPath: draftPath, draftTokens: draftTokens)
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, draftPath, draftTokens in
+            capture.recordValidator(draftPath: draftPath, draftTokens: draftTokens)
+            return true
+        }
+
+        let expectedDraftPath = alphaAbsoluteURL(for: "model-packs/\(pack.tier.rawValue)/mtp-gemma-4-12b-it.gguf").path
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: false,
+                runtimeModeOverride: nil,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil,
+                draftModelPath: nil,
+                draftModelTokens: nil
+            )
+        )
+
+        let unwrappedHealth = try XCTUnwrap(health)
+        XCTAssertEqual(unwrappedHealth.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(unwrappedHealth.available, true)
+        XCTAssertEqual(unwrappedHealth.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(unwrappedHealth.draftAccelerationStatus, "active")
+        XCTAssertEqual(unwrappedHealth.draftModelPathLabel, "mtp-gemma-4-12b-it.gguf")
+        XCTAssertNotNil(unwrappedHealth.accelerationDraftTokens)
+        XCTAssertEqual(capture.contextDraftPath, expectedDraftPath)
+        XCTAssertEqual(capture.validatorDraftPath, expectedDraftPath)
+        XCTAssertEqual(capture.contextDraftTokens, capture.validatorDraftTokens)
+    }
+
     func testRuntimeHealthSuppressesInvalidGGUFDraftAccelerationClaim() throws {
         actor StubLlamaContext: AlphaLlamaCompletionContext {
             func clear() {}

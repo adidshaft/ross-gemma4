@@ -3161,6 +3161,19 @@ enum AlphaLocalModelRuntime {
         return activePack?.runtimeMode
     }
 
+    private static func environmentWithInstalledDraftCompanion(
+        activePack: AlphaInstalledModelPack?,
+        requestedTier: AlphaCapabilityTier?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment
+    ) -> AlphaLocalRuntimeEnvironment {
+        alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: activePack.map { [$0] } ?? [],
+            baseEnvironment: runtimeEnvironment
+        )
+    }
+
     private static func realProvider(
         activePack: AlphaInstalledModelPack?,
         tier: AlphaCapabilityTier,
@@ -3300,7 +3313,12 @@ enum AlphaLocalModelRuntime {
     ) -> AlphaLocalRuntimeHealth? {
         let tier = activePack?.tier ?? requestedTier
         guard let tier else { return nil }
-        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment) {
+        let effectiveEnvironment = environmentWithInstalledDraftCompanion(
+            activePack: activePack,
+            requestedTier: requestedTier ?? tier,
+            runtimeEnvironment: runtimeEnvironment
+        )
+        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: effectiveEnvironment) {
         case nil:
             return nil
         case .deterministicDev:
@@ -3316,7 +3334,7 @@ enum AlphaLocalModelRuntime {
                     estimatedContextTokens: nil,
                     lastErrorCategory: "development_artifact_blocked",
                     userFacingStatus: alphaRuntimeHealthStatus(.devArtifactsDisabled),
-                    explicitOptInEnabled: runtimeEnvironment.enableRealInference
+                    explicitOptInEnabled: effectiveEnvironment.enableRealInference
                 )
             }
             return DeterministicDevLocalModelProvider(capabilityTier: tier) { _ in
@@ -3334,13 +3352,13 @@ enum AlphaLocalModelRuntime {
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
                 userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
-                explicitOptInEnabled: runtimeEnvironment.enableRealInference
+                explicitOptInEnabled: effectiveEnvironment.enableRealInference
             )
         default:
             return realProvider(
                 activePack: activePack,
                 tier: tier,
-                runtimeEnvironment: runtimeEnvironment
+                runtimeEnvironment: effectiveEnvironment
             )?.runtimeHealth()
         }
     }
@@ -3353,7 +3371,12 @@ enum AlphaLocalModelRuntime {
     ) -> (any AlphaLocalModelProvider)? {
         let tier = activePack?.tier ?? requestedTier
         guard let tier else { return nil }
-        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment) {
+        let effectiveEnvironment = environmentWithInstalledDraftCompanion(
+            activePack: activePack,
+            requestedTier: requestedTier ?? tier,
+            runtimeEnvironment: runtimeEnvironment
+        )
+        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: effectiveEnvironment) {
         case nil:
             return nil
         case .deterministicDev:
@@ -3362,7 +3385,7 @@ enum AlphaLocalModelRuntime {
             }
             return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
         case .mediapipeLlm, .llamaCppGguf, .mlxSwiftLm, .appleFoundationModels, .unavailable:
-            return realProvider(activePack: activePack, tier: tier, runtimeEnvironment: runtimeEnvironment)
+            return realProvider(activePack: activePack, tier: tier, runtimeEnvironment: effectiveEnvironment)
         }
     }
 }
