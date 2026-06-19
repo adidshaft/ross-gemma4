@@ -177,7 +177,12 @@ def emit(lane: str, status: str, action: str, **fields: object) -> None:
         line += f" {extras}"
     print(line)
 
-def unsupported_local_row(lane: str) -> dict[str, str] | None:
+def unsupported_local_row(lane: str, expected_file_name: str | None = None) -> dict[str, str] | None:
+    def matches_expected_file(row: dict[str, str]) -> bool:
+        if not expected_file_name:
+            return True
+        return pathlib.PurePath(row.get("path", "")).name == expected_file_name
+
     return next(
         (
             row for row in rows
@@ -185,6 +190,7 @@ def unsupported_local_row(lane: str) -> dict[str, str] | None:
             and row.get("status") == "missing"
             and row.get("path") not in {None, "", "nil"}
             and row.get("reason", "").startswith("unsupported_")
+            and matches_expected_file(row)
         ),
         None,
     )
@@ -342,8 +348,6 @@ if catalog_gguf:
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
 present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)
-unsupported_mlx = unsupported_local_row("mlx")
-unsupported_mlx_draft = unsupported_local_row("mlx_draft")
 catalog_mlx_draft = next(
     (
         row for row in rows
@@ -425,12 +429,19 @@ else:
         row.get("lane") == "catalog_mlx" and row.get("release_ready") == "false"
         for row in catalog_rows
     )
+    catalog_mlx_primary = next((row for row in catalog_rows if row.get("lane") == "catalog_mlx"), None)
+    catalog_mlx_primary_file = (
+        catalog_mlx_primary.get("file")
+        if catalog_mlx_primary
+        else None
+    )
     for row in catalog_rows:
         file_name = row.get("file") or pathlib.PurePosixPath(row.get("path", "mlx-model")).name
         target_dir = target_root / file_name
         lane = "mlx_draft" if row.get("lane") == "catalog_mlx_draft" else "mlx"
         repo = row.get("repo", "unknown")
         if lane == "mlx" and row.get("release_ready") == "false":
+            unsupported_mlx = unsupported_local_row("mlx", file_name)
             emit(
                 lane,
                 "blocked",
@@ -454,6 +465,8 @@ else:
             continue
         if lane == "mlx_draft":
             if mlx_primary_blocked:
+                unsupported_mlx = unsupported_local_row("mlx", catalog_mlx_primary_file)
+                unsupported_mlx_draft = unsupported_local_row("mlx_draft", file_name)
                 emit(
                     lane,
                     "blocked",
