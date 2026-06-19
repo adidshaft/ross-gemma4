@@ -18017,9 +18017,14 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixStages,
             [
-                "source:document_qa:en:source_refs_required:max_tokens=24",
-                "general:open_query:en:no_source_refs:max_tokens=24"
+                "source:document_qa:en:source_refs_required:max_tokens=12",
+                "general:open_query:en:no_source_refs:max_tokens=12"
             ]
+        )
+        XCTAssertEqual(RossLocalModelSmokeProfile.mtpQuick.expectedAnswerSchema, "plain_text")
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.quick.expectedAnswerSchema,
+            #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#
         )
         XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixCases,

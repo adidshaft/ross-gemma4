@@ -187,7 +187,13 @@ enum RossLocalModelSmokeProfile: String {
     }
 
     var shortProfileMaxOutputTokens: Int {
-        self == .mtpQuick ? 24 : 192
+        self == .mtpQuick ? 12 : 192
+    }
+
+    var expectedAnswerSchema: String {
+        self == .mtpQuick
+            ? "plain_text"
+            : #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#
     }
 
     var benchmarkMatrixStages: [String] {
@@ -568,7 +574,7 @@ struct RossLocalModelSmokeView: View {
                     ocrConfidence: 1
                 )
             ],
-            expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
+            expectedSchema: smokeProfile.expectedAnswerSchema,
             maxOutputTokens: smokeProfile.shortProfileMaxOutputTokens,
             languageProfile: nil,
             documentClassification: nil,
@@ -745,7 +751,7 @@ struct RossLocalModelSmokeView: View {
                 ? "No matter document is supplied. Answer with exactly this short phrase: Check sources first."
                 : "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
             sourcePack: [],
-            expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
+            expectedSchema: smokeProfile.expectedAnswerSchema,
             maxOutputTokens: smokeProfile.shortProfileMaxOutputTokens,
             languageProfile: nil,
             documentClassification: nil,
