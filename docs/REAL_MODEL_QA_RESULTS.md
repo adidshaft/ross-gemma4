@@ -1,5 +1,49 @@
 # Real Model QA Results
 
+## 2026-06-19 iOS simulator GGUF full varied benchmark pause checkpoint
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
+- Runtime mode requested: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Artifact kind: `gguf`
+- Whether model files were committed: No
+- Whether physical iPhone was used: No
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --artifact-kind gguf --tier quickStart --pack-id simulator-2b-checkpoint-varied-doc-query --smoke-profile full --stage-timeout 90 --disable-draft`
+- Result: passed.
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=14336 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Benchmark matrix:
+  - `english_source_bound_document_qa`
+  - `bengali_source_bound_document_qa`
+  - `hindi_source_bound_document_qa`
+  - `tamil_source_bound_document_qa`
+  - `telugu_source_bound_document_qa`
+  - `english_open_no_document_query`
+- Full-profile pass marker:
+  - `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime tier=quick_start profile=full elapsed=127.14s source_raw_chars=467 source_parsed_chars=202 bengali_output_chars=135 hindi_output_chars=270 tamil_output_chars=345 telugu_output_chars=102 general_output_chars=442 source_refs=1 bengali_source_refs=1 hindi_source_refs=1 tamil_source_refs=1 telugu_source_refs=1 source_native_model=true bengali_native_model=true hindi_native_model=true tamil_native_model=true telugu_native_model=true general_native_model=true source_input_tokens=207 source_output_tokens=118 source_token_speed=4.22 source_first_token_ms=32729 source_measured_tokens=false source_acceleration=standard source_draft_tokens=nil source_draft_model=nil bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=4.66 bengali_first_token_ms=45703 bengali_measured_tokens=false bengali_acceleration=standard bengali_draft_tokens=nil bengali_draft_model=nil hindi_input_tokens=278 hindi_output_tokens=134 hindi_token_speed=3.91 hindi_first_token_ms=33982 hindi_measured_tokens=false hindi_acceleration=standard hindi_draft_tokens=nil hindi_draft_model=nil tamil_input_tokens=382 tamil_output_tokens=96 tamil_token_speed=4.24 tamil_first_token_ms=50769 tamil_measured_tokens=false tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil telugu_input_tokens=433 telugu_output_tokens=96 telugu_token_speed=5.21 telugu_first_token_ms=64427 telugu_measured_tokens=false telugu_acceleration=standard telugu_draft_tokens=nil telugu_draft_model=nil general_input_tokens=190 general_output_tokens=192 general_token_speed=4.59 general_first_token_ms=25288 general_measured_tokens=false general_acceleration=standard general_draft_tokens=nil general_draft_model=nil`
+- Benchmark summary:
+  - `ROSS_SMOKE_BENCHMARK_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=14336 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil profile=full matrix_profile=full matrix_cases=english_source_bound_document_qa,bengali_source_bound_document_qa,hindi_source_bound_document_qa,tamil_source_bound_document_qa,telugu_source_bound_document_qa,english_open_no_document_query matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192,bengali:document_qa:bn:source_refs_required:max_tokens=192,hindi:document_qa:hi:source_refs_required:max_tokens=192,tamil:document_qa:ta:source_refs_required:max_tokens=96,telugu:document_qa:te:source_refs_required:max_tokens=96,general:open_query:en:no_source_refs:max_tokens=192 elapsed=127.14s source_case=english_source_bound_document_qa source_task=document_qa source_language=en source_source_refs_policy=source_refs_required source_max_tokens=192 source_input_tokens=207 source_output_tokens=118 source_token_speed=4.22 source_first_token_ms=32729 source_measured_tokens=false source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_raw_chars=467 source_parsed_chars=202 source_refs=1 source_native_model=true general_case=english_open_no_document_query general_task=open_query general_language=en general_source_refs_policy=no_source_refs general_max_tokens=192 general_input_tokens=190 general_output_tokens=192 general_token_speed=4.59 general_first_token_ms=25288 general_measured_tokens=false general_acceleration=standard general_draft_tokens=nil general_draft_model=nil general_output_chars=442 general_native_model=true bengali_case=bengali_source_bound_document_qa bengali_task=document_qa bengali_language=bn bengali_source_refs_policy=source_refs_required bengali_max_tokens=192 bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=4.66 bengali_first_token_ms=45703 bengali_measured_tokens=false bengali_acceleration=standard bengali_draft_tokens=nil bengali_draft_model=nil bengali_output_chars=135 bengali_source_refs=1 bengali_native_model=true hindi_case=hindi_source_bound_document_qa hindi_task=document_qa hindi_language=hi hindi_source_refs_policy=source_refs_required hindi_max_tokens=192 hindi_input_tokens=278 hindi_output_tokens=134 hindi_token_speed=3.91 hindi_first_token_ms=33982 hindi_measured_tokens=false hindi_acceleration=standard hindi_draft_tokens=nil hindi_draft_model=nil hindi_output_chars=270 hindi_source_refs=1 hindi_native_model=true tamil_case=tamil_source_bound_document_qa tamil_task=document_qa tamil_language=ta tamil_source_refs_policy=source_refs_required tamil_max_tokens=96 tamil_input_tokens=382 tamil_output_tokens=96 tamil_token_speed=4.24 tamil_first_token_ms=50769 tamil_measured_tokens=false tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil tamil_output_chars=345 tamil_source_refs=1 tamil_native_model=true telugu_case=telugu_source_bound_document_qa telugu_task=document_qa telugu_language=te telugu_source_refs_policy=source_refs_required telugu_max_tokens=96 telugu_input_tokens=433 telugu_output_tokens=96 telugu_token_speed=5.21 telugu_first_token_ms=64427 telugu_measured_tokens=false telugu_acceleration=standard telugu_draft_tokens=nil telugu_draft_model=nil telugu_output_chars=102 telugu_source_refs=1 telugu_native_model=true`
+- Memory footprint observed:
+  - launch: `resident_mb=244`, `phys_footprint_mb=30`
+  - provider ready: `resident_mb=2597`, `phys_footprint_mb=3150`
+  - final Telugu completion: `resident_mb=1810`, `phys_footprint_mb=3262`
+- Artifact inventory at checkpoint:
+  - GGUF present: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+  - MTP draft present: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
+  - MLX missing: `no_directory_with_config_tokenizer_and_safetensors`
+  - CoreAI/CoreML adapter missing: `no_mlmodel_or_mlmodelc_adapter_found`
+  - CoreAI system model remains `unknown` until OS/runtime generation smoke succeeds
+- Observed behavior:
+  - the simulator app ran a real GGUF provider with explicit `fallback=none`
+  - all source-bound document stages retained at least one source reference
+  - all six stages reported native-model output and structured token metrics
+  - speed on this run was lower than earlier warmed simulator numbers, but the run is still a valid full-profile pass
+- Current interpretation:
+  - this is a clean pause checkpoint for the 2B GGUF simulator baseline, including varied document/query handling and token speed metrics
+  - MLX, CoreAI/CoreML adapter, MTP performance, and physical-device performance are not proven by this checkpoint
+
 ## 2026-06-19 iOS simulator rebuilt-app CoreAI/Foundation system checkpoint
 
 - Branch: `main`
