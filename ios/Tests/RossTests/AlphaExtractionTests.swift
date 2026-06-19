@@ -22284,6 +22284,28 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(output.rawText.contains("14 May 2026"))
     }
 
+    func testFoundationModelOutputReportsEmptyPlainMatterAnswer() {
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let promptPack = AlphaPromptPackBuilder(maxInputChars: 4_000).build(input: input)
+
+        let output = alphaFoundationModelOutput(
+            for: input,
+            promptPack: promptPack,
+            rawResponse: "   \n"
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "coreai_empty_response")
+        XCTAssertEqual(output.accelerationMode, .standard)
+    }
+
     func testFoundationModelOutputStillRequiresJSONForStructuredTasks() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

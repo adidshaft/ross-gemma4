@@ -2640,7 +2640,10 @@ func alphaFoundationModelOutput(
             omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
             executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
             accelerationMode: .standard,
-            inputChars: promptPack.inputChars
+            inputChars: promptPack.inputChars,
+            errorCategory: finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "coreai_empty_response"
+                : nil
         )
     }
 
