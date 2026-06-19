@@ -94,6 +94,24 @@
   - this is still not benchmark-pass evidence because generation timed out and no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
   - physical-device morning validation is still required before claiming MTP performance
 
+### 2026-06-19 bounded 90-second rerun
+
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --artifact-kind gguf --tier caseAssociate --pack-id simulator-12b-mtp-checkpoint --smoke-profile mtp_quick --stage-timeout 90 --launch-timeout 360 --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration`
+- Result: failed by bounded source-stage timeout; no benchmark pass claimed.
+- Runtime context evidence from the rerun:
+  - `llama_context: n_ctx         = 2048`
+  - `llama_context: n_batch       = 256`
+  - `llama_context: n_ubatch      = 128`
+  - draft context: `n_ctx=2048`, `n_batch=32`, `n_ubatch=32`
+- Failure summary:
+  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active draft_error_detail=configured_acceleration=draftModelSpeculative runtime_error_detail=nil context_tokens=2048 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil fail_runtime=gemma_local_runtime profile=mtp_quick matrix_profile=mtp_quick matrix_cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token matrix_stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24 matrix_shape_error=nil stage=nil error=nil elapsed=95.82s source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=nil source_draft_tokens=nil source_draft_model=nil source_raw_chars=0 source_refs=0 source_warning_count=1 source_grounded=false source_refs_kept=false source_native_model=true source_error=smoke_stage_timeout_source general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_output_chars=0 general_warning_count=1 general_native_model=true general_error=skipped_after_source_failure`
+- Observed behavior:
+  - the main 12B GGUF and 12B MTP draft artifacts both loaded in simulator without falling back to GGUF-standard identity
+  - the source stage started generation with `prompt_tokens=198` and `max_new_tokens=24`
+  - simulator memory at timeout was `resident_mb=1615` and `phys_footprint_mb=8358`
+  - no per-stage token counts or token speed were emitted, so this remains identity/routing evidence only
+
 ## 2026-06-19 iOS simulator MTP draft checkpoint
 
 - Branch: `main`
