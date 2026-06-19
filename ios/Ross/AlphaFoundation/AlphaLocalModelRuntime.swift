@@ -3324,13 +3324,19 @@ enum AlphaLocalModelRuntime {
         artifactKind rawArtifactKind: String?,
         modelPath rawModelPath: String?
     ) -> Bool {
-        guard let rawArtifactKind,
-              let rawModelPath,
+        guard let rawModelPath,
               !rawModelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return true
         }
-        let artifactKind = rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let modelPath = rawModelPath.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let rawArtifactKind,
+              !rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return modelPath.hasSuffix(".bundle") ||
+                modelPath.hasSuffix(".mlmodel") ||
+                modelPath.hasSuffix(".mlmodelc") ||
+                modelPath.hasSuffix(".mlpackage")
+        }
+        let artifactKind = rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch artifactKind {
         case "coreml_model":
             return modelPath.hasSuffix(".mlmodel") ||

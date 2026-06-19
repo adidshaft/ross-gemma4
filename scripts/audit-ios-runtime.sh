@@ -1125,7 +1125,10 @@ if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smo
 fi
 
 if ! grep -q "coreAIAdapterPathMatchesKind" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "rawArtifactKind" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testExplicitCoreMLRuntimeRequestRejectsForeignDebugPathWithoutKindBeforeProviderConstruction" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testExplicitCoreMLRuntimeRequestRejectsForeignDebugPathWithoutKindBeforeProviderConstruction" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "non-CoreML path shape installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
    ! grep -q "non-CoreML path shape" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: CoreAI/CoreML adapter validation does not reject non-adapter path shapes."

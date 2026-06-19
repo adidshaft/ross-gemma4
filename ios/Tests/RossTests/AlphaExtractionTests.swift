@@ -22029,6 +22029,43 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "not_supported")
     }
 
+    func testExplicitCoreMLRuntimeRequestRejectsForeignDebugPathWithoutKindBeforeProviderConstruction() throws {
+        let foreignURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foreign-coreml-debug-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-not-coreai".utf8).write(to: foreignURL)
+        defer { try? FileManager.default.removeItem(at: foreignURL) }
+
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: AlphaPackRuntimeMode(runtimeAlias: "coreml"),
+            modelPath: foreignURL.path,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let resolvedProvider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let provider = try XCTUnwrap(resolvedProvider)
+        let health = provider.runtimeHealth()
+
+        XCTAssertEqual(String(describing: type(of: provider)), "AlphaUnavailableRealLocalModelProvider")
+        XCTAssertEqual(provider.runtimeMode, .appleFoundationModels)
+        XCTAssertNotEqual(provider.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health.available, false)
+        XCTAssertNil(health.modelPathLabel)
+        XCTAssertEqual(health.modelPathPresent, false)
+        XCTAssertEqual(health.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health.runtimeErrorDetail, "missing_coreai_artifact")
+        XCTAssertEqual(health.draftAccelerationStatus, "not_supported")
+    }
+
     func testRuntimeIdentityLineIncludesMissingCoreAIArtifactForExplicitCoreMLWithoutSentinel() throws {
         let pack = installedPack(
             .quickStart,
