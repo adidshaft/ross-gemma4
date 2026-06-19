@@ -645,8 +645,9 @@ if [ ! -x scripts/test-ios-device-gguf-smoke-guards.sh ]; then
 fi
 
 if ! grep -q "seed_model_basename" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
-   ! grep -q "Publishing manifest after model transfer" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
-   ! grep -q "model before publishing its manifest" scripts/test-ios-device-gguf-smoke-guards.sh 2>/dev/null; then
+   ! grep -q "pack_directory_copy" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q -- "--remove-existing-content true" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "quick_start as a device directory" scripts/test-ios-device-gguf-smoke-guards.sh 2>/dev/null; then
     echo "❌ FAIL: GGUF device smoke helper does not avoid reusing partially copied model paths."
     FAIL=1
 fi

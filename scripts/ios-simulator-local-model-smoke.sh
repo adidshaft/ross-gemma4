@@ -295,6 +295,36 @@ gguf_file_looks_usable() {
   [[ "$(LC_ALL=C dd if="$file" bs=4 count=1 2>/dev/null)" == "GGUF" ]]
 }
 
+gguf_mtp_family() {
+  local path_lower
+  path_lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$path_lower" in
+    *26b-a4b*)
+      echo "26b-a4b"
+      ;;
+    *12b*)
+      echo "12b"
+      ;;
+    *e4b*)
+      echo "e4b"
+      ;;
+    *e2b*|*gemma-2-2b*|*gemma-2b*)
+      echo "2b"
+      ;;
+    *)
+      echo "unknown"
+      ;;
+  esac
+}
+
+gguf_mtp_draft_matches_primary() {
+  local primary_family
+  local draft_family
+  primary_family="$(gguf_mtp_family "$1")"
+  draft_family="$(gguf_mtp_family "$2")"
+  [[ "$primary_family" != "unknown" && "$draft_family" != "unknown" && "$primary_family" == "$draft_family" ]]
+}
+
 coreai_adapter_looks_usable() {
   local path="$1"
   local lower_path
@@ -417,6 +447,10 @@ if [[ -n "$draft_model_path" ]]; then
       fi
       if ! gguf_file_looks_usable "$draft_model_path"; then
         echo "GGUF/MTP simulator draft proof requires a real GGUF draft file with GGUF header and size larger than 1 MB, got: $draft_model_path" >&2
+        exit 2
+      fi
+      if ! gguf_mtp_draft_matches_primary "$model_path" "$draft_model_path"; then
+        echo "GGUF/MTP simulator draft proof requires matching primary and draft model families: primary=$(basename "$model_path") draft=$(basename "$draft_model_path")" >&2
         exit 2
       fi
       ;;

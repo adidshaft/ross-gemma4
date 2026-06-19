@@ -138,6 +138,16 @@ run_expect_exit_2 \
   "large non-GGUF draft model placeholder" \
   "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$large_non_gguf" --require-draft-acceleration
 
+gemma2_main_gguf="$tmpdir/gemma-2-2b-it-Q4_K_M.gguf"
+gemma12b_draft_gguf="$tmpdir/mtp-gemma-4-12b-it.gguf"
+printf 'GGUF' > "$gemma2_main_gguf"
+truncate -s 1000004 "$gemma2_main_gguf"
+printf 'GGUF' > "$gemma12b_draft_gguf"
+truncate -s 1000004 "$gemma12b_draft_gguf"
+run_expect_exit_2 \
+  "mismatched 2B primary with 12B MTP draft" \
+  "$SIM_SMOKE" --runtime gguf --model "$gemma2_main_gguf" --draft-model "$gemma12b_draft_gguf" --require-draft-acceleration --smoke-profile mtp_quick
+
 e4b_main_gguf="$tmpdir/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
 e4b_draft_gguf="$tmpdir/mtp-gemma-4-E4B-it.gguf"
 printf 'GGUF' > "$e4b_main_gguf"
@@ -215,8 +225,8 @@ preflight_expect_ok \
 
 preflight_expect_ok \
   "GGUF MTP draft file" \
-  "draft_model_path_type=file draft_model=main.gguf draft_tokens=2" \
-  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$main_gguf" --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --preflight-only
+  "draft_model_path_type=file draft_model=mtp-gemma-4-E4B-it.gguf draft_tokens=2" \
+  "$SIM_SMOKE" --runtime gguf --model "$e4b_main_gguf" --draft-model "$e4b_draft_gguf" --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --preflight-only
 
 usable_mlx_draft="$tmpdir/usable-mlx-draft"
 mkdir -p "$usable_mlx_draft"
