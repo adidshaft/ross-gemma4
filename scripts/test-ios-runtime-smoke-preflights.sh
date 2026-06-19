@@ -25,6 +25,14 @@ run_expect_exit_2 \
   "unsupported simulator smoke profile" \
   "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --smoke-profile typo
 
+run_expect_exit_2 \
+  "invalid simulator stage timeout" \
+  "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --stage-timeout nope
+
+run_expect_exit_2 \
+  "invalid simulator launch timeout" \
+  "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --launch-timeout nope
+
 malformed_mlx="$tmpdir/malformed-mlx"
 mkdir -p "$malformed_mlx"
 printf '{}' >"$malformed_mlx/config.json"

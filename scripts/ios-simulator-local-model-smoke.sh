@@ -18,7 +18,7 @@ Options:
   --pack-id <id>          Logical pack id for the debug smoke pack.
   --smoke-profile <mode>  quick | full | mtp-quick | source-only. Default: quick
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 60
-  --launch-timeout <sec>  Overall helper timeout. Default: 240
+  --launch-timeout <sec>  Overall helper timeout. Default: auto-sized from smoke profile and stage timeout.
   --draft-model <path>    Draft model artifact/directory for MTP or MLX speculative decoding.
   --draft-tokens <count>  Draft token count to request.
   --disable-draft         Force standard acceleration.
@@ -40,7 +40,8 @@ tier="quickStart"
 pack_id=""
 smoke_profile="quick"
 stage_timeout="60"
-launch_timeout="240"
+launch_timeout=""
+launch_timeout_overridden="0"
 draft_model_path=""
 draft_tokens=""
 disable_draft="0"
@@ -86,6 +87,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --launch-timeout)
       launch_timeout="${2:-}"
+      launch_timeout_overridden="1"
       shift 2
       ;;
     --draft-model)
@@ -130,6 +132,46 @@ case "$smoke_profile" in
     exit 2
     ;;
 esac
+
+case "$stage_timeout" in
+  ''|*[!0-9]*)
+    echo "Stage timeout must be a positive integer number of seconds: $stage_timeout" >&2
+    exit 2
+    ;;
+esac
+if [[ "$stage_timeout" -le 0 ]]; then
+  echo "Stage timeout must be a positive integer number of seconds: $stage_timeout" >&2
+  exit 2
+fi
+
+if [[ "$launch_timeout_overridden" == "1" ]]; then
+  case "$launch_timeout" in
+    ''|*[!0-9]*)
+      echo "Launch timeout must be a positive integer number of seconds: $launch_timeout" >&2
+      exit 2
+      ;;
+  esac
+  if [[ "$launch_timeout" -le 0 ]]; then
+    echo "Launch timeout must be a positive integer number of seconds: $launch_timeout" >&2
+    exit 2
+  fi
+else
+  case "$smoke_profile" in
+    full)
+      smoke_stage_count=6
+      ;;
+    source|source-only)
+      smoke_stage_count=1
+      ;;
+    *)
+      smoke_stage_count=2
+      ;;
+  esac
+  launch_timeout=$((stage_timeout * smoke_stage_count + 120))
+  if [[ "$launch_timeout" -lt 240 ]]; then
+    launch_timeout="240"
+  fi
+fi
 
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "xcrun is required." >&2
