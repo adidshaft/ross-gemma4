@@ -2798,6 +2798,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: promptPack.includedSourceRefs.count,
                 omittedSourceCount: promptPack.omittedSourceRefs.count,
                 omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
+                executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
+                accelerationMode: .standard,
+                inputChars: promptPack.inputChars,
                 errorCategory: status.lastErrorCategory ?? "unsupported_runtime_on_platform"
             )
         }
@@ -2842,6 +2845,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: promptPack.includedSourceRefs.count,
                 omittedSourceCount: promptPack.omittedSourceRefs.count,
                 omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
+                executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
+                accelerationMode: .standard,
+                inputChars: promptPack.inputChars,
                 errorCategory: "coreai_generation_failed"
             )
         }

@@ -22173,6 +22173,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "coreai_generation_failed")
         XCTAssertEqual(output.warnings, [AlphaLocalModelWarningCopy.assistantCouldNotFinish])
+        XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
     }
 
     @available(iOS 26.0, macOS 26.0, *)
@@ -22209,6 +22212,9 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
     }
 
     func testModelInvocationStorePreservesMeasuredTokenPrecisionFlag() {
