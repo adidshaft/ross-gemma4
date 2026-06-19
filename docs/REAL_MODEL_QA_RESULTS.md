@@ -1,6 +1,6 @@
 # Real Model QA Results
 
-## 2026-06-19 iOS simulator current-build MTP low-token checkpoint
+## 2026-06-19 iOS simulator rebuilt-app MTP 2k-context checkpoint
 
 - Branch: `main`
 - Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
@@ -9,21 +9,22 @@
 - Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
 - Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
 - Smoke command:
-  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration --simulator E36AB177-2287-4112-8225-339048142D11 --bundle-id com.ross.ios --tier caseAssociate --smoke-profile mtp_quick --stage-timeout 180 --launch-timeout 900`
-- Result: failed source-grounding quality gate; no benchmark pass claimed.
-- Runtime identity marker:
-  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --artifact-kind gguf --tier caseAssociate --pack-id simulator-12b-mtp-2k-rebuilt --smoke-profile mtp_quick --stage-timeout 5 --launch-timeout 220 --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration`
+- Result: failed by bounded source-stage timeout; no benchmark pass claimed.
+- Runtime context evidence from rebuilt app:
+  - `llama_context: n_ctx         = 2048`
+  - `llama_context: n_batch       = 256`
+  - `llama_context: n_ubatch      = 128`
 - Failure summary:
-  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil fail_runtime=gemma_local_runtime profile=mtp_quick matrix_profile=mtp_quick matrix_cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token matrix_stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24 matrix_shape_error=nil stage=nil error=nil elapsed=158.76s source_error=nil general_error=nil source_grounded=false source_refs_kept=true source_native_model=true general_native_model=true source_warning_count=0 general_warning_count=0 source_input_tokens=198 source_output_tokens=24 source_token_speed=1.64 source_first_token_ms=73323 source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp-gemma-4-12b-it.gguf general_input_tokens=170 general_output_tokens=24 general_token_speed=2.06 general_first_token_ms=62499 general_measured_tokens=false general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp-gemma-4-12b-it.gguf`
+  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active draft_error_detail=configured_acceleration=draftModelSpeculative runtime_error_detail=nil context_tokens=2048 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil fail_runtime=gemma_local_runtime profile=mtp_quick matrix_profile=mtp_quick matrix_cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token matrix_stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24 matrix_shape_error=nil stage=nil error=nil elapsed=5.34s source_error=smoke_stage_timeout_source general_error=skipped_after_source_failure source_grounded=false source_refs_kept=false source_native_model=true general_native_model=true source_warning_count=1 general_warning_count=1 source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=nil source_draft_tokens=nil source_draft_model=nil general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil`
 - Observed behavior:
-  - the current simulator build honors the `mtp_quick` cap: source and general stages both used `max_new_tokens=24`
-  - source-bound document QA completed under active MTP draft acceleration with `source_token_speed=1.64`, `source_first_token_ms=73323`, and `source_output_tokens=24`
-  - the open-query stage completed under active MTP draft acceleration with `general_token_speed=2.06`, `general_first_token_ms=62499`, and `general_output_tokens=24`
-  - the helper now preserves compact post-failure output lines; the failed source excerpt was `<|channel>11111111111111111111111` and the general excerpt was `Check11111111111111111111111`
-  - peak simulator memory footprint during generation was about `9071 MB`
+  - the current rebuilt simulator app honors the `mtp_quick` cap: the context is `2048`, prompt batch is `256`, physical batch is `128`, and the two-stage matrix keeps `max_tokens=24`
+  - runtime identity reached active draft acceleration before generation: `acceleration=draftModelSpeculative`, `draft_tokens=2`, `draft_model=mtp-gemma-4-12b-it.gguf`, and `draft_status=active`
+  - the source stage timed out at the intentionally tiny `5s` timeout before token metrics were available; the general stage was skipped after source failure
+  - simulator memory footprint at the timeout was `resident_mb=6298` and `phys_footprint_mb=2247`
 - Current interpretation:
-  - MTP routing, draft artifact loading, active draft identity, matrix shape, and per-stage diagnostic speed fields are proven on the current simulator build
-  - this is still not benchmark-pass evidence because the generated text failed source grounding and no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
+  - MTP routing, draft artifact loading, active draft identity, and the lower 2k-context smoke profile are proven on the current rebuilt simulator app
+  - this is still not benchmark-pass evidence because generation timed out and no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
   - physical-device morning validation is still required before claiming MTP performance
 
 ## 2026-06-19 iOS simulator MTP draft checkpoint
