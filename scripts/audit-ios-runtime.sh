@@ -662,6 +662,14 @@ if ! grep -q "seed_model_basename" scripts/ios-device-gguf-smoke.sh 2>/dev/null 
     FAIL=1
 fi
 
+if ! grep -q -- "--draft-model" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_PATH" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "fake GGUF MTP draft smoke" scripts/test-ios-device-gguf-smoke-guards.sh 2>/dev/null; then
+    echo "❌ FAIL: GGUF device smoke helper does not guard seeded MTP draft proof."
+    FAIL=1
+fi
+
 if ! grep -q "seeded device-proof pack excluded by default" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack preflight tests do not cover seeded device-proof exclusion."
     FAIL=1

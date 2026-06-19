@@ -11,11 +11,18 @@ Usage:
 Options:
   --device <udid>         Physical iPhone UDID accepted by devicectl.
   --model <path>          Local GGUF file to seed into the app container.
+  --draft-model <path>    Optional local GGUF draft companion to seed for MTP proof.
+  --draft-tokens <n>      Draft tokens to request when --draft-model is supplied.
+                          Default: 2
   --bundle-id <id>        App bundle identifier. Default: com.ross.ios
   --tier <tier>           quickStart | caseAssociate | seniorDraftingSupport
                           Default: quickStart
   --pack-id <id>          Logical pack id written into the seeded manifest.
                           Default: <model-basename>-device-proof
+  --smoke-profile <mode>  full | quick | mtp | mtp-quick | mtp_quick. Default: full
+  --require-draft-acceleration
+                          Fail unless the app reports active GGUF draft speculative
+                          acceleration with draft_status=active and draft metadata.
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
   --copy-timeout <sec>    Per-copy devicectl timeout. Default: 300
 
@@ -29,9 +36,13 @@ EOF
 
 device_id=""
 model_path=""
+draft_model_path=""
+draft_tokens="2"
 bundle_id="com.ross.ios"
 tier="quickStart"
 pack_id=""
+smoke_profile="full"
+require_draft_acceleration="0"
 stage_timeout="45"
 copy_timeout="300"
 
@@ -45,6 +56,14 @@ while [[ $# -gt 0 ]]; do
       model_path="${2:-}"
       shift 2
       ;;
+    --draft-model)
+      draft_model_path="${2:-}"
+      shift 2
+      ;;
+    --draft-tokens)
+      draft_tokens="${2:-}"
+      shift 2
+      ;;
     --bundle-id)
       bundle_id="${2:-}"
       shift 2
@@ -56,6 +75,14 @@ while [[ $# -gt 0 ]]; do
     --pack-id)
       pack_id="${2:-}"
       shift 2
+      ;;
+    --smoke-profile)
+      smoke_profile="${2:-}"
+      shift 2
+      ;;
+    --require-draft-acceleration)
+      require_draft_acceleration="1"
+      shift 1
       ;;
     --stage-timeout)
       stage_timeout="${2:-}"
@@ -85,6 +112,41 @@ fi
 if [[ ! -f "$model_path" ]]; then
   echo "Model file not found: $model_path" >&2
   exit 2
+fi
+
+if [[ -n "$draft_model_path" && ! -f "$draft_model_path" ]]; then
+  echo "Draft model file not found: $draft_model_path" >&2
+  exit 2
+fi
+
+if [[ -z "$draft_tokens" || "$draft_tokens" == *[!0-9]* || "$draft_tokens" -le 0 ]]; then
+  echo "Draft tokens must be a positive integer." >&2
+  exit 2
+fi
+
+case "$smoke_profile" in
+  full|quick|mtp|mtp-quick|mtp_quick)
+    ;;
+  *)
+    echo "Unsupported smoke profile: $smoke_profile" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$require_draft_acceleration" == "1" ]]; then
+  if [[ -z "$draft_model_path" ]]; then
+    echo "Draft acceleration proof requires --draft-model so identity cannot pass with draft_model=nil." >&2
+    exit 2
+  fi
+  case "$smoke_profile" in
+    mtp|mtp-quick|mtp_quick)
+      ;;
+    *)
+      echo "Draft acceleration proof requires --smoke-profile mtp_quick/mtp-quick/mtp so MTP validation stays low-token and low-context." >&2
+      exit 2
+      ;;
+  esac
 fi
 
 if [[ -z "$copy_timeout" || "$copy_timeout" == *[!0-9]* || "$copy_timeout" -le 0 ]]; then
@@ -124,6 +186,27 @@ case "$model_basename_lower" in
     ;;
 esac
 
+draft_checksum=""
+draft_bytes=""
+draft_model_basename=""
+seed_draft_basename=""
+relative_draft_path=""
+device_draft_model_path=""
+if [[ -n "$draft_model_path" ]]; then
+  draft_model_basename="$(basename "$draft_model_path")"
+  draft_model_basename_lower="$(printf '%s' "$draft_model_basename" | tr '[:upper:]' '[:lower:]')"
+  case "$draft_model_basename_lower" in
+    *.gguf)
+      ;;
+    *)
+      echo "GGUF draft acceleration proof requires a .gguf draft model file: $draft_model_path" >&2
+      exit 2
+      ;;
+  esac
+  draft_checksum="$(shasum -a 256 "$draft_model_path" | awk '{print $1}')"
+  draft_bytes="$(wc -c < "$draft_model_path" | tr -d '[:space:]')"
+fi
+
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "xcrun is required." >&2
   exit 2
@@ -140,6 +223,10 @@ run_id="$(date -u +"%Y%m%dT%H%M%SZ")"
 safe_pack_id="$(printf '%s' "$pack_id" | tr -c 'A-Za-z0-9._-' '-')"
 seed_model_basename="${safe_pack_id}-${checksum:0:12}-${run_id}.gguf"
 manifest_basename="${seed_model_basename%.*}.manifest.json"
+if [[ -n "$draft_model_path" ]]; then
+  seed_draft_basename="${safe_pack_id}-draft-${draft_checksum:0:12}-${run_id}.gguf"
+  relative_draft_path="model-packs/$canonical_tier/$seed_draft_basename"
+fi
 
 tmpdir="$(mktemp -d /tmp/ross-ios-device-gguf-smoke.XXXXXX)"
 trap 'rm -rf "$tmpdir"' EXIT
@@ -187,21 +274,55 @@ mkdir -p "$probe_dir" "$seed_dir"
 probe_file="$probe_dir/.device-proof-probe"
 printf 'ross-device-proof\n' > "$probe_file"
 cp "$model_path" "$seed_dir/$seed_model_basename"
+if [[ -n "$draft_model_path" ]]; then
+  cp "$draft_model_path" "$seed_dir/$seed_draft_basename"
+fi
 
-cat > "$seed_dir/$manifest_basename" <<EOF
-{
-  "packId": "$pack_id",
-  "tier": "$canonical_tier",
-  "fileName": "$seed_model_basename",
-  "relativePath": "model-packs/$canonical_tier/$seed_model_basename",
-  "checksumSha256": "$checksum",
-  "bytes": $bytes,
-  "artifactKind": "local_model_artifact",
-  "runtimeMode": "gemma_local_runtime",
-  "developmentOnly": false,
-  "verifiedAt": "$verified_at"
+python3 - "$seed_dir/$manifest_basename" "$pack_id" "$canonical_tier" "$seed_model_basename" "$checksum" "$bytes" "$verified_at" "$seed_draft_basename" "$relative_draft_path" "$draft_checksum" "$draft_bytes" "$draft_tokens" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+(
+    manifest_path,
+    pack_id,
+    canonical_tier,
+    seed_model_basename,
+    checksum,
+    raw_bytes,
+    verified_at,
+    seed_draft_basename,
+    relative_draft_path,
+    draft_checksum,
+    raw_draft_bytes,
+    raw_draft_tokens,
+) = sys.argv[1:]
+
+payload = {
+    "packId": pack_id,
+    "tier": canonical_tier,
+    "fileName": seed_model_basename,
+    "relativePath": f"model-packs/{canonical_tier}/{seed_model_basename}",
+    "checksumSha256": checksum,
+    "bytes": int(raw_bytes),
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "verifiedAt": verified_at,
 }
-EOF
+
+if seed_draft_basename:
+    payload["draftArtifact"] = {
+        "fileName": seed_draft_basename,
+        "relativePath": relative_draft_path,
+        "checksumSha256": draft_checksum,
+        "bytes": int(raw_draft_bytes),
+        "artifactKind": "local_model_artifact",
+        "draftTokens": int(raw_draft_tokens),
+    }
+
+Path(manifest_path).write_text(json.dumps(payload, indent=2) + "\n")
+PY
 
 probe_output="$tmpdir/probe-copy.txt"
 run_devicectl_copy_with_timeout "probe_copy" "$probe_output" \
@@ -222,9 +343,15 @@ fi
 container_root="${probe_device_path%/Library/Application Support/RossAlpha/.device-proof-probe}"
 relative_model_path="model-packs/$canonical_tier/$seed_model_basename"
 device_model_path="$container_root/Library/Application Support/RossAlpha/$relative_model_path"
+if [[ -n "$relative_draft_path" ]]; then
+  device_draft_model_path="$container_root/Library/Application Support/RossAlpha/$relative_draft_path"
+fi
 
 echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
+if [[ -n "$device_draft_model_path" ]]; then
+  echo "Seeding draft model to: $device_draft_model_path"
+fi
 echo "Publishing tier directory with manifest: $canonical_tier"
 
 run_devicectl_copy_with_timeout "pack_directory_copy" "$tmpdir/pack-directory-copy.txt" \
@@ -236,7 +363,7 @@ run_devicectl_copy_with_timeout "pack_directory_copy" "$tmpdir/pack-directory-co
   --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier" \
   --remove-existing-content true
 
-python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
+python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$smoke_profile" "$device_draft_model_path" "$draft_tokens" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
@@ -254,10 +381,23 @@ from ross_smoke_summary import (
     parse_fields,
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
+    runtime_identity_draft_artifact_error,
     runtime_identity_resource_error,
 )
 
-device_id, bundle_id, device_model_path, checksum, stage_timeout = sys.argv[1:-1]
+(
+    device_id,
+    bundle_id,
+    device_model_path,
+    checksum,
+    stage_timeout,
+    smoke_profile,
+    draft_model_path,
+    draft_tokens,
+    require_draft_acceleration,
+) = sys.argv[1:-1]
+
+require_draft_acceleration = require_draft_acceleration == "1"
 
 env = os.environ.copy()
 env.update(
@@ -267,9 +407,15 @@ env.update(
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_PATH": device_model_path,
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_CHECKSUM": checksum,
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_KIND": "gguf",
+        "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_PROFILE": smoke_profile,
         "DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS": stage_timeout,
     }
 )
+if draft_model_path:
+    env["DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_PATH"] = draft_model_path
+    env["DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_TOKENS"] = draft_tokens
+if require_draft_acceleration:
+    env["DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"] = "1"
 
 command = [
     "xcrun",
@@ -359,6 +505,25 @@ def validate_identity_guard(identity, *, require_identity):
                 file=sys.stderr,
             )
             sys.exit(1)
+
+        if require_draft_acceleration:
+            if identity.get("acceleration") != "draftModelSpeculative":
+                print(
+                    "ROSS_SMOKE_GUARD_FAIL "
+                    "reason=draft_acceleration_inactive requested=gemma_local_runtime "
+                    f"acceleration={identity.get('acceleration') or 'nil'}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            draft_artifact_error = runtime_identity_draft_artifact_error(identity, "gemma_local_runtime")
+            if draft_artifact_error:
+                print(
+                    "ROSS_SMOKE_GUARD_FAIL "
+                    "reason=runtime_identity_draft_artifact_mismatch requested=gemma_local_runtime "
+                    f"{draft_artifact_error}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
 
         expected_artifact_name = os.path.basename(device_model_path)
         identity_artifact_name = os.path.basename(identity.get("artifact_path") or "")
