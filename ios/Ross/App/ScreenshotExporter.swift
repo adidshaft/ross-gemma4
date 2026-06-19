@@ -1272,6 +1272,10 @@ struct RossAssistantDownloadSmokeView: View {
            let installedPack = model.installedPack(for: config.tier),
            rossAssistantDownloadSmokeInstalledPackMatches(installedPack, config: config) {
             status = RossAssistantDownloadSmokeStatusCopy.passedStatus
+            RossAssistantDownloadSmokeView.logRuntimeIdentity(
+                installedPack: installedPack,
+                requestedRuntime: config.runtimeMode
+            )
             RossLocalModelSmokeView.log(
                 "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=\(String(format: "%.2f", elapsed))s tier=\(config.tier.rawValue) runtime=\(installedPack.runtimeMode.rawValue) pack=\(installedPack.packId) install_path=\(installedPack.installPath) checksum=\(installedPack.checksumVerified)"
             )
@@ -1307,6 +1311,54 @@ struct RossAssistantDownloadSmokeView: View {
             return true
         case .notStarted, .queued, .downloading, .verifying:
             return false
+        }
+    }
+
+    @MainActor
+    private static func logRuntimeIdentity(
+        installedPack: AlphaInstalledModelPack,
+        requestedRuntime: AlphaPackRuntimeMode?
+    ) {
+        let runtimeEnvironment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: requestedRuntime ?? installedPack.runtimeMode,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+        let fallbackOutput = AlphaLocalModelOutput(
+            rawText: "",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+        if let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: installedPack,
+            requestedTier: installedPack.tier,
+            runtimeEnvironment: runtimeEnvironment,
+            executor: { _ in fallbackOutput }
+        ) {
+            RossLocalModelSmokeView.logRuntimeIdentity(
+                activePack: installedPack,
+                provider: provider,
+                providerHealth: provider.runtimeHealth(),
+                requestedRuntime: requestedRuntime
+            )
+            return
+        }
+        if let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: installedPack,
+            requestedTier: installedPack.tier,
+            runtimeEnvironment: runtimeEnvironment
+        ) {
+            RossLocalModelSmokeView.logRuntimeIdentity(
+                activePack: installedPack,
+                providerName: RossLocalModelSmokeView.preflightProviderName(for: health.runtimeMode),
+                actualRuntime: health.runtimeMode,
+                providerHealth: health,
+                requestedRuntime: requestedRuntime
+            )
         }
     }
 }

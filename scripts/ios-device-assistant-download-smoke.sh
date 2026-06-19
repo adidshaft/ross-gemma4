@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -18,7 +20,8 @@ Options:
 This helper:
   1. Launches Ross in assistant-download smoke mode on the cabled device
   2. Streams structured download progress logs from the app
-  3. Exits 0 only after a ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS line appears
+  3. Exits 0 only after ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS and a matching
+     ROSS_RUNTIME_IDENTITY line prove the installed runtime is available
 EOF
 }
 
@@ -77,12 +80,19 @@ if [[ -z "$device_id" || -z "$selected_tier" ]]; then
   exit 2
 fi
 
-python3 - "$device_id" "$bundle_id" "$selected_tier" "$selected_runtime" "$mobile_allowed" "$force_refresh" "$wait_seconds" <<'PY'
+python3 - "$device_id" "$bundle_id" "$selected_tier" "$selected_runtime" "$mobile_allowed" "$force_refresh" "$wait_seconds" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
 import subprocess
 import sys
+
+sys.path.insert(0, sys.argv[-1])
+from ross_smoke_summary import (
+    parse_fields,
+    runtime_identity_artifact_error,
+    runtime_identity_availability_error,
+)
 
 (
     device_id,
@@ -92,7 +102,7 @@ import sys
     mobile_allowed,
     force_refresh,
     wait_seconds,
-) = sys.argv[1:]
+) = sys.argv[1:-1]
 
 def normalize_runtime(value):
     lowered = value.strip().lower()
@@ -115,15 +125,6 @@ if expected_runtime is None:
         file=sys.stderr,
     )
     sys.exit(2)
-
-def parse_fields(line):
-    fields = {}
-    for chunk in line.split()[1:]:
-        if "=" not in chunk:
-            continue
-        key, value = chunk.split("=", 1)
-        fields[key] = value
-    return fields
 
 env = os.environ.copy()
 env.update(
@@ -153,9 +154,66 @@ command = [
 
 pass_re = re.compile(r"ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL\b")
+identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
+
+def validate_identity_guard(identity):
+    if identity is None:
+        print("ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL reason=missing_runtime_identity", file=sys.stderr)
+        sys.exit(1)
+
+    actual_runtime = identity.get("actual_runtime")
+    requested_runtime = identity.get("requested_runtime")
+    if expected_runtime != "auto" and (
+        actual_runtime != expected_runtime or requested_runtime not in (expected_runtime, "nil")
+    ):
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_mismatch requested={expected_runtime} "
+            f"identity_requested={requested_runtime} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    expected_identity_runtime = actual_runtime if expected_runtime == "auto" else expected_runtime
+    pack_runtime = identity.get("pack_runtime")
+    if pack_runtime in (None, "nil", ""):
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=pack_runtime_missing actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if actual_runtime is None or pack_runtime != actual_runtime:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=pack_runtime_mismatch pack_runtime={pack_runtime} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_unavailable requested={expected_identity_runtime} "
+            f"{availability_error}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    artifact_error = runtime_identity_artifact_error(identity, expected_identity_runtime)
+    if artifact_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_artifact_mismatch requested={expected_identity_runtime} "
+            f"{artifact_error}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 outcome = None
 pass_fields = None
+identity = None
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -170,6 +228,8 @@ try:
     for raw_line in process.stdout:
         line = raw_line.rstrip("\n")
         print(line)
+        if identity_re.search(line):
+            identity = parse_fields(line)
         if pass_re.search(line):
             pass_fields = parse_fields(line)
             outcome = "pass"
@@ -187,6 +247,7 @@ finally:
         process.wait(timeout=5)
 
 if outcome == "pass":
+    validate_identity_guard(identity)
     if expected_runtime != "auto":
         actual_runtime = (pass_fields or {}).get("runtime")
         if actual_runtime != expected_runtime:

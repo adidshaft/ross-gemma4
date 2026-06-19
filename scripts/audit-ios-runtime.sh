@@ -394,7 +394,10 @@ if ! grep -q "identity_requested" scripts/ios-device-gguf-smoke.sh 2>/dev/null; 
     FAIL=1
 fi
 
-if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null; then
+if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "missing_runtime_identity" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_artifact_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "test-ios-device-assistant-download-smoke-guards.sh" scripts/audit-ios-runtime.sh 2>/dev/null; then
     echo "❌ FAIL: assistant-download smoke runtime pass guard missing."
     FAIL=1
 fi
@@ -929,6 +932,7 @@ if [ "$FAIL" -eq 1 ]; then
 else
     scripts/test-ios-runtime-smoke-preflights.sh
     scripts/test-ios-device-installed-pack-preflights.sh
+    scripts/test-ios-device-assistant-download-smoke-guards.sh
     scripts/test-ios-morning-runtime-checkpoint-plan.sh
     scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
