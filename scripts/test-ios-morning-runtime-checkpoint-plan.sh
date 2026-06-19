@@ -60,6 +60,43 @@ grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" /tmp/ross-morning-plan.out
 grep -q "without launching Simulator or touching the cabled iPhone" /tmp/ross-morning-plan.out
 grep -q "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query." /tmp/ross-morning-plan.out
 
+tiny_gguf="$tmpdir/tiny-primary.gguf"
+printf 'GGUF' > "$tiny_gguf"
+"$PLAN" --device TEST_DEVICE --gguf-model "$tiny_gguf" > /tmp/ross-morning-plan.out
+grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=missing_or_invalid_primary_gguf model=$tiny_gguf" /tmp/ross-morning-plan.out
+if grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out; then
+  echo "Expected tiny local GGUF to suppress baseline device smoke command" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
+draft_like_gguf="$tmpdir/mtp-gemma-4-12b-it.gguf"
+python3 - "$draft_like_gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
+"$PLAN" --device TEST_DEVICE --gguf-model "$draft_like_gguf" > /tmp/ross-morning-plan.out
+grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=local_gguf_is_draft_like model=$draft_like_gguf" /tmp/ross-morning-plan.out
+if grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out; then
+  echo "Expected draft-like local GGUF to suppress baseline device smoke command" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
+primary_gguf="$tmpdir/gemma-4-e4b-primary.gguf"
+python3 - "$primary_gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
+"$PLAN" --device TEST_DEVICE --gguf-model "$primary_gguf" > /tmp/ross-morning-plan.out
+grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
+grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out
+grep -q -- "--model $primary_gguf" /tmp/ross-morning-plan.out
+
 support_root="$tmpdir/RossAlpha"
 packs_root="$support_root/model-packs"
 mkdir -p "$packs_root/quickStart"

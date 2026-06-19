@@ -88,6 +88,32 @@ quote_args() {
   printf '\n'
 }
 
+file_size_bytes() {
+  stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0
+}
+
+gguf_file_looks_usable() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  local size
+  size="$(file_size_bytes "$file")"
+  [[ "$size" =~ ^[0-9]+$ ]] || return 1
+  [[ "$size" -gt 1000000 ]] || return 1
+  [[ "$(LC_ALL=C dd if="$file" bs=4 count=1 2>/dev/null)" == "GGUF" ]]
+}
+
+gguf_path_is_draft_like() {
+  local path="$1"
+  local lower_path
+  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_path" in
+    *mtp*|*draft*|*assistant*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 inventory_output=""
 if [[ -n "$installed_root" ]]; then
   inventory_args=(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")
@@ -181,7 +207,7 @@ print_command \
   --bundle-id "$bundle_id" \
   --list-only
 
-if [[ -f "$gguf_model" ]]; then
+if gguf_file_looks_usable "$gguf_model" && ! gguf_path_is_draft_like "$gguf_model"; then
   print_command \
     "2. GGUF baseline seeded quick smoke" \
     scripts/ios-device-gguf-smoke.sh \
@@ -192,7 +218,11 @@ if [[ -f "$gguf_model" ]]; then
     --stage-timeout "$stage_timeout"
 else
   echo "2. GGUF baseline seeded quick smoke:"
-  echo "   SKIP reason=missing_local_gguf model=${gguf_model}"
+  if [[ -f "$gguf_model" ]] && gguf_path_is_draft_like "$gguf_model"; then
+    echo "   SKIP reason=local_gguf_is_draft_like model=${gguf_model}"
+  else
+    echo "   SKIP reason=missing_or_invalid_primary_gguf model=${gguf_model}"
+  fi
 fi
 
 if inventory_has_present_lane "installed_gguf" "$tier" &&

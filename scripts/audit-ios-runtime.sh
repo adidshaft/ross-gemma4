@@ -815,6 +815,14 @@ if ! grep -q "Stage timeout must be a positive integer" scripts/ios-morning-runt
     FAIL=1
 fi
 
+if ! grep -q "local_gguf_is_draft_like" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "missing_or_invalid_primary_gguf" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "draft-like local GGUF" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "missing_or_invalid_primary_gguf" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan can still print baseline GGUF commands for invalid or draft-like GGUF paths."
+    FAIL=1
+fi
+
 if ! grep -q "Launch timeout must be a positive integer" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "reason=helper_timeout" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "reason=no_terminal_smoke_marker" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
