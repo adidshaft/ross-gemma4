@@ -448,6 +448,11 @@ if ! grep -q "testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration" ios/T
     FAIL=1
 fi
 
+if ! grep -q "testMLXRunReturnsInvalidArtifactForEmptyWeightsBeforeGeneration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift MLX run path can still reach generation for empty primary weights."
+    FAIL=1
+fi
+
 if ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Documents.swift 2>/dev/null ||

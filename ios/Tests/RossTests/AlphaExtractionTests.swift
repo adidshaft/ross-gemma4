@@ -21743,6 +21743,50 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotNil(output.inputChars)
     }
 
+    func testMLXRunReturnsInvalidArtifactForEmptyWeightsBeforeGeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-empty-mlx-run-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        FileManager.default.createFile(
+            atPath: directory.appendingPathComponent("model.safetensors").path,
+            contents: Data()
+        )
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, _ in
+            XCTFail("Empty MLX weights should fail before generation.")
+            return AlphaMLXGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
+    }
+
     func testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration() async throws {
         let previousGenerator = AlphaMLXLocalProvider.streamGenerator
         defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
