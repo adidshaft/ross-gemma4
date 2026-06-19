@@ -80,9 +80,10 @@ Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity
 
 Installed-pack validation is runtime-specific before reuse:
 
-- GGUF packs require `local_model_artifact`; MTP draft companions must be `.gguf` local-model artifacts.
+- GGUF packs require a GGUF/local artifact kind such as `local_model_artifact`, `gguf`, or `gguf_model`; MTP draft companions must be `.gguf` local-model artifacts.
 - MLX packs and MLX draft companions require `mlx_directory` and a usable MLX directory shape.
 - CoreAI/CoreML/Foundation adapters require adapter artifact kinds; built-in `system_model` is reserved for system sentinel paths.
+- App-side provider resolution and smoke preflights both fail closed on incompatible artifact shapes, so an MLX/CoreAI runtime request cannot reuse a GGUF pack as benchmark evidence.
 - Pre-device installed-pack inventory also rejects malformed reachable artifacts: tiny or wrong-header GGUF primary/draft files and incomplete MLX directories are reported as unusable instead of ready.
 
 ## Backend Catalog Modes

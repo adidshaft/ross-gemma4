@@ -96,6 +96,13 @@ if ! grep -q "artifactCompatibilityError" ios/Ross/AlphaFoundation/AlphaLocalMod
     FAIL=1
 fi
 
+if ! grep -q "iOS GGUF/.*current proven real local inference lane" docs/RUNTIME_DECISION_MEMO.md 2>/dev/null ||
+   ! grep -q "Do not claim MLX/CoreAI/MTP numbers from a GGUF identity marker" docs/RUNTIME_DECISION_MEMO.md 2>/dev/null ||
+   ! grep -q "App-side provider resolution and smoke preflights both fail closed on incompatible artifact shapes" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: runtime docs do not preserve the current iOS GGUF proof and no-GGUF-fallback contract."
+    FAIL=1
+fi
+
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
     FAIL=1

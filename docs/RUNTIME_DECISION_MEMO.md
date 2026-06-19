@@ -8,33 +8,34 @@ Ross Real Local Model Proof & QA Alpha
 
 - Keep `deterministic_dev` as the default runtime for CI, simulator, and safe fallback.
 - Treat the deterministic dev provider as a test/runtime scaffold, not as a real model.
-- Use Android `mediapipe_llm` as the first real local inference proof path.
-- Keep iOS `apple_foundation_models` behind explicit opt-in and compatible-device checks.
+- Treat iOS GGUF/`llama.cpp` as the current proven real local inference lane.
+- Keep MLX and Apple Foundation/CoreAI/CoreML behind explicit runtime identity and artifact-shape checks.
 - Do not bundle model files.
 - Do not commit model files.
 - Do not add any cloud inference path.
 
 ## Latest observed outcome
 
-- Android physical-device proof remains blocked in this session.
-- `adb devices -l` returned no physical Android device.
-- No developer-provided `.task` artifact was configured in this session.
-- The repo stayed validated after one narrow iOS safety fix for missing Foundation Models adapter paths.
+- iOS GGUF Quick Start has physical-device benchmark evidence on Aman's iPhone from June 19, 2026.
+- The 12B GGUF lane is correctly blocked as `insufficient_device_memory` on the 7 GB iPhone class.
+- MTP draft artifacts are discoverable, but a benchmark is invalid unless runtime identity reports `acceleration=draftModelSpeculative`, `draft_status=active`, non-`nil` draft tokens, and a non-`nil` draft model.
+- MLX and CoreAI/CoreML requests are not valid benchmarks unless `ROSS_RUNTIME_IDENTITY actual_runtime` proves `mlx_swift_lm` or `apple_foundation_models` respectively.
+- Runtime resolution now rejects incompatible active/debug artifact shapes before provider construction, so a requested MLX/CoreAI lane cannot borrow a GGUF artifact and become benchmark evidence.
 
-## Why Android is the first proof target
+## Why iOS GGUF is the current proof target
 
-- The Android branch already has a concrete MediaPipe-backed provider path.
-- A developer can supply a `.task` artifact outside the repo.
-- Physical-device proof is more important than adding more runtime scaffolding.
-- The app now exposes runtime mode, fallback state, checksum status, model-path status, and the last invocation runtime in Technical details.
+- The iOS app has a concrete `llama.cpp` provider path with source-grounded physical-device smoke evidence.
+- The cabled-device and simulator smoke helpers now require runtime identity before benchmark summaries.
+- The app exposes runtime mode, artifact shape, fallback state, checksum status, acceleration state, draft metadata, token counts, and speed in diagnostic surfaces.
+- Further MLX/CoreAI/MTP work should improve real provider activation and guardrails, not widen fallback behavior.
 
-## Why iOS stays opt-in
+## Why MLX/CoreAI/MTP stay guarded
 
-- The iOS alpha path is useful for QA readiness, but it still depends on compatible OS and hardware.
 - Real-runtime probing remains off unless `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`.
-- The canonical real-runtime value remains `ROSS_LOCAL_RUNTIME=apple_foundation_models`.
-- If unavailable, Ross must say so clearly and keep deterministic fallback active.
-- A missing configured Foundation Models adapter path must fail safely without opening an interactive system prompt.
+- `ROSS_LOCAL_RUNTIME=mlx` must resolve to `mlx_swift_lm` with `artifactKind=mlx_directory` and a usable directory.
+- `ROSS_LOCAL_RUNTIME=coreai` or `coreml` must resolve to `apple_foundation_models` with a system sentinel or a valid Foundation/CoreAI/CoreML adapter artifact.
+- `ROSS_LOCAL_RUNTIME=gguf` with `--require-draft-acceleration` must fail unless MTP draft acceleration is active and generation stages report draft acceleration.
+- If unavailable, Ross must say so clearly with categories such as `missing_mlx_artifact`, `missing_coreai_artifact`, `unsupported_runtime_on_platform`, or draft-specific MTP errors.
 
 ## Backend decision
 
@@ -49,19 +50,29 @@ Ross Real Local Model Proof & QA Alpha
 
 ## Model artifact strategy for alpha
 
-1. Preferred proof path: developer-provided local debug model on Android.
+1. Preferred proven path: installed or explicit GGUF artifact on iOS.
    - Set `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-   - Set `ROSS_LOCAL_RUNTIME=mediapipe_llm`
+   - Set `ROSS_LOCAL_RUNTIME=gguf`
    - Set `ROSS_LOCAL_MODEL_PATH`
    - Optionally set `ROSS_LOCAL_MODEL_CHECKSUM`
-2. Optional backend metadata path:
+2. MTP proof path:
+   - Use the GGUF lane with a valid `.gguf` draft companion.
+   - Set `ROSS_LOCAL_DRAFT_MODEL_PATH` or use an installed manifest with `draftArtifact.relativePath`.
+   - Use the `mtp_quick` profile and require draft acceleration for proof.
+3. MLX proof path:
+   - Set `ROSS_LOCAL_RUNTIME=mlx`.
+   - Provide an MLX directory artifact, not a GGUF file.
+4. CoreAI/CoreML proof path:
+   - Set `ROSS_LOCAL_RUNTIME=coreai` or `coreml`.
+   - Use `system-model`/`system://...` only for the built-in Foundation Models sentinel, or provide a real adapter artifact.
+5. Optional backend metadata path:
    - enable `ROSS_ENABLE_EXTERNAL_MODEL_METADATA=1`
    - advertise `external_debug_model` metadata without exposing a download path
-3. Optional backend dev serving path:
+6. Optional backend dev serving path:
    - enable `ROSS_ENABLE_EXTERNAL_MODEL_SERVING=1`
    - provide `ROSS_EXTERNAL_MODEL_FILE_PATH`
    - keep the file outside the repo
-4. Production delivery remains future work.
+7. Production delivery remains future work.
    - signed manifests
    - signed URLs
    - app-private storage
@@ -69,9 +80,9 @@ Ross Real Local Model Proof & QA Alpha
 
 ## Runtime truth rules
 
-- Do not claim real local inference unless the app actually recorded the real runtime mode.
-- Android proof should normally come from a physical device.
-- iOS proof requires a compatible device/runtime and explicit opt-in.
+- Do not claim real local inference unless the app records a matching `ROSS_RUNTIME_IDENTITY` runtime mode.
+- Do not claim MLX/CoreAI/MTP numbers from a GGUF identity marker or a failed smoke summary.
+- Physical iPhone proof is required for release-quality device performance claims.
 - If the runtime is unavailable, Ross must say fallback is active.
 - Unsupported or low-confidence model output must not be silently accepted.
 - All accepted output must remain schema-validated, source-validated, and verifier-gated.
@@ -87,12 +98,13 @@ Ross Real Local Model Proof & QA Alpha
 
 ## Blockers that still require manual proof
 
-- A compatible physical Android device.
-- A developer-provided `.task` model artifact.
-- A compatible Apple device/runtime for Foundation Models QA.
+- Physical-device MTP proof with active draft acceleration and non-degenerate output.
+- Physical-device MLX proof with a real MLX directory artifact.
+- Physical-device Apple Foundation/CoreAI/CoreML proof on a supported OS/device or with a valid adapter.
+- End-to-end model delivery, resume, repair, and deletion for production-sized artifacts.
 
 ## Recommendation
 
-- Use the new Android smoke tooling and Technical details screen first.
-- Record one honest physical-device `Case Associate` run before expanding runtime architecture any further.
-- Defer iOS metric-parity work until after that Android proof exists.
+- Keep using iOS smoke helpers and runtime identity as the source of truth.
+- Run the morning checkpoint only after the iPhone is cabled/unlocked, using short guarded smokes and stopping on fallback, memory pressure, thermal issues, or instability.
+- Do not publish new MLX/CoreAI/MTP benchmark numbers until the matching runtime identity and generation pass are recorded.
