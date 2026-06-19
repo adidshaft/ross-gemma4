@@ -738,7 +738,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                     packedSourceCount: pack.includedSourceRefs.count,
                     omittedSourceCount: pack.omittedSourceRefs.count,
                     omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
-                    errorCategory: inferenceFailureCategory(contextCreationFailed: true)
+                    errorCategory: inferenceFailureCategory(contextCreationFailed: true),
+                    runtimeErrorDetail: alphaRuntimeSafeErrorDetail(error)
                 )
             }
             await context.clear()

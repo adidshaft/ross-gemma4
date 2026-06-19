@@ -1391,7 +1391,9 @@ if ! grep -q "strictDraftContextFactory" ios/Ross/AlphaFoundation/AlphaLlamaCppP
 fi
 
 if ! grep -q "draft_context_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
-   ! grep -q "testExperimentalGGUFProviderReportsStrictDraftContextFailureWithoutFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+   ! grep -q "runtimeErrorDetail: alphaRuntimeSafeErrorDetail(error)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderReportsStrictDraftContextFailureWithoutFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "domain:Ross.LlamaError,code:1" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP required-draft smoke does not preserve strict draft context failure evidence."
     FAIL=1
 fi

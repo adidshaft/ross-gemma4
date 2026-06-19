@@ -8384,6 +8384,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(capture.standardContextCalls, standardContextCallsBeforeRun)
         XCTAssertEqual(capture.strictDraftPath, draftURL.path)
         XCTAssertEqual(output.errorCategory, "draft_context_failed")
+        XCTAssertEqual(output.runtimeErrorDetail, "domain:Ross.LlamaError,code:1")
         XCTAssertFalse(output.schemaValid)
         XCTAssertNil(output.accelerationMode)
         XCTAssertNil(output.accelerationDraftTokens)
