@@ -21368,6 +21368,100 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
     }
 
+    func testExperimentalMLXProviderRunsStandardGenerationWhenDraftArtifactIsInvalid() async throws {
+        actor AttemptCapture {
+            var draftPath: String?
+            var draftTokens: Int?
+
+            func record(draftPath: String?, draftTokens: Int?) {
+                self.draftPath = draftPath
+                self.draftTokens = draftTokens
+            }
+
+            func snapshot() -> (draftPath: String?, draftTokens: Int?) {
+                (draftPath, draftTokens)
+            }
+        }
+
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-invalid-draft-run-\(UUID().uuidString)")
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-invalid-draft-run-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        try Data("{}".utf8).write(to: draftDirectory.appendingPathComponent("config.json"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = AttemptCapture()
+        AlphaMLXLocalProvider.streamGenerator = { _, draftURL, draftTokens, _, _, _, onChunk in
+            await capture.record(draftPath: draftURL?.path, draftTokens: draftTokens)
+            onChunk?("Standard MLX answer")
+            return AlphaMLXGenerationSnapshot(
+                text: "Standard MLX answer",
+                promptTokenCount: 180,
+                generationTokenCount: 18,
+                outputTokensPerSecond: 9.0,
+                timeToFirstTokenMs: 600
+            )
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true,
+            draftModelPath: draftDirectory.path,
+            draftModelTokens: 4
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        let recordedAttempt = await capture.snapshot()
+        XCTAssertNil(recordedAttempt.draftPath)
+        XCTAssertNil(recordedAttempt.draftTokens)
+        XCTAssertEqual(output.rawText, "Standard MLX answer")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNil(output.accelerationDraftTokens)
+        XCTAssertNil(output.accelerationDraftModelLabel)
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        XCTAssertNil(output.errorCategory)
+
+        let health = provider.runtimeHealth()
+        XCTAssertEqual(health.available, true)
+        XCTAssertEqual(health.lastErrorCategory, "invalid_mlx_draft_artifact")
+        XCTAssertEqual(health.accelerationMode, .standard)
+        XCTAssertNil(health.accelerationDraftTokens)
+        XCTAssertNil(health.draftModelPathLabel)
+        XCTAssertEqual(health.draftAccelerationStatus, "invalid_mlx_draft_artifact")
+    }
+
     func testRuntimeHealthRejectsFileLikeMLXDraftWithoutPoisoningPrimaryRuntime() throws {
         let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-file-draft-\(UUID().uuidString)")
         let draftFile = FileManager.default.temporaryDirectory

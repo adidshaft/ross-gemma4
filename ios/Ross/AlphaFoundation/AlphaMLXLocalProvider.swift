@@ -1142,13 +1142,17 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         }
 
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
-        let draftDirectoryURL = resolvedDraftDirectoryURL()
-        let draftTokens = draftTokensForGeneration()
-        let accelerationMode = draftAccelerationMode(draftDirectoryURL: draftDirectoryURL)
-        let draftModelLabel = draftDirectoryURL?.lastPathComponent
-        let executionPathLabel = draftDirectoryURL == nil
-            ? "MLX standard generation"
-            : "MLX with draft acceleration"
+        let draftStatus = draftAccelerationStatus(
+            runtimeAvailable: availability.available,
+            unavailableReason: availability.errorCategory
+        )
+        let draftDirectoryURL = draftStatus.status == "active" ? resolvedDraftDirectoryURL() : nil
+        let draftTokens = draftStatus.status == "active" ? draftStatus.tokens : nil
+        let accelerationMode = draftStatus.mode
+        let draftModelLabel = draftStatus.status == "active" ? draftStatus.label : nil
+        let executionPathLabel = draftStatus.status == "active"
+            ? "MLX with draft acceleration"
+            : "MLX standard generation"
         let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
         let matterPromptPack = usesPlainMatterAnswerPrompt ? conciseMatterQuestionPack(for: taskInput) : nil
         let activePromptPack = usesPlainMatterAnswerPrompt ? matterPromptPack : pack

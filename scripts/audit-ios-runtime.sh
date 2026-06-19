@@ -427,6 +427,12 @@ if grep -q 'return (false, "invalid_mlx_draft_artifact"' ios/Ross/AlphaFoundatio
     FAIL=1
 fi
 
+if ! grep -q 'draftStatus.status == "active"' ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalMLXProviderRunsStandardGenerationWhenDraftArtifactIsInvalid" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: invalid MLX draft companion can still be passed into generation or output metadata."
+    FAIL=1
+fi
+
 if ! grep -q "unsupported_mlx_draft_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
     echo "❌ FAIL: MLX draft companion diagnostics do not surface unsupported draft archive categories."
     FAIL=1
