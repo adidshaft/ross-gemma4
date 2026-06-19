@@ -1,5 +1,64 @@
 # Real Model QA Results
 
+## 2026-06-19 physical iPhone current-build GGUF checkpoint
+
+- Branch: `main`
+- Platform: physical iPhone (`Aman's iPhone`, `iPhone 15 Pro`, `iPhone16,1`, UDID `3803F5B6-1666-56D3-A71A-62F131F6CE3B`)
+- Whether the physical app was rebuilt before smoke: Yes.
+- Build command:
+  - `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -configuration Debug -destination 'id=3803F5B6-1666-56D3-A71A-62F131F6CE3B' -derivedDataPath ios/build-device build`
+- Install command:
+  - `xcrun devicectl device install app --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B ios/build-device/Build/Products/Debug-iphoneos/Ross.app`
+- Runtime mode requested: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Artifact kind: `gguf`
+- Whether model files were committed: No
+- Smoke command:
+  - `scripts/ios-device-gguf-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --bundle-id com.ross.ios --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf --tier quickStart --pack-id gemma-2-2b-it-Q4_K_M-device-proof --stage-timeout 45`
+- Result: passed after reinstalling the current app build.
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=10240 gpu_offload=n_gpu_layers:32,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Benchmark matrix:
+  - `english_source_bound_document_qa`
+  - `bengali_source_bound_document_qa`
+  - `hindi_source_bound_document_qa`
+  - `tamil_source_bound_document_qa`
+  - `telugu_source_bound_document_qa`
+  - `english_open_no_document_query`
+- Full-profile pass marker:
+  - `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime tier=quick_start profile=full elapsed=20.04s source_raw_chars=337 source_parsed_chars=321 bengali_output_chars=275 hindi_output_chars=157 tamil_output_chars=168 telugu_output_chars=75 general_output_chars=558 source_refs=1 bengali_source_refs=1 hindi_source_refs=1 tamil_source_refs=1 telugu_source_refs=1 source_native_model=true bengali_native_model=true hindi_native_model=true tamil_native_model=true telugu_native_model=true general_native_model=true source_input_tokens=207 source_output_tokens=105 source_token_speed=14.65 source_first_token_ms=790 source_measured_tokens=false source_acceleration=standard source_draft_tokens=nil source_draft_model=nil bengali_input_tokens=328 bengali_output_tokens=192 bengali_token_speed=13.45 bengali_first_token_ms=2096 bengali_measured_tokens=false bengali_acceleration=standard bengali_draft_tokens=nil bengali_draft_model=nil hindi_input_tokens=278 hindi_output_tokens=192 hindi_token_speed=14.41 hindi_first_token_ms=1714 hindi_measured_tokens=false hindi_acceleration=standard hindi_draft_tokens=nil hindi_draft_model=nil tamil_input_tokens=382 tamil_output_tokens=54 tamil_token_speed=10.36 tamil_first_token_ms=2307 tamil_measured_tokens=false tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil telugu_input_tokens=433 telugu_output_tokens=60 telugu_token_speed=9.11 telugu_first_token_ms=3042 telugu_measured_tokens=false telugu_acceleration=standard telugu_draft_tokens=nil telugu_draft_model=nil general_input_tokens=190 general_output_tokens=190 general_token_speed=14.89 general_first_token_ms=1197 general_measured_tokens=false general_acceleration=standard general_draft_tokens=nil general_draft_model=nil`
+- Benchmark summary:
+  - `ROSS_SMOKE_BENCHMARK_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=gemma-2-2b-it-Q4_K_M.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=10240 gpu_offload=n_gpu_layers:32,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil profile=full matrix_profile=full matrix_cases=english_source_bound_document_qa,bengali_source_bound_document_qa,hindi_source_bound_document_qa,tamil_source_bound_document_qa,telugu_source_bound_document_qa,english_open_no_document_query matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192,bengali:document_qa:bn:source_refs_required:max_tokens=192,hindi:document_qa:hi:source_refs_required:max_tokens=192,tamil:document_qa:ta:source_refs_required:max_tokens=96,telugu:document_qa:te:source_refs_required:max_tokens=96,general:open_query:en:no_source_refs:max_tokens=192 elapsed=20.04s source_case=english_source_bound_document_qa source_task=document_qa source_language=en source_source_refs_policy=source_refs_required source_max_tokens=192 source_input_tokens=207 source_output_tokens=105 source_token_speed=14.65 source_first_token_ms=790 source_measured_tokens=false source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_raw_chars=337 source_parsed_chars=321 source_refs=1 source_native_model=true general_case=english_open_no_document_query general_task=open_query general_language=en general_source_refs_policy=no_source_refs general_max_tokens=192 general_input_tokens=190 general_output_tokens=190 general_token_speed=14.89 general_first_token_ms=1197 general_measured_tokens=false general_acceleration=standard general_draft_tokens=nil general_draft_model=nil general_output_chars=558 general_native_model=true bengali_case=bengali_source_bound_document_qa bengali_task=document_qa bengali_language=bn bengali_source_refs_policy=source_refs_required bengali_max_tokens=192 bengali_input_tokens=328 bengali_output_tokens=192 bengali_token_speed=13.45 bengali_first_token_ms=2096 bengali_measured_tokens=false bengali_acceleration=standard bengali_draft_tokens=nil bengali_draft_model=nil bengali_output_chars=275 bengali_source_refs=1 bengali_native_model=true hindi_case=hindi_source_bound_document_qa hindi_task=document_qa hindi_language=hi hindi_source_refs_policy=source_refs_required hindi_max_tokens=192 hindi_input_tokens=278 hindi_output_tokens=192 hindi_token_speed=14.41 hindi_first_token_ms=1714 hindi_measured_tokens=false hindi_acceleration=standard hindi_draft_tokens=nil hindi_draft_model=nil hindi_output_chars=157 hindi_source_refs=1 hindi_native_model=true tamil_case=tamil_source_bound_document_qa tamil_task=document_qa tamil_language=ta tamil_source_refs_policy=source_refs_required tamil_max_tokens=96 tamil_input_tokens=382 tamil_output_tokens=54 tamil_token_speed=10.36 tamil_first_token_ms=2307 tamil_measured_tokens=false tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil tamil_output_chars=168 tamil_source_refs=1 tamil_native_model=true telugu_case=telugu_source_bound_document_qa telugu_task=document_qa telugu_language=te telugu_source_refs_policy=source_refs_required telugu_max_tokens=96 telugu_input_tokens=433 telugu_output_tokens=60 telugu_token_speed=9.11 telugu_first_token_ms=3042 telugu_measured_tokens=false telugu_acceleration=standard telugu_draft_tokens=nil telugu_draft_model=nil telugu_output_chars=75 telugu_source_refs=1 telugu_native_model=true`
+- Token speed summary:
+  - source: `105 output`, `14.65 tok/s`, first token `790 ms`
+  - general: `190 output`, `14.89 tok/s`, first token `1197 ms`
+  - Bengali: `192 output`, `13.45 tok/s`, first token `2096 ms`
+  - Hindi: `192 output`, `14.41 tok/s`, first token `1714 ms`
+  - Tamil: `54 output`, `10.36 tok/s`, first token `2307 ms`
+  - Telugu: `60 output`, `9.11 tok/s`, first token `3042 ms`
+- Memory footprint observed:
+  - provider ready: about `phys_footprint_mb=1112`
+  - maximum observed during the full matrix: about `phys_footprint_mb=1151`
+  - no memory pressure, crash, or runtime fallback was observed in the valid current-build GGUF run
+- Installed-pack preflight results on the same current app container:
+  - list-only showed manifest-backed packs for `gemma-4-12b-it-UD-Q4_K_XL-device-proof`, `gemma-2-2b-it-Q4_K_M-device-proof`, and `gemma-4-e4b-q4`
+  - the real E4B+MTP installed-pack smoke failed before inference because `Library/Application Support/RossAlpha/model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf` was missing from the app container
+  - the seeded 2B installed-pack preflight also had stale manifest state before the direct helper reseeded the current app container
+- Artifact inventory at checkpoint:
+  - GGUF present: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+  - MTP draft present: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
+  - MLX missing: `no_directory_with_config_tokenizer_and_safetensors`
+  - CoreAI/CoreML adapter missing: `no_mlmodel_or_mlmodelc_adapter_found`
+  - no installed CoreAI/system-model manifest was observed in the physical-device pack list
+- Guardrail note:
+  - an initial old-app direct GGUF run emitted a smoke pass but failed the helper guard with `ROSS_SMOKE_GUARD_FAIL reason=missing_runtime_identity`; that old-app run is intentionally not counted as benchmark evidence
+- Current interpretation:
+  - current-build physical-device GGUF inference is working on iPhone 15 Pro for the 2B full varied document/query matrix
+  - hidden response metrics are emitted in the smoke summary: input tokens, output tokens, token speed, first-token latency, acceleration, draft fields, and native-model markers
+  - installed real E4B+MTP is not currently usable on this phone because the primary E4B artifact is missing from the app container
+  - MLX is not benchmark-proven because no usable MLX artifact is present
+  - CoreAI/CoreML is not benchmark-proven on the physical phone because no installed system-model/CoreAI pack was observed
+
 ## 2026-06-19 iOS simulator GGUF full varied benchmark pause checkpoint
 
 - Branch: `main`
