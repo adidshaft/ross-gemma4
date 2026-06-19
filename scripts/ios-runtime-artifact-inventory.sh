@@ -250,6 +250,10 @@ def int_field(body: str, name: str) -> str | None:
     match = re.search(rf"{re.escape(name)}:\s*([0-9_]+)", body)
     return match.group(1).replace("_", "") if match else None
 
+def bool_field(body: str, name: str) -> str | None:
+    match = re.search(rf"{re.escape(name)}:\s*(true|false)", body)
+    return match.group(1) if match else None
+
 def hf_repo_id(url: str) -> str:
     match = re.search(r"huggingface\.co/([^/]+/[^/?#]+)", url)
     return match.group(1) if match else "unknown"
@@ -298,6 +302,7 @@ for descriptor_match in download_descriptor_pattern.finditer(private_ai_source):
     url = field(body, "downloadURLString") or "nil"
     bytes_value = int_field(body, "sizeBytes") or "nil"
     checksum = field(body, "checksumSha256") or "nil"
+    release_ready = bool_field(body, "releaseReady") or "nil"
     lane = "catalog_mlx_draft" if "assistant" in pack.lower() or "assistant" in file_name.lower() else "catalog_mlx"
     reason = "configured_catalog_mlx_draft" if lane == "catalog_mlx_draft" else "configured_catalog_mlx"
     repo_id = hf_repo_id(url)
@@ -307,7 +312,7 @@ for descriptor_match in download_descriptor_pattern.finditer(private_ai_source):
         f"lane={lane} status=expected path={q(url)} "
         f"reason={reason} "
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
-        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} "
+        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} release_ready={q(release_ready)} "
         f"repo={q(repo_id)} target_dir={q(target_dir)} acquisition_hint=hf_download_mlx_directory "
         "preflight_hint=simulator_mlx_directory_preflight"
     )

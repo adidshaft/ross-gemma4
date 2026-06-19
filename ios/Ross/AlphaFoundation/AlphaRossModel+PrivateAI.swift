@@ -224,7 +224,7 @@ private let alphaBundledMLXQuickStartAssistantDownloadDescriptor = AlphaAssistan
     developmentOnly: false,
     downloadURLString: "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-4bit",
     verified: true,
-    releaseReady: true,
+    releaseReady: false,
     draftArtifact: alphaBundledMLXDraftArtifact(
         from: alphaBundledMLXQuickStartAssistantDraftDownloadDescriptor
     )
@@ -272,7 +272,7 @@ private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssis
     developmentOnly: false,
     downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
     verified: true,
-    releaseReady: true,
+    releaseReady: false,
     draftArtifact: alphaBundledMLXDraftArtifact(
         from: alphaBundledMLXCaseAssociateAssistantDraftDownloadDescriptor
     )
@@ -347,13 +347,25 @@ private func alphaDirectMLXRepositoryArtifact(
     return components.count == 2
 }
 
-private func alphaMLXArtifactRequiresUnsupportedOptiQRuntime(
+private func alphaMLXArtifactRequiresUnsupportedRuntime(
     packId: String? = nil,
     fileName: String? = nil,
     downloadURLString: String? = nil
 ) -> Bool {
-    [packId, fileName, downloadURLString].contains { value in
-        value?.localizedCaseInsensitiveContains("optiq") == true
+    let joined = [packId, fileName, downloadURLString]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        .joined(separator: " ")
+    guard !joined.isEmpty else { return false }
+    if joined.contains("optiq") { return true }
+
+    let unsupportedPrimaryArchives = [
+        "gemma-4-e4b-it-qat-4bit",
+        "gemma-4-12b-it-qat-4bit",
+        "gemma-4-26b-a4b-it-qat-4bit",
+        "gemma-4-31b-it-qat-4bit"
+    ]
+    return unsupportedPrimaryArchives.contains { archiveName in
+        joined.contains(archiveName) && !joined.contains("\(archiveName)-assistant")
     }
 }
 
@@ -453,7 +465,7 @@ func alphaAssistantDraftArtifactSupportsCurrentInstaller(_ artifact: AlphaAssist
         return artifact.fileName.lowercased().hasSuffix(".gguf") &&
             artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(
             fileName: artifact.fileName,
             downloadURLString: artifact.downloadURLString
         ) else {
@@ -486,7 +498,7 @@ private func alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(
         return artifact.fileName.lowercased().hasSuffix(".gguf") &&
             artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(
             fileName: artifact.fileName,
             downloadURLString: artifact.downloadURLString
         ) else {
@@ -574,7 +586,7 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
         return descriptor.fileName.lowercased().hasSuffix(".gguf") &&
             descriptor.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(
             packId: descriptor.packId,
             fileName: descriptor.fileName,
             downloadURLString: descriptor.downloadURLString
@@ -611,7 +623,7 @@ func alphaAssistantCatalogDescriptorSupportsCurrentInstaller(_ descriptor: Alpha
     case .llamaCppGguf:
         return descriptor.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(packId: descriptor.packId) else {
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(packId: descriptor.packId) else {
             return false
         }
         return descriptor.artifactKind == "mlx_directory"
@@ -1883,7 +1895,7 @@ func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalog
     case .llamaCppGguf:
         return pack.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(packId: pack.packId) else {
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(packId: pack.packId) else {
             return false
         }
         return pack.artifactKind == "mlx_directory"
@@ -1924,7 +1936,7 @@ func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifa
         return fileName.lowercased().hasSuffix(".gguf") &&
             artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
     case .mlxSwiftLm:
-        guard !alphaMLXArtifactRequiresUnsupportedOptiQRuntime(
+        guard !alphaMLXArtifactRequiresUnsupportedRuntime(
             fileName: fileName,
             downloadURLString: artifact.downloadUrl
         ) else {

@@ -218,6 +218,17 @@ else:
         target_dir = target_root / file_name
         lane = "mlx_draft" if row.get("lane") == "catalog_mlx_draft" else "mlx"
         repo = row.get("repo", "unknown")
+        if lane == "mlx" and row.get("release_ready") == "false":
+            emit(
+                lane,
+                "blocked",
+                "await_compatible_archive",
+                repo=repo,
+                target_dir=target_dir,
+                reason="catalog_primary_not_release_ready",
+                compatibility_hint="runtime_requires_supported_text_mlx_archive",
+            )
+            continue
         if lane == "mlx_draft" and present_mlx_draft:
             emit(
                 lane,

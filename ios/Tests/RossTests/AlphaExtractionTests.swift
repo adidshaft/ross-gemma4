@@ -9115,6 +9115,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(quickStart.packId, "gemma-4-e4b-mlx")
         XCTAssertEqual(quickStart.checksumSha256, "2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c")
         XCTAssertEqual(quickStart.draftArtifact?.checksumSha256, "6c3171c6ce77320de39ab8eb3a206daecd221b7dfb965ec689ae450bf868c8f3")
+        XCTAssertFalse(quickStart.releaseReady)
 
         let caseAssociate = alphaPreferredAssistantDownloadFallback(
             for: .caseAssociate,
@@ -9124,6 +9125,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(caseAssociate.packId, "gemma-4-12b-mlx")
         XCTAssertEqual(caseAssociate.checksumSha256, "c13638bb7068b40b95d4c977de1de1bc3952bdcca6b6f54f51b2692e0f07f7c1")
         XCTAssertEqual(caseAssociate.draftArtifact?.checksumSha256, "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8")
+        XCTAssertFalse(caseAssociate.releaseReady)
     }
 
     func testShouldPrimeAssistantSetupCatalogsAcceptsBundledPreferredMLXDescriptorWhenCatalogIsFresh() {
@@ -16657,7 +16659,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
-    func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsDirectMLXRepository() {
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsKnownUnsupportedDirectMLXPrimaryRepository() {
         let descriptor = AlphaAssistantDownloadDescriptor(
             sessionId: nil,
             packId: "gemma-4-12b-mlx",
@@ -16673,10 +16675,10 @@ final class AlphaExtractionTests: XCTestCase {
             releaseReady: true
         )
 
-        XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
-    func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsMLXDraftCompanion() {
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsKnownUnsupportedMLXPrimaryEvenWithDraftCompanion() {
         let descriptor = AlphaAssistantDownloadDescriptor(
             sessionId: nil,
             packId: "gemma-4-12b-mlx",
@@ -16700,7 +16702,19 @@ final class AlphaExtractionTests: XCTestCase {
             )
         )
 
-        XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+        XCTAssertTrue(
+            alphaAssistantDraftArtifactSupportsCurrentInstaller(
+                AlphaAssistantDraftArtifactDescriptor(
+                    fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                    sizeBytes: 270_093_545,
+                    checksumSha256: String(repeating: "b", count: 64),
+                    artifactKind: "mlx_directory",
+                    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
+                    draftTokens: 6
+                )
+            )
+        )
     }
 
     func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedRangeUnit() {
@@ -16841,7 +16855,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
-    func testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository() {
+    func testBackendArtifactSupportsCurrentInstallerRejectsKnownUnsupportedDirectMLXPrimaryRepository() {
         let artifact = AlphaBackendArtifact(
             fileName: "gemma-4-12B-it-qat-4bit",
             sizeBytes: 11_020_138_609,
@@ -16854,7 +16868,7 @@ final class AlphaExtractionTests: XCTestCase {
             segments: []
         )
 
-        XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
     func testBackendArtifactSupportsCurrentInstallerRejectsUnsupportedRangeUnit() {
@@ -16968,7 +16982,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
-    func testBackendArtifactSupportsCurrentInstallerAllowsMLXDraftCompanion() {
+    func testBackendArtifactSupportsCurrentInstallerRejectsKnownUnsupportedMLXPrimaryEvenWithDraftCompanion() {
         let artifact = AlphaBackendArtifact(
             fileName: "gemma-4-12B-it-qat-4bit",
             sizeBytes: 11_020_138_609,
@@ -16990,7 +17004,7 @@ final class AlphaExtractionTests: XCTestCase {
             )
         )
 
-        XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
     func testAssistantCatalogDescriptorSupportsCurrentInstallerAllowsMLXDraftCompanion() {
