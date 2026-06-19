@@ -540,7 +540,21 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         self.assertIsNone(
             runtime_identity_artifact_error(
-                {"model_format": "system_model", "artifact_path_type": "system"},
+                {
+                    "model_format": "system_model",
+                    "artifact_path_type": "system",
+                    "artifact_path": "system-model",
+                },
+                "apple_foundation_models",
+            )
+        )
+        self.assertIsNone(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "system_model",
+                    "artifact_path_type": "system",
+                    "artifact_path": "system://apple-foundation-models",
+                },
                 "apple_foundation_models",
             )
         )
@@ -550,6 +564,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "apple_foundation_models",
             ),
             "system_model_path_type=file",
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "system_model",
+                    "artifact_path_type": "system",
+                    "artifact_path": "foundation-adapter.mlmodelc",
+                },
+                "apple_foundation_models",
+            ),
+            "system_model_path=foundation-adapter.mlmodelc",
         )
         self.assertEqual(
             runtime_identity_artifact_error(

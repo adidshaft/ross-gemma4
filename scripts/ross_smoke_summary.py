@@ -70,6 +70,10 @@ def runtime_identity_artifact_error(identity, expected_runtime):
     if expected_runtime == "apple_foundation_models":
         if model_format == "system_model" and artifact_path_type != "system":
             return f"system_model_path_type={summary_value(identity, 'artifact_path_type')}"
+        if model_format == "system_model":
+            artifact_path = identity.get("artifact_path") or ""
+            if artifact_path != "system-model" and not artifact_path.startswith("system://"):
+                return f"system_model_path={summary_value(identity, 'artifact_path')}"
         if model_format != "system_model" and artifact_path_type == "system":
             return f"adapter_path_type={summary_value(identity, 'artifact_path_type')}"
     return None

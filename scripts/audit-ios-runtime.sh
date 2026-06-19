@@ -166,6 +166,11 @@ if ! grep -q "benchmark_runtime_artifact_mismatch" scripts/ross_smoke_summary.py
     FAIL=1
 fi
 
+if ! grep -q "system_model_path" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not require CoreAI system_model sentinel paths."
+    FAIL=1
+fi
+
 if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared smoke parser omits failure summaries."
     FAIL=1
