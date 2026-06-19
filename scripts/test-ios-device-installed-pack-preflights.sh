@@ -203,6 +203,47 @@ write_manifest '{
 run_expect_exit_1 "tiny MTP draft installed manifest" "implausibly small draft artifact" "${base_command[@]}" --runtime gguf --require-draft-acceleration
 
 write_manifest '{
+  "packId": "missing-primary",
+  "tier": "quick_start",
+  "fileName": "main.gguf",
+  "relativePath": "model-packs/quick/main.gguf",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+run_expect_exit_1 "missing installed primary artifact" "Installed artifact file is missing" "${base_command[@]}" --runtime gguf
+
+write_manifest '{
+  "packId": "missing-draft",
+  "tier": "quick_start",
+  "fileName": "main.gguf",
+  "relativePath": "model-packs/quick/main.gguf",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "draft.gguf",
+    "relativePath": "model-packs/quick/draft.gguf",
+    "checksumSha256": "b",
+    "bytes": 2000000,
+    "artifactKind": "local_model_artifact",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+python3 - "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/main.gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
+PY
+run_expect_exit_1 "missing installed draft artifact" "Installed draft artifact file is missing" "${base_command[@]}" --runtime gguf --require-draft-acceleration
+
+write_manifest '{
   "packId": "tiny-mlx",
   "tier": "quick_start",
   "fileName": "mlx-model",

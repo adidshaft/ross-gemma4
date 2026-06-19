@@ -578,6 +578,18 @@ if [[ -n "$selected_draft_relative_path" ]]; then
   device_draft_path="$container_root/Library/Application Support/RossAlpha/$selected_draft_relative_path"
 fi
 
+if [[ "$selected_artifact_kind" != "system_model" && ! -e "$device_model_path" ]]; then
+  echo "Installed artifact file is missing from the app container: $device_model_path" >&2
+  echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+  exit 1
+fi
+
+if [[ -n "$device_draft_path" && ! -e "$device_draft_path" ]]; then
+  echo "Installed draft artifact file is missing from the app container: $device_draft_path" >&2
+  echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+  exit 1
+fi
+
 echo "Using installed pack path: $device_model_path"
 if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
