@@ -14440,6 +14440,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaPackUsesSystemFoundationModel(adapterPack))
     }
 
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    func testSystemFoundationInstallValidationOnlyTrustsSentinelPaths() {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+
+        let systemShortcutPack = AlphaInstalledModelPack(
+            packId: "apple-foundation-models-case_associate",
+            tier: .caseAssociate,
+            installPath: "system-model",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let systemURLPack = AlphaInstalledModelPack(
+            packId: "apple-foundation-models-case_associate",
+            tier: .caseAssociate,
+            installPath: "system://apple-foundation-models",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let mislabeledFileBackedPack = AlphaInstalledModelPack(
+            packId: "case-coreml-mislabeled-system",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        XCTAssertTrue(alphaInstalledAssistantPackPassesRuntimeValidation(systemShortcutPack))
+        XCTAssertTrue(alphaInstalledAssistantPackPassesRuntimeValidation(systemURLPack))
+        XCTAssertFalse(alphaInstalledAssistantPackPassesRuntimeValidation(mislabeledFileBackedPack))
+    }
+    #endif
+
     @MainActor
     func testRemovingSystemAssistantShortcutStatePreservesCoreMLAdapterArtifacts() {
         let model = AlphaRossModel(previewState: .empty())
