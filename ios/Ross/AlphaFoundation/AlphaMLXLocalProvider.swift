@@ -1675,11 +1675,18 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return false
         }
         for case let fileURL as URL in enumerator {
-            if fileURL.pathExtension == "safetensors" || fileURL.lastPathComponent.hasSuffix(".safetensors.index.json") {
+            if (fileURL.pathExtension == "safetensors" || fileURL.lastPathComponent.hasSuffix(".safetensors.index.json")),
+               Self.fileLooksNonEmpty(fileURL, fileManager: fileManager) {
                 return true
             }
         }
         return false
+    }
+
+    private static func fileLooksNonEmpty(_ fileURL: URL, fileManager: FileManager = .default) -> Bool {
+        let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path)
+        let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+        return size > 0
     }
 
     private static func archiveCompatibility(for directoryURL: URL) -> AlphaMLXArchiveCompatibility {

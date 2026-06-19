@@ -21249,6 +21249,41 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
     }
 
+    func testRuntimeHealthMarksEmptyMLXWeightsUnavailable() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-empty-mlx-weights-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        FileManager.default.createFile(
+            atPath: directory.appendingPathComponent("model.safetensors").path,
+            contents: Data()
+        )
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_artifact")
+    }
+
     func testRuntimeHealthKeepsMLXAvailableWithInvalidDraftArtifactWithoutClaimingAcceleration() throws {
         let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-\(UUID().uuidString)")
         let draftDirectory = FileManager.default.temporaryDirectory

@@ -407,6 +407,12 @@ if ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvid
     FAIL=1
 fi
 
+if ! grep -q "fileLooksNonEmpty" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthMarksEmptyMLXWeightsUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift MLX runtime health can still treat empty weights as a usable artifact."
+    FAIL=1
+fi
+
 if ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Documents.swift 2>/dev/null ||
