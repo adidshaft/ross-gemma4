@@ -317,6 +317,12 @@ if ! grep -q "runtime_identity_mismatch" scripts/ios-device-installed-pack-smoke
     FAIL=1
 fi
 
+if ! grep -q "installed MLX request rejects GGUF identity" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_mismatch" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack smoke tests do not cover rejecting GGUF identity for a requested MLX lane."
+    FAIL=1
+fi
+
 if ! grep -q "preferredRuntimeMode != nil" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null; then
     echo "❌ FAIL: Ask runtime resolver does not fail closed for explicit preferred runtime requests."
     FAIL=1

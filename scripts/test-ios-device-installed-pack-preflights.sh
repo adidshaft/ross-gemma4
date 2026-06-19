@@ -423,4 +423,31 @@ run_process_guard_expect_exit_1 \
   "$tmpdir/mtp-stage-fallback.log" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick
 
+write_manifest '{
+  "packId": "mlx-gguf-identity",
+  "tier": "quick_start",
+  "fileName": "mlx-model",
+  "relativePath": "model-packs/quick/mlx-model",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/config.json"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/tokenizer.json"
+printf 'weights' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/model.safetensors"
+cat >"$tmpdir/mlx-gguf-identity.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=mlx_swift_lm actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf artifact_path_type=file artifact_path=model.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=mlx_swift_lm profile=quick elapsed=10.00s source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_refs=1 source_native_model=true general_input_tokens=80 general_output_tokens=24 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_native_model=true
+EOF
+run_process_guard_expect_exit_1 \
+  "installed MLX request rejects GGUF identity" \
+  "runtime_identity_mismatch" \
+  "$tmpdir/mlx-gguf-identity.log" \
+  "${base_command[@]}" --runtime mlx --smoke-profile quick
+
 echo "iOS device installed-pack preflight tests: PASS"
