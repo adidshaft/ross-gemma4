@@ -49,6 +49,13 @@ def summary_value(fields, key):
     return value if value not in (None, "") else "nil"
 
 
+def runtime_identity_supported_runtime_error(identity):
+    actual_runtime = identity.get("actual_runtime")
+    if actual_runtime not in RUNTIME_ARTIFACT_RULES:
+        return f"actual_runtime={summary_value(identity, 'actual_runtime')}"
+    return None
+
+
 def runtime_identity_artifact_error(identity, expected_runtime):
     rules = RUNTIME_ARTIFACT_RULES.get(expected_runtime)
     if not rules:
@@ -219,6 +226,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"benchmark_requested_runtime_mismatch requested_runtime={identity_requested_runtime} "
             f"identity_runtime={actual_runtime}"
         )
+    supported_runtime_error = runtime_identity_supported_runtime_error(identity)
+    if supported_runtime_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_runtime_unsupported {supported_runtime_error}")
     for required_key in ("profile", "cases", "stages"):
         if not matrix_fields.get(required_key):
             raise MissingBenchmarkMatrixError(f"missing_benchmark_matrix_{required_key}")

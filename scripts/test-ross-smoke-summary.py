@@ -9,6 +9,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
+    runtime_identity_supported_runtime_error,
     benchmark_matrix_shape_error,
     benchmark_stage_metric_error,
     benchmark_stage_draft_error,
@@ -176,6 +177,42 @@ class RossSmokeSummaryTests(unittest.TestCase):
                     "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
                 },
             )
+
+    def test_benchmark_summary_rejects_unsupported_runtime_identity(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        for runtime in ("deterministic_dev", "unavailable", "surprise_runtime"):
+            with self.subTest(runtime=runtime):
+                identity = {
+                    "actual_runtime": runtime,
+                    "requested_runtime": runtime,
+                    "model_format": "debug_local_model",
+                    "artifact_path_type": "nil",
+                    "available": "true",
+                    "fallback": "none",
+                }
+                self.assertEqual(
+                    runtime_identity_supported_runtime_error(identity),
+                    f"actual_runtime={runtime}",
+                )
+                with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_unsupported"):
+                    benchmark_summary_line(
+                        identity,
+                        {**pass_fields, "runtime": runtime},
+                        matrix,
+                    )
 
     def test_present_identity_with_missing_optional_fields_reports_nil(self):
         identity = self.valid_identity()
