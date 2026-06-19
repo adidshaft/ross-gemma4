@@ -911,6 +911,13 @@ if ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-device-installe
     FAIL=1
 fi
 
+if ! grep -q "strictDraftContextFactory" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "smokeRequiresDraftAcceleration" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP required-draft smoke can still build a non-strict generation context."
+    FAIL=1
+fi
+
 if ! grep -Fq 'draft_status=\(providerHealth.draftAccelerationStatus' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: app-side MTP failure marker does not report draft status."
     FAIL=1

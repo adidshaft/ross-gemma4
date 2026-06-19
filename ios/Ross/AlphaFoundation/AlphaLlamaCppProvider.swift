@@ -481,6 +481,16 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         )
     }
 
+    nonisolated(unsafe) static var strictDraftContextFactory: (String, String, Int?) throws -> any AlphaLlamaCompletionContext = {
+        path, draftPath, draftTokens in
+        try LlamaContext.create_context(
+            path: path,
+            draftPath: draftPath,
+            draftTokens: draftTokens,
+            strictDraftSetup: true
+        )
+    }
+
     nonisolated(unsafe) static var draftAccelerationValidator: (String, String, Int?) throws -> Bool = {
         path, draftPath, draftTokens in
         try LlamaContext.create_context(
@@ -605,14 +615,34 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
         let draftPath = includeDraft ? effectiveDraftModelPath() : nil
         let draftTokens = draftPath == nil ? nil : effectiveDraftTokenCount()
-        let newContext = try AlphaLlamaCppProvider.contextFactory(
-            path,
-            draftPath,
-            draftTokens
-        )
+        let newContext: any AlphaLlamaCompletionContext
+        if includeDraft,
+           let draftPath,
+           AlphaLlamaCppProvider.smokeRequiresDraftAcceleration() {
+            newContext = try AlphaLlamaCppProvider.strictDraftContextFactory(
+                path,
+                draftPath,
+                draftTokens
+            )
+        } else {
+            newContext = try AlphaLlamaCppProvider.contextFactory(
+                path,
+                draftPath,
+                draftTokens
+            )
+        }
         AlphaLlamaCppProvider.cachedContext = newContext
         AlphaLlamaCppProvider.cachedKey = cacheKey
         return newContext
+    }
+
+    private static func smokeRequiresDraftAcceleration(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        let rawValue = environment["ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return ["1", "true", "yes", "on"].contains(rawValue)
     }
     
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
@@ -827,7 +857,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: pack.includedSourceRefs.count,
                 omittedSourceCount: pack.omittedSourceRefs.count,
                 omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
-                errorCategory: "inference_failed"
+                errorCategory: Self.smokeRequiresDraftAcceleration()
+                    ? "draft_acceleration_required"
+                    : "inference_failed"
             )
         }
     }
