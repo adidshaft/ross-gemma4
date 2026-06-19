@@ -296,6 +296,18 @@ def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
     return None
 
 
+def benchmark_profile_draft_error(identity, pass_fields, matrix_fields):
+    profiles = {
+        (pass_fields.get("profile") or "").replace("-", "_"),
+        (matrix_fields.get("profile") or "").replace("-", "_"),
+    }
+    if not any(profile == "mtp" or profile.startswith("mtp_") for profile in profiles):
+        return None
+    if identity.get("acceleration") != "draftModelSpeculative":
+        return f"acceleration={summary_value(identity, 'acceleration')}"
+    return None
+
+
 def benchmark_stage_metric_error(pass_fields, matrix_fields):
     required_metrics = [
         "input_tokens",
@@ -438,6 +450,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     draft_artifact_error = runtime_identity_draft_artifact_error(identity, actual_runtime)
     if draft_artifact_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_artifact_mismatch {draft_artifact_error}")
+    draft_profile_error = benchmark_profile_draft_error(identity, pass_fields, matrix_fields)
+    if draft_profile_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_draft_profile_mismatch {draft_profile_error}")
     draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
     if draft_stage_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")

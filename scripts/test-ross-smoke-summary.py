@@ -11,6 +11,7 @@ from ross_smoke_summary import (
     runtime_identity_draft_artifact_error,
     runtime_identity_supported_runtime_error,
     benchmark_matrix_shape_error,
+    benchmark_profile_draft_error,
     benchmark_stage_metric_error,
     benchmark_stage_draft_error,
 )
@@ -618,13 +619,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
     def test_benchmark_summary_rejects_stage_output_above_matrix_token_cap(self):
         matrix = {
-            "profile": "mtp_quick",
+            "profile": "quick",
             "cases": "english_source_bound_document_qa_low_token",
             "stages": "source:document_qa:en:source_refs_required:max_tokens=8",
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
-            "profile": "mtp_quick",
+            "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "16",
             "source_token_speed": "1.45",
@@ -913,6 +914,41 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "general_acceleration=standard",
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_draft_stage_mismatch"):
+            benchmark_summary_line(identity, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_mtp_profile_without_active_draft_identity(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
+            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "acceleration=standard draft_tokens=nil draft_model=nil "
+            "draft_model_path_type=nil draft_status=validator_rejected context_tokens=4096 "
+            "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=8,"
+            "general:open_query:en:no_source_refs:max_tokens=8"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_refs=1 source_native_model=true "
+            "source_acceleration=standard source_draft_tokens=nil source_draft_model=nil "
+            "general_input_tokens=80 general_output_tokens=6 general_token_speed=10.5 "
+            "general_first_token_ms=850 general_measured_tokens=true "
+            "general_native_model=true "
+            "general_acceleration=standard general_draft_tokens=nil general_draft_model=nil"
+        )
+
+        self.assertEqual(
+            benchmark_profile_draft_error(identity, pass_fields, matrix),
+            "acceleration=standard",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_draft_profile_mismatch"):
             benchmark_summary_line(identity, pass_fields, matrix)
 
     def test_benchmark_summary_accepts_active_draft_identity_when_all_stages_match(self):

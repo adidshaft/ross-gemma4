@@ -810,6 +810,12 @@ if ! grep -q "benchmark_stage_draft_error" scripts/ross_smoke_summary.py 2>/dev/
     FAIL=1
 fi
 
+if ! grep -q "benchmark_profile_draft_error" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_mtp_profile_without_active_draft_identity" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject MTP profiles without active draft identity."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not require per-stage token and speed metrics."
     FAIL=1
