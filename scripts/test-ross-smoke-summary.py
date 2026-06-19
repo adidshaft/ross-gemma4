@@ -9,6 +9,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
+    benchmark_stage_metric_error,
     benchmark_stage_draft_error,
 )
 
@@ -98,17 +99,61 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_empty_identity_and_pass_fields_are_reported_as_nil(self):
         summary = benchmark_summary_line(
             {},
-            {"profile": "quick"},
+            {
+                "profile": "quick",
+                "source_input_tokens": "120",
+                "source_output_tokens": "32",
+                "source_token_speed": "11.0",
+                "source_first_token_ms": "900",
+                "source_measured_tokens": "false",
+            },
             {
                 "profile": "quick",
                 "cases": "english_source_bound_document_qa",
-                "stages": "source:document_qa",
+                "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
             },
         )
 
         self.assertIn("runtime=nil", summary)
         self.assertIn("matrix_cases=english_source_bound_document_qa", summary)
-        self.assertIn("matrix_stages=source:document_qa", summary)
+        self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
+
+    def test_benchmark_summary_rejects_missing_stage_metrics(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {"profile": "quick"}
+
+        self.assertEqual(
+            benchmark_stage_metric_error(pass_fields, matrix),
+            "source_input_tokens=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+            benchmark_summary_line({}, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_token_speed_without_output_tokens(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "nil",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+        }
+
+        self.assertEqual(
+            benchmark_stage_metric_error(pass_fields, matrix),
+            "source_output_tokens=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
+            benchmark_summary_line({}, pass_fields, matrix)
 
     def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):
         self.assertIsNone(

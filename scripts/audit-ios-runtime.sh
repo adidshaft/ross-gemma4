@@ -379,6 +379,16 @@ if ! grep -q "benchmark_stage_draft_error" scripts/ross_smoke_summary.py 2>/dev/
     FAIL=1
 fi
 
+if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not require per-stage token and speed metrics."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_stage_metrics_missing" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject missing per-stage token and speed metrics."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_draft_stage_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject active identity with standard generation stages."
     FAIL=1

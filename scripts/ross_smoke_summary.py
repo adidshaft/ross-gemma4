@@ -137,6 +137,42 @@ def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
     return None
 
 
+def benchmark_stage_metric_error(pass_fields, matrix_fields):
+    required_metrics = [
+        "input_tokens",
+        "output_tokens",
+        "token_speed",
+        "first_token_ms",
+        "measured_tokens",
+    ]
+    for stage in benchmark_matrix_stage_names(matrix_fields):
+        for metric in required_metrics:
+            key = f"{stage}_{metric}"
+            if pass_fields.get(key) in (None, ""):
+                return f"{key}=nil"
+
+        output_tokens = pass_fields.get(f"{stage}_output_tokens")
+        token_speed = pass_fields.get(f"{stage}_token_speed")
+        if token_speed != "nil":
+            try:
+                if float(token_speed) <= 0:
+                    return f"{stage}_token_speed={token_speed}"
+            except ValueError:
+                return f"{stage}_token_speed={token_speed}"
+            try:
+                if int(output_tokens) <= 0:
+                    return f"{stage}_output_tokens={output_tokens}"
+            except ValueError:
+                return f"{stage}_output_tokens={output_tokens}"
+
+        if pass_fields.get(f"{stage}_measured_tokens") == "true":
+            if pass_fields.get(f"{stage}_input_tokens") == "nil":
+                return f"{stage}_input_tokens=nil"
+            if output_tokens == "nil":
+                return f"{stage}_output_tokens=nil"
+    return None
+
+
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
@@ -153,6 +189,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
     if draft_stage_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")
+    stage_metric_error = benchmark_stage_metric_error(pass_fields, matrix_fields)
+    if stage_metric_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_stage_metrics_missing {stage_metric_error}")
 
     summary = {
         "provider": summary_value(identity, "provider"),
