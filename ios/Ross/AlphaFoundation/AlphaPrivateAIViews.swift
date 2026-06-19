@@ -2221,10 +2221,10 @@ func alphaAssistantAccelerationLabel(
         return "Draft model"
     case .standard:
         if let cleanedDraftLabel {
-            return "Standard generation (draft head ready: \(cleanedDraftLabel))"
+            return "Standard generation (draft inactive: \(cleanedDraftLabel))"
         }
         if draftTokens != nil {
-            return "Standard generation (draft head ready)"
+            return "Standard generation (draft inactive)"
         }
         return "Standard generation"
     case nil:

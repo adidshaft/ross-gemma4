@@ -5484,7 +5484,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.answerDetailAccelerationLabel, "Standard generation")
     }
 
-    func testModelInvocationCompletionKeepsDraftHeadReadinessForStandardGeneration() {
+    func testModelInvocationCompletionMarksDraftMetadataInactiveForStandardGeneration() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
             documentId: UUID(),
@@ -5541,7 +5541,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.accelerationDraftModelLabel, "mtp-gemma-4-12b-it.gguf")
         XCTAssertEqual(
             completed.answerDetailAccelerationLabel,
-            "Standard generation (draft head ready: mtp-gemma-4-12b-it.gguf)"
+            "Standard generation (draft inactive: mtp-gemma-4-12b-it.gguf)"
         )
     }
 
@@ -6895,7 +6895,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
-            "Standard generation (draft head ready: \(draftURL.lastPathComponent))"
+            "Standard generation (draft inactive: \(draftURL.lastPathComponent))"
         )
     }
 
