@@ -2755,8 +2755,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     private func coreAIModelPathPresent() -> Bool {
         if modelPathLabel == "system-model" { return true }
         guard let modelPath, !modelPath.isEmpty else { return false }
-        return FileManager.default.fileExists(atPath: modelPath) &&
-            FileManager.default.isReadableFile(atPath: modelPath)
+        return Self.adapterPathLooksUsable(modelPath)
     }
 
     func contextWindowEstimate() -> Int? {
@@ -2978,13 +2977,39 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     private func adapter(from path: String) throws -> SystemLanguageModel.Adapter {
-        guard FileManager.default.fileExists(atPath: path) else {
+        guard Self.adapterPathLooksUsable(path) else {
             throw CocoaError(.fileNoSuchFile)
         }
-        guard FileManager.default.isReadableFile(atPath: path) else {
-            throw CocoaError(.fileReadNoPermission)
-        }
         return try SystemLanguageModel.Adapter(fileURL: URL(fileURLWithPath: path))
+    }
+
+    private static func adapterPathLooksUsable(_ path: String) -> Bool {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory),
+              fileManager.isReadableFile(atPath: path) else {
+            return false
+        }
+        if !isDirectory.boolValue {
+            return (try? fileManager.attributesOfItem(atPath: path)[.size] as? NSNumber)?.int64Value ?? 0 > 0
+        }
+        guard let enumerator = fileManager.enumerator(
+            at: URL(fileURLWithPath: path),
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            options: [.skipsHiddenFiles],
+            errorHandler: nil
+        ) else {
+            return false
+        }
+        for case let fileURL as URL in enumerator {
+            guard let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true,
+                  (values.fileSize ?? 0) > 0 else {
+                continue
+            }
+            return true
+        }
+        return false
     }
 
     private func availabilityStatus() -> (available: Bool, userFacingStatus: String, lastErrorCategory: String?) {

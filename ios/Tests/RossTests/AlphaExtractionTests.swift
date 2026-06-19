@@ -20722,6 +20722,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testRuntimeHealthMarksEmptyConfiguredAdapterFileUnavailable() throws {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("empty-foundation-adapter-\(UUID().uuidString).mlmodel")
+        FileManager.default.createFile(atPath: adapterURL.path, contents: Data())
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "coreml_model"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+    }
+
+    func testRuntimeHealthMarksEmptyConfiguredAdapterDirectoryUnavailable() throws {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("empty-foundation-adapter-\(UUID().uuidString).mlmodelc", isDirectory: true)
+        try FileManager.default.createDirectory(at: adapterURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "coreml_model"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+    }
+
     func testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider() throws {
         let modelURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-explicit-mlx-no-gguf-fallback-\(UUID().uuidString)")

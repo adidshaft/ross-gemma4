@@ -599,6 +599,13 @@ if ! grep -q "Selected CoreAI/CoreML adapter manifest reports an empty artifact"
     FAIL=1
 fi
 
+if ! grep -q "adapterPathLooksUsable" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthMarksEmptyConfiguredAdapterFileUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthMarksEmptyConfiguredAdapterDirectoryUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift CoreAI adapter runtime health can still treat empty adapter artifacts as usable."
+    FAIL=1
+fi
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
