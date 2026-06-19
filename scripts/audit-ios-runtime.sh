@@ -700,6 +700,16 @@ if [ ! -x scripts/test-ios-runtime-artifact-inventory.sh ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/ios-runtime-artifact-fetch-plan.sh ]; then
+    echo "❌ FAIL: executable local runtime artifact fetch planner missing."
+    FAIL=1
+fi
+
+if [ ! -x scripts/test-ios-runtime-artifact-fetch-plan.sh ]; then
+    echo "❌ FAIL: executable local runtime artifact fetch planner test missing."
+    FAIL=1
+fi
+
 if ! grep -q '"mtp_draft"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory does not report MTP draft readiness."
     FAIL=1
@@ -786,6 +796,8 @@ fi
 if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q '"hf", "download"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "preflight_after_download" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "catalog_mlx status=expected" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory tests/docs do not cover catalog MLX primary and draft expectations."
     FAIL=1
@@ -1501,6 +1513,7 @@ else
     scripts/test-ios-device-assistant-download-smoke-guards.sh
     scripts/test-ios-morning-runtime-checkpoint-plan.sh
     scripts/test-ios-runtime-artifact-inventory.sh
+    scripts/test-ios-runtime-artifact-fetch-plan.sh
     scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
