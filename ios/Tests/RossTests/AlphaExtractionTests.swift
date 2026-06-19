@@ -17324,7 +17324,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumVerified: true,
             supportedTasks: [.matterQuestionAnswer],
             maxInputChars: 22_000,
-            estimatedContextTokens: 4_096,
+            estimatedContextTokens: 2_048,
             accelerationMode: .draftModelSpeculative,
             accelerationDraftTokens: 2,
             draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
@@ -17356,7 +17356,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("draft_model_path_type=file"))
         XCTAssertTrue(line.contains("draft_status=active"))
         XCTAssertTrue(line.contains("draft_error_detail=configured_acceleration=draftModelSpeculative"))
-        XCTAssertTrue(line.contains("context_tokens=4096"))
+        XCTAssertTrue(line.contains("context_tokens=2048"))
         XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:"))
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=true"))
@@ -20332,7 +20332,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: memory,
                 environment: mtpQuickEnvironment
             ),
-            4_096
+            2_048
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(
@@ -20340,7 +20340,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: memory,
                 environment: mtpQuickEnvironment
             ),
-            512
+            256
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(
@@ -20348,7 +20348,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: memory,
                 environment: mtpQuickEnvironment
             ),
-            256
+            128
         )
     }
 
