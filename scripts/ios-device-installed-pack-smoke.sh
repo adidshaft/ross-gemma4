@@ -763,8 +763,8 @@ if outcome == "pass":
     if pass_fields is not None:
         try:
             print_benchmark_summary(identity, pass_fields, matrix_fields)
-        except MissingBenchmarkMatrixError:
-            print("ROSS_SMOKE_GUARD_FAIL reason=missing_benchmark_matrix", file=sys.stderr)
+        except MissingBenchmarkMatrixError as error:
+            print(f"ROSS_SMOKE_GUARD_FAIL reason={error}", file=sys.stderr)
             sys.exit(1)
     sys.exit(0)
 if outcome == "fail":

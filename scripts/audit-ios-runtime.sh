@@ -81,7 +81,7 @@ if ! grep -q 'Label(rossLocalized("answer_details"), systemImage: "info.circle")
 fi
 
 for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
-    if ! grep -q "missing_benchmark_matrix" "$smoke_script" 2>/dev/null; then
+    if ! grep -q "MissingBenchmarkMatrixError" "$smoke_script" 2>/dev/null; then
         echo "❌ FAIL: $smoke_script does not require benchmark matrix before benchmark summary."
         FAIL=1
     fi
@@ -373,6 +373,13 @@ if ! grep -q "benchmark_draft_stage_mismatch" scripts/ross_smoke_summary.py 2>/d
     echo "❌ FAIL: benchmark summary guard does not reject active identity with standard generation stages."
     FAIL=1
 fi
+
+for smoke_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
+    if ! grep -q "MissingBenchmarkMatrixError as error" "$smoke_helper" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_helper does not preserve specific benchmark summary guard errors."
+        FAIL=1
+    fi
+done
 
 if ! grep -q "draft_model_format" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared MTP guard does not reject non-GGUF draft artifact labels."
