@@ -52,6 +52,43 @@ This run passed the full benchmark matrix with `ROSS_RUNTIME_IDENTITY actual_run
 
 The companion draft-enabled full-matrix run is intentionally not a benchmark pass. It produced useful failure evidence: source/general/Bengali stages initially reported `draftModelSpeculative`, but Bengali failed with `bengali_error=draft_output_degenerate`. The same draft pair must remain blocked until a future MTP proof passes the low-token `mtp_quick` profile and any requested full matrix without degenerate output.
 
+## Current Physical Checkpoint - 2026-06-19 14:18 IST
+
+The current checkout was rebuilt and installed on Aman's cabled iPhone 15 Pro (`iPhone16,1`, UDID `3803F5B6-1666-56D3-A71A-62F131F6CE3B`) with the same automatic signing settings. The app container still held the E4B Quick Start pack, the 2B seeded proof pack, and the 12B seeded proof pack.
+
+Two full benchmark matrices passed on the physical device:
+
+| Pack | Result | Coverage | Runtime identity |
+| --- | --- | --- | --- |
+| `gemma-4-e4b-q4` | PASS | English source-bound document Q&A, Bengali/Hindi/Tamil/Telugu source-bound document Q&A, English open query | `gemma_local_runtime`, `acceleration=standard`, `fallback=none`, `context_tokens=4096`, CPU-only llama.cpp |
+| `gemma-2-2b-it-Q4_K_M-device-proof` | PASS | Same full multilingual/source/general matrix | `gemma_local_runtime`, `acceleration=standard`, `fallback=none`, `context_tokens=10240`, Metal offload enabled |
+
+Guardrail probes behaved correctly:
+
+| Probe | Result | Meaning |
+| --- | --- | --- |
+| E4B strict MTP `mtp_quick` with `--require-draft-acceleration` | FAIL SAFE | `draft_status=validator_failed`, `error=draft_acceleration_required`; do not count MTP speed. |
+| 12B quick smoke | FAIL SAFE | `insufficient_device_memory` before generation; 12B remains gated on this 7 GB device class. |
+| MLX assistant-download smoke | NOT BENCHMARKED | Ended as `ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job`; it did not produce MLX artifact-backed generation. |
+| CoreAI assistant-download smoke | NOT BENCHMARKED | Ended as `ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job`; it did not produce CoreAI artifact-backed generation. |
+
+Fresh speed highlights:
+
+| Run | Stage | Tokens processed | Token speed |
+| --- | --- | ---: | ---: |
+| E4B standard full | Source document query | 207 input / 56 output | 6.18 output tok/s |
+| E4B standard full | Bengali document query | 240 input / 59 output | 6.28 output tok/s |
+| E4B standard full | Hindi document query | 246 input / 59 output | 5.92 output tok/s |
+| E4B standard full | Tamil document query | 305 input / 95 output | 5.46 output tok/s |
+| E4B standard full | Telugu document query | 339 input / 96 output | 5.79 output tok/s |
+| E4B standard full | General query | 190 input / 30 output | 6.11 output tok/s |
+| 2B full | Source document query | 207 input / 105 output | 14.28 output tok/s |
+| 2B full | Bengali document query | 328 input / 192 output | 13.97 output tok/s |
+| 2B full | Hindi document query | 278 input / 192 output | 14.29 output tok/s |
+| 2B full | Tamil document query | 382 input / 54 output | 10.19 output tok/s |
+| 2B full | Telugu document query | 433 input / 60 output | 10.00 output tok/s |
+| 2B full | General query | 190 input / 190 output | 14.85 output tok/s |
+
 ## Installed Packs Observed
 
 | Tier | Pack | Runtime | Artifact | Size | Notes |
