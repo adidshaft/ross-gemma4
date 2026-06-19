@@ -23477,6 +23477,60 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderReportsEmptyAdapterArtifactsBeforeGeneration() async throws {
+        let emptyFileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("empty-foundation-run-adapter-\(UUID().uuidString)")
+            .appendingPathExtension("mlmodel")
+        FileManager.default.createFile(atPath: emptyFileURL.path, contents: Data())
+        let emptyDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("empty-foundation-run-adapter-\(UUID().uuidString).mlmodelc", isDirectory: true)
+        try FileManager.default.createDirectory(at: emptyDirectoryURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: emptyFileURL)
+            try? FileManager.default.removeItem(at: emptyDirectoryURL)
+        }
+
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            XCTFail("Empty CoreAI/CoreML adapter artifacts should fail before generation.")
+            return AlphaFoundationModelsGenerationSnapshot(text: "")
+        }
+
+        for adapterURL in [emptyFileURL, emptyDirectoryURL] {
+            let provider = AlphaFoundationModelsLocalProvider(
+                capabilityTier: .quickStart,
+                modelPathLabel: adapterURL.lastPathComponent,
+                modelPath: adapterURL.path,
+                checksumVerified: true
+            )
+
+            let output = await provider.run(
+                AlphaLocalModelInput(
+                    task: .matterQuestionAnswer,
+                    instruction: "What happened in the selected order?",
+                    sourcePack: [],
+                    expectedSchema: "plain_text",
+                    maxOutputTokens: 128,
+                    extractionMode: .quickStart
+                )
+            )
+
+            XCTAssertFalse(output.schemaValid)
+            XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+            XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+            XCTAssertEqual(output.accelerationMode, .standard)
+            XCTAssertNotNil(output.inputChars)
+        }
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
     func testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration() async throws {
         let ggufURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("foreign-foundation-adapter-\(UUID().uuidString)")
