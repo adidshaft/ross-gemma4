@@ -193,6 +193,15 @@ file_size_bytes() {
   stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0
 }
 
+absolute_local_path() {
+  python3 - "$1" <<'PY'
+import pathlib
+import sys
+
+print(pathlib.Path(sys.argv[1]).expanduser().resolve())
+PY
+}
+
 gguf_file_looks_usable() {
   local file="$1"
   [[ -f "$file" ]] || return 1
@@ -317,6 +326,14 @@ if [[ -n "$draft_model_path" ]]; then
       fi
       ;;
   esac
+fi
+
+if [[ "$model_path" != "system-model" && "$model_path" != system://* ]]; then
+  model_path="$(absolute_local_path "$model_path")"
+fi
+
+if [[ -n "$draft_model_path" ]]; then
+  draft_model_path="$(absolute_local_path "$draft_model_path")"
 fi
 
 if [[ -z "$pack_id" ]]; then

@@ -509,6 +509,13 @@ if ! grep -q "MLX simulator draft proof requires an MLX draft directory" scripts
     FAIL=1
 fi
 
+if ! grep -q "absolute_local_path" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q 'model_path="$(absolute_local_path "$model_path")"' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q 'draft_model_path="$(absolute_local_path "$draft_model_path")"' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator smoke does not pass app-readable absolute artifact paths after local preflight."
+    FAIL=1
+fi
+
 if ! grep -q "Draft acceleration proof is only supported for GGUF/MLX simulator smokes" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator CoreAI smoke does not reject unsupported draft proof."
     FAIL=1
