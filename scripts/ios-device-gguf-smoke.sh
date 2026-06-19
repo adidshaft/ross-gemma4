@@ -246,6 +246,9 @@ import sys
 sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
     MissingBenchmarkMatrixError,
+    METRICS,
+    STAGE_AUX_METRICS,
+    STAGES,
     benchmark_summary_line,
     failure_summary_line,
     parse_fields,
@@ -286,6 +289,7 @@ pass_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_PASS\b")
 fail_re = re.compile(r"ROSS_LOCAL_MODEL_SMOKE_FAIL\b")
 identity_re = re.compile(r"^ROSS_RUNTIME_IDENTITY\b")
 matrix_re = re.compile(r"^ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX\b")
+stage_done_re = re.compile(r"^ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE\b")
 def print_benchmark_summary(identity, pass_fields, matrix_fields):
     print(benchmark_summary_line(identity, pass_fields, matrix_fields))
 
@@ -372,6 +376,7 @@ identity = None
 matrix_fields = None
 pass_fields = None
 fail_fields = None
+completed_stage_fields = {}
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -390,14 +395,27 @@ try:
             identity = parse_fields(line)
         if matrix_re.search(line):
             matrix_fields = parse_fields(line)
+        if stage_done_re.search(line):
+            stage_fields = parse_fields(line)
+            for stage in STAGES:
+                for metric in METRICS + STAGE_AUX_METRICS:
+                    key = f"{stage}_{metric}"
+                    if key in stage_fields:
+                        completed_stage_fields[key] = stage_fields[key]
         if pass_re.search(line):
             outcome = "pass"
-            pass_fields = parse_fields(line)
+            pass_fields = {
+                **completed_stage_fields,
+                **parse_fields(line),
+            }
             process.send_signal(signal.SIGINT)
             break
         if fail_re.search(line):
             outcome = "fail"
-            fail_fields = parse_fields(line)
+            fail_fields = {
+                **completed_stage_fields,
+                **parse_fields(line),
+            }
             process.send_signal(signal.SIGINT)
             break
 finally:
