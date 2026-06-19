@@ -91,6 +91,19 @@ if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$wrong_ti
   exit 1
 fi
 
+exact_bad_root="$tmpdir/exact-bad-downloads"
+mkdir -p "$exact_bad_root"
+python3 - "$exact_bad_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf" "$exact_bad_root/mtp-gemma-4-E4B-it.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 1000001))
+PY
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$exact_bad_root" --search-root "$tmpdir/empty" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=missing action=download .*target_file=$exact_bad_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*local_unusable_path=$exact_bad_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*local_unusable_reason=size_mismatch" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=missing action=download .*target_file=$exact_bad_root/mtp-gemma-4-E4B-it.gguf .*local_unusable_path=$exact_bad_root/mtp-gemma-4-E4B-it.gguf .*local_unusable_reason=size_mismatch" /tmp/ross-runtime-fetch-plan.out
+
 quick_gguf_root="$tmpdir/quick-gguf"
 mkdir -p "$quick_gguf_root"
 python3 - "$quick_gguf_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf" "$quick_gguf_root/mtp-gemma-4-E4B-it.gguf" <<'PY'

@@ -772,6 +772,12 @@ if ! grep -q '"coreai_adapter"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/de
     FAIL=1
 fi
 
+if ! grep -q "catalog_gguf_file_status" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "local_unusable_reason=size_mismatch" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP fetch plan can miss or misclassify exact catalog files in the target root."
+    FAIL=1
+fi
+
 if ! grep -q '"mtp_draft"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory does not report MTP draft readiness."
     FAIL=1

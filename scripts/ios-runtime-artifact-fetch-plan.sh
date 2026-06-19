@@ -128,6 +128,7 @@ import os
 import pathlib
 import shlex
 import sys
+import hashlib
 
 tier = sys.argv[1]
 target_root = pathlib.Path(sys.argv[2]).expanduser()
@@ -169,6 +170,39 @@ def command(*args: object) -> str:
 
 def row_tier_matches(row: dict[str, str]) -> bool:
     return row.get("tier") in accepted_tiers
+
+def normalized_sha256(value: object) -> str:
+    text = str(value or "").strip().lower()
+    return text if len(text) == 64 and all(c in "0123456789abcdef" for c in text) else ""
+
+def file_sha256(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def catalog_gguf_file_status(path: pathlib.Path, catalog_row: dict[str, str]) -> tuple[bool, str]:
+    if not path.is_file():
+        return (False, "file_missing")
+    try:
+        if path.stat().st_size <= 1_000_000:
+            return (False, "file_too_small")
+        with path.open("rb") as handle:
+            if handle.read(4) != b"GGUF":
+                return (False, "bad_gguf_header")
+    except OSError:
+        return (False, "file_unreadable")
+
+    expected_bytes = str(catalog_row.get("bytes") or "").strip()
+    if expected_bytes.isdigit() and path.stat().st_size != int(expected_bytes):
+        return (False, "size_mismatch")
+
+    expected_checksum = normalized_sha256(catalog_row.get("checksum"))
+    if expected_checksum and file_sha256(path) != expected_checksum:
+        return (False, "checksum_mismatch")
+
+    return (True, "catalog_checksum_verified")
 
 def emit(lane: str, status: str, action: str, **fields: object) -> None:
     extras = " ".join(f"{key}={q(value)}" for key, value in fields.items() if value is not None)
@@ -237,6 +271,7 @@ catalog_mtp_draft = next(
 if catalog_gguf:
     primary_file = catalog_gguf.get("file") or pathlib.PurePosixPath(catalog_gguf.get("path", "model.gguf")).name
     expected_primary_path = target_root / primary_file
+    expected_primary_ok, expected_primary_reason = catalog_gguf_file_status(expected_primary_path, catalog_gguf)
     present_gguf = next(
         (
             row for row in present_gguf_candidates
@@ -244,6 +279,11 @@ if catalog_gguf:
         ),
         None,
     )
+    if not present_gguf and expected_primary_ok:
+        present_gguf = {
+            "path": str(expected_primary_path),
+            "reason": expected_primary_reason,
+        }
     primary_path = present_gguf.get("path", "") if present_gguf else str(expected_primary_path)
     if present_gguf:
         emit(
@@ -270,6 +310,8 @@ if catalog_gguf:
             target_file=expected_primary_path,
             bytes=catalog_gguf.get("bytes"),
             checksum=catalog_gguf.get("checksum"),
+            local_unusable_path=expected_primary_path if expected_primary_path.exists() else None,
+            local_unusable_reason=expected_primary_reason if expected_primary_path.exists() else None,
             command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} {shlex.quote(primary_file)} --local-dir {shlex.quote(str(target_root))}",
         )
         emit(
@@ -290,6 +332,7 @@ if catalog_gguf:
     if catalog_mtp_draft:
         draft_file = catalog_mtp_draft.get("file") or pathlib.PurePosixPath(catalog_mtp_draft.get("path", "draft.gguf")).name
         expected_draft_path = target_root / draft_file
+        expected_draft_ok, expected_draft_reason = catalog_gguf_file_status(expected_draft_path, catalog_mtp_draft)
         present_mtp_draft = next(
             (
                 row for row in present_mtp_draft_candidates
@@ -297,6 +340,11 @@ if catalog_gguf:
             ),
             None,
         )
+        if not present_mtp_draft and expected_draft_ok:
+            present_mtp_draft = {
+                "path": str(expected_draft_path),
+                "reason": expected_draft_reason,
+            }
         draft_path = present_mtp_draft.get("path", "") if present_mtp_draft else str(expected_draft_path)
         if present_mtp_draft:
             emit(
@@ -326,6 +374,8 @@ if catalog_gguf:
                 target_file=expected_draft_path,
                 bytes=catalog_mtp_draft.get("bytes"),
                 checksum=catalog_mtp_draft.get("checksum"),
+                local_unusable_path=expected_draft_path if expected_draft_path.exists() else None,
+                local_unusable_reason=expected_draft_reason if expected_draft_path.exists() else None,
                 command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} {shlex.quote(draft_file)} --local-dir {shlex.quote(str(target_root))}",
             )
             emit(
