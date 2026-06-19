@@ -228,7 +228,7 @@ mlx_directory_looks_usable() {
     return 1
   fi
 
-  find "$directory" -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -print -quit | grep -q .
+  find "$directory" -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit | grep -q .
 }
 
 file_size_bytes() {

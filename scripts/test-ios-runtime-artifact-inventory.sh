@@ -28,13 +28,17 @@ mlx_dir="$tmpdir/model.mlx"
 mkdir -p "$mlx_dir"
 printf '{}' > "$mlx_dir/config.json"
 printf '{}' > "$mlx_dir/tokenizer.json"
-printf 'weights' > "$mlx_dir/model.safetensors"
+: > "$mlx_dir/model.safetensors"
 
 mkdir -p "$tmpdir/foundation-adapter.mlmodelc"
 
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=gguf status=present" /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=present" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx status=missing" /tmp/ross-runtime-inventory.out
+
+printf 'weights' > "$mlx_dir/model.safetensors"
+"$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=present" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
 
@@ -168,6 +172,8 @@ mkdir -p "$bad_packs_root/coreai/empty-adapter.mlmodelc"
 printf 'GGUF' > "$bad_packs_root/quickStart/main.gguf"
 printf 'GGUF' > "$bad_packs_root/quickStart/draft.gguf"
 printf '{}' > "$bad_packs_root/mlx/bad-mlx/config.json"
+printf '{}' > "$bad_packs_root/mlx/bad-mlx/tokenizer.json"
+: > "$bad_packs_root/mlx/bad-mlx/model.safetensors"
 python3 - "$bad_support_root" <<'PY'
 import json
 import pathlib

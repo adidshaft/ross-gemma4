@@ -71,7 +71,7 @@ mlx_directory_looks_usable() {
     return 1
   fi
 
-  find "$directory" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -print -quit | grep -q .
+  find "$directory" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit | grep -q .
 }
 
 coreai_adapter_looks_usable() {
@@ -270,7 +270,9 @@ def mlx_directory_looks_usable(path: pathlib.Path) -> bool:
         return False
     if not any((path / name).is_file() for name in ("tokenizer.json", "tokenizer.model", "tokenizer_config.json")):
         return False
-    return any(path.glob("**/*.safetensors")) or any(path.glob("**/*.safetensors.index.json"))
+    return any(file_size(path) > 0 for path in path.glob("**/*.safetensors")) or any(
+        file_size(path) > 0 for path in path.glob("**/*.safetensors.index.json")
+    )
 
 def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
     if path.is_file():

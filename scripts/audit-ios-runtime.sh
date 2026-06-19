@@ -515,6 +515,14 @@ if ! grep -q "device_mlx_directory_looks_usable" scripts/ios-device-installed-pa
     FAIL=1
 fi
 
+if ! grep -q -- "-size +0c" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q -- "-size +0c" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "empty MLX weights" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "lane=mlx status=missing" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: MLX preflight/inventory can still treat empty safetensors files as usable."
+    FAIL=1
+fi
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "bad-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=coreai_adapter status=missing" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||

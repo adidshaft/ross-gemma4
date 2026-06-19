@@ -46,6 +46,15 @@ run_expect_exit_2 \
   "GGUF file passed as MLX" \
   "$SIM_SMOKE" --runtime mlx --model "$gguf_as_mlx"
 
+empty_weight_mlx="$tmpdir/empty-weight-mlx"
+mkdir -p "$empty_weight_mlx"
+printf '{}' >"$empty_weight_mlx/config.json"
+printf '{}' >"$empty_weight_mlx/tokenizer.json"
+: >"$empty_weight_mlx/model.safetensors"
+run_expect_exit_2 \
+  "empty MLX weights" \
+  "$SIM_SMOKE" --runtime mlx --model "$empty_weight_mlx"
+
 run_expect_exit_2 \
   "tiny GGUF primary model placeholder" \
   "$SIM_SMOKE" --runtime gguf --model "$gguf_as_mlx"
