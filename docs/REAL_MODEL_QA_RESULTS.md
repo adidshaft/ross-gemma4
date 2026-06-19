@@ -1,5 +1,28 @@
 # Real Model QA Results
 
+## 2026-06-19 iOS simulator MTP draft checkpoint
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
+- Runtime mode requested: `gemma_local_runtime` with MTP draft acceleration required
+- Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
+- Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
+- Draft bytes observed locally: `465109248`
+- Draft SHA-256 observed locally: `145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b`
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --tier caseAssociate --model "$HOME/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf" --draft-model "$HOME/model-artifacts/mtp-gemma-4-12b-it.gguf" --draft-tokens 2 --smoke-profile mtp_quick --stage-timeout 60 --launch-timeout 420 --require-draft-acceleration`
+- Result: failed, no benchmark claimed.
+- Terminal guard line:
+  - `ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome=None`
+- Observed behavior:
+  - the prior simulator run aborted in `LlamaContext.deinit` while freeing draft batch memory
+  - after removing the manual draft token-buffer deallocation and freeing contexts before models, the rerun loaded the 12B main GGUF, loaded the 12B MTP draft GGUF, and reached shared draft KV setup without the previous abort
+  - the simulator still did not emit `ROSS_LOCAL_MODEL_SMOKE_PASS` or `ROSS_LOCAL_MODEL_SMOKE_FAIL` before the launch watcher ended
+- Current interpretation:
+  - the 12B draft artifact is now locally present and the repo catalog checksums match the downloaded byte SHA
+  - draft cleanup is safer, but MTP generation is not proven and no token speed should be recorded for this MTP attempt
+  - a valid future MTP benchmark still requires `ROSS_RUNTIME_IDENTITY acceleration=draftModelSpeculative draft_status=active` plus a guarded `ROSS_SMOKE_BENCHMARK_SUMMARY`
+
 ## 2026-06-19 iOS simulator GGUF benchmark checkpoint
 
 - Branch: `main`

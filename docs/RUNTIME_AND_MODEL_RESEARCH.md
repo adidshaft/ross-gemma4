@@ -33,7 +33,7 @@
 | checksumSha256 | `ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020` |
 | draft companion | `mtp-gemma-4-12b-it.gguf` |
 | draftSizeBytes | `465109248` |
-| draftChecksumSha256 | `aed49e55a3d0123a8a13b47667eb8d8198f4237f5e8c7c57829b531c26b34200` |
+| draftChecksumSha256 | `145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b` |
 | verified | true |
 | releaseReady | true |
 | notes | Current recommended quality target for most matters and larger files. |
@@ -51,7 +51,7 @@
 | checksumSha256 | `7e9c7880585fbf09ab31f3c042bd4c2c20d1c8036441163cdd839fd16670736d` |
 | draft companion | `mtp-gemma-4-26B-A4B-it.gguf` |
 | draftSizeBytes | `461766816` |
-| draftChecksumSha256 | `fb7a81da9da6f2287b5c8b357e9e854d0dfaca4d24eac7d69ab564ad5514e525` |
+| draftChecksumSha256 | `6326fb9f5e487aa8dcdd313a091e3c67724cb2a666ec3b7d2895b5b26d93ed1b` |
 | verified | true |
 | releaseReady | true |
 | notes | Highest-quality visible pack. Best reserved for larger-memory devices and drafting-heavy workflows. |

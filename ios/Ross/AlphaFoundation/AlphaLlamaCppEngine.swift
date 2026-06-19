@@ -114,17 +114,14 @@ actor LlamaContext: AlphaLlamaCompletionContext {
     deinit {
         if let draftState = draftState {
             llama_sampler_free(draftState.sampling)
-            if let tokenBuffer = draftState.batch.token {
-                tokenBuffer.deallocate()
-            }
             llama_batch_free(draftState.batch)
-            llama_model_free(draftState.model)
             llama_free(draftState.context)
+            llama_model_free(draftState.model)
         }
         llama_sampler_free(sampling)
         llama_batch_free(batch)
-        llama_model_free(model)
         llama_free(context)
+        llama_model_free(model)
     }
 
     nonisolated(unsafe) private static var backendInitialized = false
