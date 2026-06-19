@@ -64,10 +64,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=full elapsed=12.34s "
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 "
             "source_first_token_ms=17392 source_measured_tokens=false "
+            "source_refs=1 source_native_model=true "
             "bengali_input_tokens=328 bengali_output_tokens=121 bengali_token_speed=8.84 "
             "bengali_first_token_ms=24339 bengali_measured_tokens=false "
+            "bengali_source_refs=1 bengali_native_model=true "
             "general_input_tokens=190 general_output_tokens=192 general_token_speed=8.57 "
-            "general_first_token_ms=14781 general_measured_tokens=false"
+            "general_first_token_ms=14781 general_measured_tokens=false "
+            "general_native_model=true"
         )
 
         summary = benchmark_summary_line(identity, pass_fields, matrix)
@@ -342,6 +345,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "source_token_speed": "11.0",
                 "source_first_token_ms": "900",
                 "source_measured_tokens": "false",
+                "source_refs": "1",
+                "source_native_model": "true",
             },
             {
                 "profile": "quick",
@@ -881,9 +886,11 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
+            "source_refs=1 source_native_model=true "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
             "general_input_tokens=80 general_output_tokens=6 general_token_speed=10.5 "
             "general_first_token_ms=850 general_measured_tokens=true "
+            "general_native_model=true "
             "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf"
         )
 
@@ -892,6 +899,57 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("acceleration=draftModelSpeculative", summary)
         self.assertIn("source_acceleration=draftModelSpeculative", summary)
         self.assertIn("general_draft_model=mtp.gguf", summary)
+
+    def test_benchmark_summary_rejects_missing_source_refs_for_source_bound_stage(self):
+        identity = self.valid_identity()
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_refs=0 source_native_model=true"
+        )
+
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_quality_missing"):
+            benchmark_summary_line(identity, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_non_native_stage_output(self):
+        identity = self.valid_identity()
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_open_no_document_query "
+            "stages=general:open_query:en:no_source_refs:max_tokens=192"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "general_input_tokens=120 general_output_tokens=32 general_token_speed=11.0 "
+            "general_first_token_ms=900 general_measured_tokens=true "
+            "general_native_model=false"
+        )
+
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "general_native_model=false"):
+            benchmark_summary_line(identity, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_stage_error_in_pass_marker(self):
+        identity = self.valid_identity()
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_refs=1 source_native_model=true source_error=source_grounding_failed"
+        )
+
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "source_error=source_grounding_failed"):
+            benchmark_summary_line(identity, pass_fields, matrix)
 
     def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
         identity = parse_fields(

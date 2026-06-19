@@ -336,6 +336,29 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
     return None
 
 
+def benchmark_stage_quality_error(pass_fields, matrix_fields):
+    stage_specs = benchmark_matrix_stage_specs_by_name(matrix_fields)
+    for stage in benchmark_matrix_stage_names(matrix_fields):
+        stage_error = pass_fields.get(f"{stage}_error")
+        if stage_error not in (None, "", "nil"):
+            return f"{stage}_error={stage_error}"
+
+        native_model = pass_fields.get(f"{stage}_native_model")
+        if native_model != "true":
+            return f"{stage}_native_model={summary_value(pass_fields, f'{stage}_native_model')}"
+
+        stage_spec = stage_specs.get(stage, {})
+        if stage_spec.get("source_refs") == "source_refs_required":
+            source_ref_key = "source_refs" if stage == "source" else f"{stage}_source_refs"
+            source_refs = pass_fields.get(source_ref_key)
+            try:
+                if int(source_refs) <= 0:
+                    return f"{source_ref_key}={source_refs}"
+            except (TypeError, ValueError):
+                return f"{source_ref_key}={summary_value(pass_fields, source_ref_key)}"
+    return None
+
+
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
@@ -410,6 +433,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     stage_metric_error = benchmark_stage_metric_error(pass_fields, matrix_fields)
     if stage_metric_error:
         raise MissingBenchmarkMatrixError(f"benchmark_stage_metrics_missing {stage_metric_error}")
+    stage_quality_error = benchmark_stage_quality_error(pass_fields, matrix_fields)
+    if stage_quality_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_stage_quality_missing {stage_quality_error}")
 
     summary = {
         "provider": summary_value(identity, "provider"),
