@@ -181,8 +181,8 @@ run_devicectl_copy_with_timeout() {
 }
 
 probe_dir="$tmpdir/Library/Application Support/RossAlpha"
-seed_dir="$probe_dir/model-packs/$canonical_tier"
-mkdir -p "$seed_dir"
+seed_dir="$tmpdir/$canonical_tier"
+mkdir -p "$probe_dir" "$seed_dir"
 
 probe_file="$probe_dir/.device-proof-probe"
 printf 'ross-device-proof\n' > "$probe_file"
@@ -225,23 +225,16 @@ device_model_path="$container_root/Library/Application Support/RossAlpha/$relati
 
 echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
-echo "Publishing manifest after model transfer: $manifest_basename"
+echo "Publishing tier directory with manifest: $canonical_tier"
 
-run_devicectl_copy_with_timeout "model_copy" "$tmpdir/model-copy.txt" \
+run_devicectl_copy_with_timeout "pack_directory_copy" "$tmpdir/pack-directory-copy.txt" \
   xcrun devicectl device copy to \
   --device "$device_id" \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
-  --source "$seed_dir/$seed_model_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/"
-
-run_devicectl_copy_with_timeout "manifest_copy" "$tmpdir/manifest-copy.txt" \
-  xcrun devicectl device copy to \
-  --device "$device_id" \
-  --domain-type appDataContainer \
-  --domain-identifier "$bundle_id" \
-  --source "$seed_dir/$manifest_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/"
+  --source "$seed_dir" \
+  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier" \
+  --remove-existing-content true
 
 python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
 import os

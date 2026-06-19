@@ -38,6 +38,7 @@ case "$command" in
     shift || true
     sources=()
     destination=""
+    remove_existing="false"
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --source)
@@ -46,6 +47,10 @@ case "$command" in
           ;;
         --destination)
           destination="${2:-}"
+          shift 2
+          ;;
+        --remove-existing-content)
+          remove_existing="${2:-false}"
           shift 2
           ;;
         *)
@@ -57,14 +62,21 @@ case "$command" in
       echo "fake copy direction unsupported: $direction" >&2
       exit 2
     fi
+    if [[ "$remove_existing" == "true" ]]; then
+      rm -rf "$FAKE_DEVICE_ROOT/$destination"
+    fi
     mkdir -p "$FAKE_DEVICE_ROOT/$destination"
     for source in "${sources[@]}"; do
       source_basename="$(basename "$source")"
-      if [[ -n "${FAKE_MODEL_COPY_DELAY:-}" && "$source_basename" == *.gguf ]]; then
+      if [[ -n "${FAKE_MODEL_COPY_DELAY:-}" ]] && {
+        [[ "$source_basename" == *.gguf ]] || find "$source" -maxdepth 1 -name '*.gguf' -print -quit | grep -q .
+      }; then
         sleep "$FAKE_MODEL_COPY_DELAY"
       fi
       if [[ -f "$source" ]]; then
         cp "$source" "$FAKE_DEVICE_ROOT/$destination/"
+      elif [[ -d "$source" ]]; then
+        cp -R "$source"/. "$FAKE_DEVICE_ROOT/$destination/"
       fi
       printf 'COPY_TO %s %s\n' "$source_basename" "$destination" >>"$FAKE_COPY_LOG"
     done
@@ -112,6 +124,7 @@ if ! grep -q "GGUF device smoke requires a .gguf model file" "$tmpdir/non-gguf.o
 fi
 
 printf 'fake gguf bytes\n' >"$tmpdir/model.gguf"
+set +e
 PATH="$fake_bin:$PATH" \
   FAKE_DEVICE_ROOT="$fake_device_root" \
   FAKE_COPY_LOG="$copy_log" \
@@ -124,6 +137,13 @@ PATH="$fake_bin:$PATH" \
     --pack-id unit-pack \
     --stage-timeout 5 \
     >"$tmpdir/gguf.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]]; then
+  echo "FAIL: fake GGUF smoke should exit 0, got $rc" >&2
+  cat "$tmpdir/gguf.out" >&2 || true
+  exit 1
+fi
 
 if ! grep -q "ROSS_SMOKE_BENCHMARK_SUMMARY" "$tmpdir/gguf.out"; then
   echo "FAIL: fake GGUF smoke did not emit benchmark summary." >&2
@@ -142,12 +162,21 @@ if [[ "$device_model_name" != unit-pack-*.gguf ]]; then
   exit 1
 fi
 
-model_copy_line="$(grep -n "COPY_TO $device_model_name " "$copy_log" | cut -d: -f1 | head -n 1)"
 manifest_name="${device_model_name%.*}.manifest.json"
-manifest_copy_line="$(grep -n "COPY_TO $manifest_name " "$copy_log" | cut -d: -f1 | head -n 1)"
-if [[ -z "$model_copy_line" || -z "$manifest_copy_line" || "$model_copy_line" -ge "$manifest_copy_line" ]]; then
-  echo "FAIL: GGUF helper must copy the model before publishing its manifest." >&2
+if ! grep -q "COPY_TO quick_start Library/Application Support/RossAlpha/model-packs/quick_start" "$copy_log"; then
+  echo "FAIL: GGUF helper must publish the quick_start tier as a directory copy." >&2
   cat "$copy_log" >&2 || true
+  exit 1
+fi
+
+seeded_tier_path="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick_start"
+if [[ ! -d "$seeded_tier_path" ]]; then
+  echo "FAIL: GGUF helper did not create quick_start as a device directory." >&2
+  exit 1
+fi
+if [[ ! -f "$seeded_tier_path/$device_model_name" || ! -f "$seeded_tier_path/$manifest_name" ]]; then
+  echo "FAIL: GGUF helper did not seed both model and manifest into quick_start." >&2
+  find "$seeded_tier_path" -maxdepth 1 -type f -print >&2 || true
   exit 1
 fi
 
@@ -216,7 +245,7 @@ if [[ "$rc" -ne 1 ]]; then
   cat "$tmpdir/gguf-copy-timeout.out" >&2 || true
   exit 1
 fi
-if ! grep -q "model_copy timed out after 1s" "$tmpdir/gguf-copy-timeout.out"; then
+if ! grep -q "pack_directory_copy timed out after 1s" "$tmpdir/gguf-copy-timeout.out"; then
   echo "FAIL: stalled GGUF model copy did not report the bounded copy timeout." >&2
   cat "$tmpdir/gguf-copy-timeout.out" >&2 || true
   exit 1

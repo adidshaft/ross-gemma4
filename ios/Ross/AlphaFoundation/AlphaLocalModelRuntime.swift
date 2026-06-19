@@ -3458,7 +3458,10 @@ enum AlphaLocalModelRuntime {
     ) -> String? {
         let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
         if let debugPath = debug.modelPath, !debugPath.isEmpty {
-            return debugPath
+            if debugPath.hasPrefix("/") {
+                return debugPath
+            }
+            return alphaAbsoluteURL(for: debugPath).path
         }
         guard let activePack else { return nil }
         if debug.enableRealInference,
