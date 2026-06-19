@@ -9114,6 +9114,61 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(preparedDirectory.path, sourceDirectory.path)
     }
 
+    func testPreparedMLXRuntimeDirectoryPatchesGemma4SharedKVWeightMap() throws {
+        let sourceDirectory = try makeGemma4SharedKVOverlayFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let overlayDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-gemma4-overlay-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: overlayDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: overlayDirectory) }
+        try FileManager.default.createSymbolicLink(
+            at: overlayDirectory.appendingPathComponent("model.safetensors.index.json"),
+            withDestinationURL: sourceDirectory.appendingPathComponent("model.safetensors.index.json")
+        )
+
+        try AlphaMLXLocalProvider.patchGemma4SharedKVOverlayIndexForTesting(
+            sourceDirectory: sourceDirectory,
+            overlayDirectory: overlayDirectory,
+            shimFileName: "ross-shared-kv-shim.safetensors",
+            shimTensorNames: [
+                "language_model.model.layers.2.self_attn.v_proj.weight",
+                "language_model.model.layers.3.self_attn.k_norm.weight"
+            ]
+        )
+
+        let preparedIndexData = try Data(
+            contentsOf: overlayDirectory.appendingPathComponent("model.safetensors.index.json")
+        )
+        let preparedIndex = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: preparedIndexData) as? [String: Any]
+        )
+        let preparedWeightMap = try XCTUnwrap(preparedIndex["weight_map"] as? [String: String])
+
+        XCTAssertEqual(
+            preparedWeightMap["language_model.model.layers.2.self_attn.v_proj.weight"],
+            "ross-shared-kv-shim.safetensors"
+        )
+        XCTAssertEqual(
+            preparedWeightMap["language_model.model.layers.3.self_attn.k_norm.weight"],
+            "ross-shared-kv-shim.safetensors"
+        )
+        XCTAssertEqual(
+            preparedWeightMap["language_model.model.layers.0.self_attn.v_proj.weight"],
+            "model.safetensors"
+        )
+
+        let sourceIndexData = try Data(
+            contentsOf: sourceDirectory.appendingPathComponent("model.safetensors.index.json")
+        )
+        let sourceIndex = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: sourceIndexData) as? [String: Any]
+        )
+        let sourceWeightMap = try XCTUnwrap(sourceIndex["weight_map"] as? [String: String])
+
+        XCTAssertNil(sourceWeightMap["language_model.model.layers.2.self_attn.v_proj.weight"])
+    }
+
     func testPreferredAssistantDownloadFallbackUsesRossDirectoryDigestChecksumsForBundledDirectMLX() {
         let quickStart = alphaPreferredAssistantDownloadFallback(
             for: .quickStart,

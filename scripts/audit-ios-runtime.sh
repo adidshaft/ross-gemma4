@@ -1125,6 +1125,13 @@ if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smo
     FAIL=1
 fi
 
+if ! grep -q "alphaPatchGemma4SharedKVOverlayIndex" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "testPreparedMLXRuntimeDirectoryPatchesGemma4SharedKVWeightMap" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "ross-shared-kv-shim.safetensors" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: MLX Gemma4 shared-KV overlay does not prove indexed loaders can discover shim tensors."
+    FAIL=1
+fi
+
 if ! grep -q "coreAIAdapterPathMatchesKind" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "rawArtifactKind" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||

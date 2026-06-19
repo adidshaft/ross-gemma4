@@ -162,6 +162,35 @@ private func alphaGemma4SharedKVWeightMap(from directoryURL: URL) -> [String: St
     return weightMap
 }
 
+private func alphaPatchGemma4SharedKVOverlayIndex(
+    sourceDirectory: URL,
+    overlayDirectory: URL,
+    shimFileName: String,
+    shimTensorNames: [String],
+    fileManager: FileManager = .default
+) throws {
+    let sourceIndexURL = sourceDirectory.appendingPathComponent("model.safetensors.index.json")
+    let overlayIndexURL = overlayDirectory.appendingPathComponent("model.safetensors.index.json")
+    let data = try Data(contentsOf: sourceIndexURL)
+    guard
+        var payload = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+        var weightMap = payload["weight_map"] as? [String: String]
+    else {
+        return
+    }
+
+    for tensorName in shimTensorNames {
+        weightMap[tensorName] = shimFileName
+    }
+    payload["weight_map"] = weightMap
+
+    if fileManager.fileExists(atPath: overlayIndexURL.path) {
+        try fileManager.removeItem(at: overlayIndexURL)
+    }
+    let patchedData = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+    try patchedData.write(to: overlayIndexURL, options: [.atomic])
+}
+
 private func alphaGemma4SharedKVShimPlan(for directoryURL: URL) -> AlphaGemma4SharedKVShimPlan? {
     guard
         let config = alphaGemma4SharedKVShimConfig(from: directoryURL),
@@ -287,11 +316,20 @@ private func alphaPreparedMLXRuntimeDirectory(
                 arrays[key] = MLXArray.ones(tensor.shape, dtype: .float16)
             }
         }
-        let shimURL = overlayDirectory.appendingPathComponent("ross-shared-kv-shim.safetensors")
+        let shimFileName = "ross-shared-kv-shim.safetensors"
+        let shimURL = overlayDirectory.appendingPathComponent(shimFileName)
         try MLX.save(arrays: arrays, url: shimURL)
+        try alphaPatchGemma4SharedKVOverlayIndex(
+            sourceDirectory: sourceDirectory,
+            overlayDirectory: overlayDirectory,
+            shimFileName: shimFileName,
+            shimTensorNames: Array(shimPlan.tensors.keys),
+            fileManager: fileManager
+        )
         let markerData = try JSONSerialization.data(
             withJSONObject: [
                 "source_path": sourceDirectory.path,
+                "index_patched": true,
                 "shim_keys": Array(shimPlan.tensors.keys).sorted()
             ],
             options: [.sortedKeys]
@@ -1015,6 +1053,22 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         fileManager: FileManager = .default
     ) throws -> URL {
         try alphaPreparedMLXRuntimeDirectory(for: directory, fileManager: fileManager)
+    }
+
+    static func patchGemma4SharedKVOverlayIndexForTesting(
+        sourceDirectory: URL,
+        overlayDirectory: URL,
+        shimFileName: String,
+        shimTensorNames: [String],
+        fileManager: FileManager = .default
+    ) throws {
+        try alphaPatchGemma4SharedKVOverlayIndex(
+            sourceDirectory: sourceDirectory,
+            overlayDirectory: overlayDirectory,
+            shimFileName: shimFileName,
+            shimTensorNames: shimTensorNames,
+            fileManager: fileManager
+        )
     }
 
     static func gemma4SharedKVShimTensorShapes(for directory: URL) -> [String: [Int]] {
