@@ -112,6 +112,9 @@ PY
   process)
     if [[ -n "${FAKE_DEVICECTL_PROCESS_LOG:-}" ]]; then
       cat "$FAKE_DEVICECTL_PROCESS_LOG"
+      if [[ -n "${FAKE_DEVICECTL_SLEEP_AFTER_CAT:-}" ]]; then
+        sleep "$FAKE_DEVICECTL_SLEEP_AFTER_CAT"
+      fi
       exit 0
     fi
     echo "fake devicectl process launch should not be reached by preflight rejection" >&2
@@ -543,6 +546,30 @@ run_process_guard_expect_exit_1 \
   "no_terminal_smoke_marker" \
   "$tmpdir/silent-installed-pack.log" \
   "${base_command[@]}" --runtime gguf --smoke-profile quick
+
+cat >"$tmpdir/concise-terminal-fail-hangs-after-marker.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=false error=source_fact_missing runtime_error_detail=nil source_input_tokens=120 source_output_tokens=12 source_token_speed=7.25 source_first_token_ms=900 source_measured_tokens=true source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s source_error=source_fact_missing general_error=nil source_grounded=false source_refs_kept=true source_refs=1 source_native_model=true general_native_model=true
+EOF
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_DEVICECTL_PROCESS_LOG="$tmpdir/concise-terminal-fail-hangs-after-marker.log" \
+  FAKE_DEVICECTL_SLEEP_AFTER_CAT=10 \
+  "${base_command[@]}" --runtime gguf --smoke-profile quick --launch-timeout 5 \
+  >"$tmpdir/out.txt" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]] ||
+   ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" "$tmpdir/out.txt" ||
+   ! grep -q "source_token_speed=7.25" "$tmpdir/out.txt" ||
+   grep -q "reason=helper_timeout" "$tmpdir/out.txt"; then
+  echo "FAIL: installed-pack terminal fail did not exit from app failure marker." >&2
+  cat "$tmpdir/out.txt" >&2 || true
+  exit 1
+fi
 
 cat >"$tmpdir/concise-terminal-pass.log" <<'EOF'
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil

@@ -812,10 +812,11 @@ fi
 python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$launch_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
 import os
 import re
+import queue
 import signal
-import select
 import subprocess
 import sys
+import threading
 import time
 
 sys.path.insert(0, sys.argv[-1])
@@ -1022,6 +1023,15 @@ process = subprocess.Popen(
 
 try:
     assert process.stdout is not None
+    line_queue = queue.Queue()
+
+    def enqueue_output():
+        assert process.stdout is not None
+        for queued_line in process.stdout:
+            line_queue.put(queued_line.rstrip("\n"))
+        line_queue.put(None)
+
+    threading.Thread(target=enqueue_output, daemon=True).start()
     while True:
         if time.time() > deadline:
             outcome = "timeout"
@@ -1036,17 +1046,14 @@ try:
             }
             process.kill()
             break
-        ready, _, _ = select.select([process.stdout], [], [], 0.2)
-        if not ready:
+        try:
+            line = line_queue.get(timeout=0.2)
+        except queue.Empty:
             if process.poll() is not None:
                 break
             continue
-        raw_line = process.stdout.readline()
-        if raw_line == "":
-            if process.poll() is not None:
-                break
-            continue
-        line = raw_line.rstrip("\n")
+        if line is None:
+            break
         print(line, flush=True)
         if identity_re.search(line):
             identity = parse_fields(line)
@@ -1065,7 +1072,10 @@ try:
                 **completed_stage_fields,
                 **parse_fields(line),
             }
-            process.send_signal(signal.SIGINT)
+            try:
+                process.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                pass
             break
         if fail_re.search(line):
             outcome = "fail"
@@ -1073,7 +1083,10 @@ try:
                 **completed_stage_fields,
                 **parse_fields(line),
             }
-            process.send_signal(signal.SIGINT)
+            try:
+                process.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                pass
             break
 finally:
     try:

@@ -584,11 +584,12 @@ fi
 
 python3 - "$simulator" "$bundle_id" "$normalized_runtime" "$model_path" "$checksum" "$artifact_kind" "$tier" "$pack_id" "$draft_model_path" "$draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$launch_timeout" "$physical_memory_bytes" "$SCRIPT_DIR" <<'PY'
 import os
+import queue
 import re
-import selectors
 import signal
 import subprocess
 import sys
+import threading
 import time
 
 sys.path.insert(0, sys.argv[-1])
@@ -787,7 +788,6 @@ pass_fields = None
 fail_fields = None
 completed_stage_fields = {}
 outcome = None
-fail_tail_lines_remaining = None
 deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
     command,
@@ -800,8 +800,15 @@ process = subprocess.Popen(
 
 try:
     assert process.stdout is not None
-    selector = selectors.DefaultSelector()
-    selector.register(process.stdout, selectors.EVENT_READ)
+    line_queue = queue.Queue()
+
+    def enqueue_output():
+        assert process.stdout is not None
+        for queued_line in process.stdout:
+            line_queue.put(queued_line.rstrip("\n"))
+        line_queue.put(None)
+
+    threading.Thread(target=enqueue_output, daemon=True).start()
     while True:
         if time.time() > deadline:
             outcome = "timeout"
@@ -817,29 +824,17 @@ try:
             process.kill()
             break
 
-        events = selector.select(timeout=0.25)
-        if not events:
+        try:
+            line = line_queue.get(timeout=0.25)
+        except queue.Empty:
             if process.poll() is not None:
                 break
             continue
 
-        raw_line = process.stdout.readline()
-        if raw_line == "":
-            if process.poll() is not None:
-                break
-            continue
+        if line is None:
+            break
 
-        line = raw_line.rstrip("\n")
         print(line, flush=True)
-        if outcome == "fail" and fail_tail_lines_remaining is not None:
-            fail_tail_lines_remaining -= 1
-            if fail_tail_lines_remaining <= 0:
-                try:
-                    process.send_signal(signal.SIGINT)
-                except ProcessLookupError:
-                    pass
-                break
-            continue
         if identity_re.search(line):
             identity = parse_fields(line)
         if matrix_re.search(line):
@@ -868,8 +863,11 @@ try:
                 **completed_stage_fields,
                 **parse_fields(line),
             }
-            fail_tail_lines_remaining = 2
-            continue
+            try:
+                process.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                pass
+            break
 finally:
     try:
         process.wait(timeout=15)

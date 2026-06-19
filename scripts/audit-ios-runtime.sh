@@ -372,8 +372,10 @@ for timeout_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-dev
     fi
 done
 
-if ! grep -q "selectors.DefaultSelector" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
-   ! grep -q "simulator silent launch timeout" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+if ! grep -q "queue.Queue" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "threading.Thread" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "simulator silent launch timeout" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "terminal fail did not exit from app failure marker" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke timeout can still block forever while stdout is silent."
     FAIL=1
 fi
