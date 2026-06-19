@@ -163,9 +163,9 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         print("Using \(nThreads) threads")
 
         var ctxParams = llama_context_default_params()
-        ctxParams.n_ctx = AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: path, physicalMemory: memory)
-        ctxParams.n_batch = AlphaLlamaRuntimeProfile.promptBatchTokens(forModelPath: path, physicalMemory: memory)
-        ctxParams.n_ubatch = AlphaLlamaRuntimeProfile.physicalBatchTokens(forModelPath: path, physicalMemory: memory)
+        ctxParams.n_ctx = AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(forModelPath: path, physicalMemory: memory)
+        ctxParams.n_batch = AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(forModelPath: path, physicalMemory: memory)
+        ctxParams.n_ubatch = AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(forModelPath: path, physicalMemory: memory)
         ctxParams.n_threads = Int32(nThreads)
         ctxParams.n_threads_batch = Int32(nThreads)
         let shouldOffloadKQV = modelParams.n_gpu_layers > 0 && AlphaLlamaRuntimeProfile.shouldOffloadKQV(
@@ -285,7 +285,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         }
 
         var draftContextParams = llama_context_default_params()
-        draftContextParams.n_ctx = AlphaLlamaRuntimeProfile.contextWindowTokens(
+        draftContextParams.n_ctx = AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(
             forModelPath: configuration.path,
             physicalMemory: physicalMemory
         )
@@ -363,7 +363,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings? = nil
     ) throws {
         if let requestedMaxNewTokens {
-            maxNewTokens = max(16, min(384, requestedMaxNewTokens))
+            maxNewTokens = max(1, min(384, requestedMaxNewTokens))
         } else {
             maxNewTokens = defaultMaxNewTokens
         }

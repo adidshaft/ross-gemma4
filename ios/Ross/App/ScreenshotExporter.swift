@@ -187,7 +187,7 @@ enum RossLocalModelSmokeProfile: String {
     }
 
     var benchmarkMatrixStages: [String] {
-        let shortMaxTokens = self == .mtpQuick ? 64 : 192
+        let shortMaxTokens = self == .mtpQuick ? 8 : 192
         let shortStages = [
             "source:document_qa:en:source_refs_required:max_tokens=\(shortMaxTokens)",
             "general:open_query:en:no_source_refs:max_tokens=\(shortMaxTokens)"
@@ -507,7 +507,7 @@ struct RossLocalModelSmokeView: View {
                 )
             ],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: smokeProfile == .mtpQuick ? 64 : 192,
+            maxOutputTokens: smokeProfile == .mtpQuick ? 8 : 192,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -682,7 +682,7 @@ struct RossLocalModelSmokeView: View {
             instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
             sourcePack: [],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: smokeProfile == .mtpQuick ? 64 : 192,
+            maxOutputTokens: smokeProfile == .mtpQuick ? 8 : 192,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -698,13 +698,26 @@ struct RossLocalModelSmokeView: View {
             stage: "source",
             timeoutSeconds: perStageTimeoutSeconds
         )
-        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE general timeout=\(Int(perStageTimeoutSeconds))s")
-        let generalOutput = await RossLocalModelSmokeView.runProviderStage(
-            provider: provider,
-            input: generalInput,
-            stage: "general",
-            timeoutSeconds: perStageTimeoutSeconds
-        )
+        let generalOutput: AlphaLocalModelOutput
+        if smokeProfile == .mtpQuick, sourceBoundOutput.errorCategory != nil {
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE_SKIPPED stage=general reason=source_failed")
+            generalOutput = AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: ["Skipped after source stage failed."],
+                sourceRefs: [],
+                errorCategory: "skipped_after_source_failure"
+            )
+        } else {
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE general timeout=\(Int(perStageTimeoutSeconds))s")
+            generalOutput = await RossLocalModelSmokeView.runProviderStage(
+                provider: provider,
+                input: generalInput,
+                stage: "general",
+                timeoutSeconds: perStageTimeoutSeconds
+            )
+        }
         let elapsed = Date().timeIntervalSince(started)
         let sourceRawLength = sourceBoundOutput.rawText.count
         let sourceParsedLength = sourceBoundOutput.parsedJson?.count ?? 0

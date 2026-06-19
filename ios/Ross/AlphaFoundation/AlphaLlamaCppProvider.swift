@@ -43,6 +43,54 @@ enum AlphaLlamaRuntimeProfile {
             physicalMemory < constrainedE4BProfileMemoryCeilingBytes
     }
 
+    static func smokeContextOverrideTokens(environment: [String: String] = ProcessInfo.processInfo.environment) -> UInt32? {
+        let rawProfile = environment["ROSS_LOCAL_MODEL_SMOKE_PROFILE"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        switch rawProfile {
+        case "mtp", "mtp-quick", "mtp_quick":
+            return 4_096
+        default:
+            return nil
+        }
+    }
+
+    static func effectiveContextWindowTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> UInt32 {
+        let baseline = contextWindowTokens(forModelPath: path, physicalMemory: physicalMemory)
+        guard let smokeOverride = smokeContextOverrideTokens(environment: environment) else {
+            return baseline
+        }
+        return min(baseline, smokeOverride)
+    }
+
+    static func effectivePromptBatchTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> UInt32 {
+        let baseline = promptBatchTokens(forModelPath: path, physicalMemory: physicalMemory)
+        guard smokeContextOverrideTokens(environment: environment) != nil else {
+            return baseline
+        }
+        return min(baseline, 512)
+    }
+
+    static func effectivePhysicalBatchTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> UInt32 {
+        let baseline = physicalBatchTokens(forModelPath: path, physicalMemory: physicalMemory)
+        guard smokeContextOverrideTokens(environment: environment) != nil else {
+            return baseline
+        }
+        return min(baseline, 256)
+    }
+
     static func minimumSupportedMemoryBytes(forModelPath path: String?) -> UInt64 {
         switch archiveProfile(forModelPath: path) {
         case .flash:
@@ -489,7 +537,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func contextWindowEstimate() -> Int? {
-        Int(AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: modelPath))
+        Int(AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(forModelPath: modelPath))
     }
     
     func maxInputChars() -> Int? {
@@ -503,7 +551,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     private func contextCacheKey(path: String) -> String {
         let draftKey = effectiveDraftModelPath() ?? ""
         let tokenKey = draftKey.isEmpty ? "" : (effectiveDraftTokenCount().map(String.init) ?? "")
-        return [path, draftKey, tokenKey].joined(separator: "|")
+        let smokeContextKey = AlphaLlamaRuntimeProfile.smokeContextOverrideTokens()
+            .map { "smoke_ctx:\($0)" } ?? "smoke_ctx:none"
+        return [path, draftKey, tokenKey, smokeContextKey].joined(separator: "|")
     }
 
     private func getOrContext(path: String) throws -> any AlphaLlamaCompletionContext {

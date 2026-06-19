@@ -16813,8 +16813,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixStages,
             [
-                "source:document_qa:en:source_refs_required:max_tokens=64",
-                "general:open_query:en:no_source_refs:max_tokens=64"
+                "source:document_qa:en:source_refs_required:max_tokens=8",
+                "general:open_query:en:no_source_refs:max_tokens=8"
             ]
         )
         XCTAssertEqual(
@@ -19829,6 +19829,62 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000
             ),
             1_536
+        )
+    }
+
+    func testLlamaRuntimeProfileCapsMTPQuickSmokeContextWithoutChangingBaselineProfile() {
+        let modelPath = "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf"
+        let memory = UInt64(24_000_000_000)
+
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: [:]
+            ),
+            40_960
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: [:]
+            ),
+            2_560
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: [:]
+            ),
+            2_048
+        )
+
+        let mtpQuickEnvironment = ["ROSS_LOCAL_MODEL_SMOKE_PROFILE": "mtp_quick"]
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: mtpQuickEnvironment
+            ),
+            4_096
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: mtpQuickEnvironment
+            ),
+            512
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: mtpQuickEnvironment
+            ),
+            256
         )
     }
 

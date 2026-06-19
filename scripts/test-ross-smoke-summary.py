@@ -680,8 +680,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
             "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
-            "stages=source:document_qa:en:source_refs_required:max_tokens=64,"
-            "general:open_query:en:no_source_refs:max_tokens=64"
+            "stages=source:document_qa:en:source_refs_required:max_tokens=8,"
+            "general:open_query:en:no_source_refs:max_tokens=8"
         )
         pass_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
@@ -712,8 +712,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
             "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
-            "stages=source:document_qa:en:source_refs_required:max_tokens=64,"
-            "general:open_query:en:no_source_refs:max_tokens=64"
+            "stages=source:document_qa:en:source_refs_required:max_tokens=8,"
+            "general:open_query:en:no_source_refs:max_tokens=8"
         )
         pass_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "

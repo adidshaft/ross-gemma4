@@ -10,17 +10,20 @@
 - Draft bytes observed locally: `465109248`
 - Draft SHA-256 observed locally: `145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b`
 - Smoke command:
-  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --tier caseAssociate --model "$HOME/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf" --draft-model "$HOME/model-artifacts/mtp-gemma-4-12b-it.gguf" --draft-tokens 2 --smoke-profile mtp_quick --stage-timeout 60 --launch-timeout 420 --require-draft-acceleration`
-- Result: failed, no benchmark claimed.
-- Terminal guard line:
-  - `ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome=None`
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --tier caseAssociate --model "$HOME/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf" --draft-model "$HOME/model-artifacts/mtp-gemma-4-12b-it.gguf" --draft-tokens 2 --smoke-profile mtp_quick --stage-timeout 90 --launch-timeout 420 --require-draft-acceleration`
+- Result: failed on the open-query stage, no full benchmark claimed.
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Failure summary:
+  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil fail_runtime=gemma_local_runtime profile=mtp_quick matrix_profile=mtp_quick matrix_cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token matrix_stages=source:document_qa:en:source_refs_required:max_tokens=8,general:open_query:en:no_source_refs:max_tokens=8 matrix_shape_error=nil stage=nil error=nil elapsed=187.89s source_error=nil general_error=smoke_stage_timeout_general source_grounded=false source_refs_kept=true source_native_model=true general_native_model=true source_warning_count=0 general_warning_count=1 source_input_tokens=207 source_output_tokens=16 source_token_speed=1.45 source_first_token_ms=82386 source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp-gemma-4-12b-it.gguf general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil`
 - Observed behavior:
-  - the prior simulator run aborted in `LlamaContext.deinit` while freeing draft batch memory
-  - after removing the manual draft token-buffer deallocation and freeing contexts before models, the rerun loaded the 12B main GGUF, loaded the 12B MTP draft GGUF, and reached shared draft KV setup without the previous abort
-  - the simulator still did not emit `ROSS_LOCAL_MODEL_SMOKE_PASS` or `ROSS_LOCAL_MODEL_SMOKE_FAIL` before the launch watcher ended
+  - the prior simulator run aborted in `LlamaContext.deinit` while freeing draft batch memory; after removing the manual draft token-buffer deallocation and freeing contexts before models, the rerun loaded the 12B main GGUF and MTP draft GGUF without the previous abort
+  - `mtp_quick` now uses a smoke-only `4096` context cap with `512` prompt batch and `256` physical batch for the main model; the draft context also uses `4096` with `32`/`32` batches
+  - the source-bound document QA stage completed with active draft acceleration and reported `source_input_tokens=207`, `source_output_tokens=16`, `source_token_speed=1.45`, and `source_first_token_ms=82386`
+  - the open-query stage timed out on Simulator CPU, so the helper emitted `ROSS_SMOKE_FAILURE_SUMMARY` instead of `ROSS_SMOKE_BENCHMARK_SUMMARY`
 - Current interpretation:
-  - the 12B draft artifact is now locally present and the repo catalog checksums match the downloaded byte SHA
-  - draft cleanup is safer, but MTP generation is not proven and no token speed should be recorded for this MTP attempt
+  - the 12B draft artifact is locally present, the repo catalog checksums match the downloaded byte SHA, and MTP activation is proven by runtime identity
+  - Simulator CPU execution is too slow for the full two-stage 12B MTP benchmark at this timeout; only the completed source-stage token speed should be treated as diagnostic evidence
   - a valid future MTP benchmark still requires `ROSS_RUNTIME_IDENTITY acceleration=draftModelSpeculative draft_status=active` plus a guarded `ROSS_SMOKE_BENCHMARK_SUMMARY`
 
 ## 2026-06-19 iOS simulator GGUF benchmark checkpoint
