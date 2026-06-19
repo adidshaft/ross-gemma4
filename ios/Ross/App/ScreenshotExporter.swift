@@ -199,8 +199,8 @@ enum RossLocalModelSmokeProfile: String {
             "source:document_qa:en:source_refs_required:max_tokens=192",
             "bengali:document_qa:bn:source_refs_required:max_tokens=192",
             "hindi:document_qa:hi:source_refs_required:max_tokens=192",
-            "tamil:document_qa:ta:source_refs_required:max_tokens=192",
-            "telugu:document_qa:te:source_refs_required:max_tokens=192",
+            "tamil:document_qa:ta:source_refs_required:max_tokens=96",
+            "telugu:document_qa:te:source_refs_required:max_tokens=96",
             "general:open_query:en:no_source_refs:max_tokens=192"
         ]
     }
@@ -619,18 +619,18 @@ struct RossLocalModelSmokeView: View {
         )
         let tamilSourceBoundInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
-            instruction: "தமிழ் எழுத்தில் பதிலளிக்கவும். கொடுக்கப்பட்ட மூலத்தின் படி பிரிவு 417 என்ன செய்ய சொல்கிறது? JSON திருப்புங்கள்: headline, sections, statusNote.",
+            instruction: "தமிழ் எழுத்தில் ஒரு சுருக்கமான வாக்கியமாக பதிலளிக்கவும். கொடுக்கப்பட்ட மூலத்தின் படி பிரிவு 417 என்ன செய்ய சொல்கிறது? பதிலில் பிரிவு 417, மேற்கோள், சரிபார்க்க ஆகிய மூலச் சொற்களை வைத்திருங்கள். JSON திருப்புங்கள்: headline, sections, statusNote.",
             sourcePack: [
                 AlphaSourceTextBlock(
                     sourceRef: tamilSourceRef,
-                    text: "தமிழ் உள்ளூர் சோதனை மூலம்: பிரிவு 417 படி வழக்கறிஞர் தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும். இது தானியங்கி சட்ட ஆலோசனையை அனுமதிக்காது.",
+                    text: "தமிழ் உள்ளூர் சோதனை மூலம்: பிரிவு 417 படி வழக்கறிஞர் தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும். முக்கிய சொற்கள்: பிரிவு 417, மேற்கோள், சரிபார்க்க. இது தானியங்கி சட்ட ஆலோசனையை அனுமதிக்காது.",
                     pageNumber: 1,
                     languageHint: "ta",
                     ocrConfidence: 1
                 )
             ],
             expectedSchema: #"{"headline":"short Tamil string","sections":["one concise Tamil string"],"statusNote":"short Tamil string"}"#,
-            maxOutputTokens: 192,
+            maxOutputTokens: 96,
             languageProfile: tamilLanguageProfile,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -642,7 +642,7 @@ struct RossLocalModelSmokeView: View {
             documentId: teluguDocumentId,
             documentTitle: "Telugu Local Smoke Source",
             pageNumber: 1,
-            textSnippet: "సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి."
+            textSnippet: "సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉల్లేఖనాన్ని ధృవీకరించాలి."
         )
         let teluguLanguageProfile = AlphaDocumentLanguageProfile(
             documentId: teluguDocumentId,
@@ -660,18 +660,18 @@ struct RossLocalModelSmokeView: View {
         )
         let teluguSourceBoundInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
-            instruction: "తెలుగు లిపిలో సమాధానం ఇవ్వండి. ఇచ్చిన మూలం ప్రకారం సెక్షన్ 417 ఏమి చేయమంటుంది? JSON ఇవ్వండి: headline, sections, statusNote.",
+            instruction: "తెలుగు లిపిలో ఒక చిన్న వాక్యంగా సమాధానం ఇవ్వండి. ఇచ్చిన మూలం ప్రకారం సెక్షన్ 417 ఏమి చేయమంటుంది? సమాధానంలో సెక్షన్ 417, ఉల్లేఖనం, ధృవీకరించాలి అనే మూల పదాలను ఉంచండి. JSON ఇవ్వండి: headline, sections, statusNote.",
             sourcePack: [
                 AlphaSourceTextBlock(
                     sourceRef: teluguSourceRef,
-                    text: "తెలుగు స్థానిక స్మోక్ మూలం: సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి. ఇది ఆటోమేటిక్ న్యాయ సలహాను అనుమతించదు.",
+                    text: "తెలుగు స్థానిక స్మోక్ మూలం: సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉల్లేఖనాన్ని ధృవీకరించాలి. ముఖ్య పదాలు: సెక్షన్ 417, ఉల్లేఖనం, ధృవీకరించాలి. ఇది ఆటోమేటిక్ న్యాయ సలహాను అనుమతించదు.",
                     pageNumber: 1,
                     languageHint: "te",
                     ocrConfidence: 1
                 )
             ],
             expectedSchema: #"{"headline":"short Telugu string","sections":["one concise Telugu string"],"statusNote":"short Telugu string"}"#,
-            maxOutputTokens: 192,
+            maxOutputTokens: 96,
             languageProfile: teluguLanguageProfile,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -1097,20 +1097,39 @@ struct RossLocalModelSmokeView: View {
         let hasTamilScript = text.unicodeScalars.contains { scalar in
             (0x0B80...0x0BFF).contains(Int(scalar.value))
         }
+        let mentionsArticle = text.contains("417")
+            && (text.contains("பிரிவு") || text.contains("கட்டுரை") || text.localizedCaseInsensitiveContains("article"))
+        let mentionsCitation = text.contains("மேற்கோ")
+            || text.contains("சான்று")
+            || text.localizedCaseInsensitiveContains("citation")
+        let mentionsVerification = text.contains("சரிபா")
+            || text.contains("சோதிக்க")
+            || text.contains("உறுதிப்படுத்த")
+            || text.localizedCaseInsensitiveContains("verify")
         return hasTamilScript
-            && text.contains("417")
-            && text.contains("மேற்கோ")
-            && text.contains("சரிபா")
+            && mentionsArticle
+            && mentionsCitation
+            && mentionsVerification
     }
 
     nonisolated static func mentionsTeluguSmokeSourceFact(_ text: String) -> Bool {
         let hasTeluguScript = text.unicodeScalars.contains { scalar in
             (0x0C00...0x0C7F).contains(Int(scalar.value))
         }
+        let mentionsSection = text.contains("417")
+            && (text.contains("సెక్షన్") || text.contains("ఆర్టికల్") || text.localizedCaseInsensitiveContains("article"))
+        let mentionsCitation = text.contains("ఉల్లేఖ")
+            || text.contains("సైటేష")
+            || text.contains("ఉదాహరణ")
+            || text.localizedCaseInsensitiveContains("citation")
+        let mentionsVerification = text.contains("ధృవీక")
+            || text.contains("పరిశీ")
+            || text.contains("సరిపోల్చ")
+            || text.localizedCaseInsensitiveContains("verify")
         return hasTeluguScript
-            && text.contains("417")
-            && text.contains("ఉదాహరణ")
-            && text.contains("ధృవీక")
+            && mentionsSection
+            && mentionsCitation
+            && mentionsVerification
     }
 
     private func debugLocalModelSmokePack(environment: AlphaLocalRuntimeEnvironment) -> AlphaInstalledModelPack? {

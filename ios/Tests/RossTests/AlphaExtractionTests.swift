@@ -16671,8 +16671,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(fullStages.contains("source:document_qa:en:source_refs_required:max_tokens=192"))
         XCTAssertTrue(fullStages.contains("bengali:document_qa:bn:source_refs_required:max_tokens=192"))
         XCTAssertTrue(fullStages.contains("hindi:document_qa:hi:source_refs_required:max_tokens=192"))
-        XCTAssertTrue(fullStages.contains("tamil:document_qa:ta:source_refs_required:max_tokens=192"))
-        XCTAssertTrue(fullStages.contains("telugu:document_qa:te:source_refs_required:max_tokens=192"))
+        XCTAssertTrue(fullStages.contains("tamil:document_qa:ta:source_refs_required:max_tokens=96"))
+        XCTAssertTrue(fullStages.contains("telugu:document_qa:te:source_refs_required:max_tokens=96"))
         XCTAssertTrue(fullStages.contains("general:open_query:en:no_source_refs:max_tokens=192"))
         XCTAssertEqual(
             RossLocalModelSmokeProfile.full.benchmarkMatrixCases,
@@ -22231,6 +22231,11 @@ final class AlphaExtractionTests: XCTestCase {
                 #"{"headline":"பிரிவு 417","sections":["பிரிவு 417 படி தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும்."],"statusNote":"மூலத்தின் அடிப்படையில்."}"#
             )
         )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(
+                #"{"headline":"கட்டுரை 417","sections":["கட்டுரை 417 தாக்கலுக்கு முன் சான்று மேற்கோளை உறுதிப்படுத்த வேண்டும்."],"statusNote":"மூலத்தின் அடிப்படையில்."}"#
+            )
+        )
         XCTAssertFalse(
             RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(
                 #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
@@ -22238,7 +22243,12 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertTrue(
             RossLocalModelSmokeView.mentionsTeluguSmokeSourceFact(
-                #"{"headline":"సెక్షన్ 417","sections":["సెక్షన్ 417 ప్రకారం దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి."],"statusNote":"మూలాల ఆధారంగా."}"#
+                #"{"headline":"సెక్షన్ 417","sections":["సెక్షన్ 417 ప్రకారం దాఖలు చేసే ముందు ఉల్లేఖనాన్ని ధృవీకరించాలి."],"statusNote":"మూలాల ఆధారంగా."}"#
+            )
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsTeluguSmokeSourceFact(
+                #"{"headline":"ఆర్టికల్ 417","sections":["ఆర్టికల్ 417 ప్రకారం దాఖలుకు ముందు సైటేషన్‌ను పరిశీలించాలి."],"statusNote":"మూలాల ఆధారంగా."}"#
             )
         )
         XCTAssertFalse(
