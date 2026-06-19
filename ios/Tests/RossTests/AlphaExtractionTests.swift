@@ -7409,6 +7409,82 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.accelerationDraftModelLabel, draftURL.lastPathComponent)
     }
 
+    func testExperimentalGGUFProviderHonorsVeryLowRequestedOutputTokenCaps() async throws {
+        actor TokenCaptureLlamaContext: AlphaLlamaCompletionContext {
+            private var capturedMaxNewTokens: Int32?
+
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {
+                capturedMaxNewTokens = requestedMaxNewTokens
+            }
+            func completionLoop() -> String { "Short answer." }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 48 }
+            func generatedTokenCount() -> Int { 1 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+            func maxNewTokens() -> Int32? { capturedMaxNewTokens }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-low-output-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let context = TokenCaptureLlamaContext()
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in context }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true
+        )
+
+        _ = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Give the shortest possible answer.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Short Order",
+                            pageNumber: 1,
+                            textSnippet: "The petition was disposed of."
+                        ),
+                        text: "The petition was disposed of.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 8,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        let requestedMaxNewTokens = await context.maxNewTokens()
+        XCTAssertEqual(requestedMaxNewTokens, 8)
+    }
+
     func testExperimentalGGUFProviderAllowsLowTokenDraftAccelerationForConstrainedQuickStartE4B() async throws {
         final class DraftCapture: @unchecked Sendable {
             private let lock = NSLock()
