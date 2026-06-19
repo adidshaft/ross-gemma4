@@ -130,6 +130,10 @@ def runtime_identity_artifact_error(identity, expected_runtime):
         return f"model_format={summary_value(identity, 'model_format')}"
     if artifact_path_type not in rules["path_types"]:
         return f"artifact_path_type={summary_value(identity, 'artifact_path_type')}"
+    if expected_runtime == "gemma_local_runtime":
+        artifact_path = (identity.get("artifact_path") or "").lower()
+        if not artifact_path.endswith(".gguf"):
+            return f"gguf_file_path={summary_value(identity, 'artifact_path')}"
     if expected_runtime == "mlx_swift_lm":
         artifact_path = (identity.get("artifact_path") or "").lower()
         if artifact_path.endswith(".gguf") or artifact_path.endswith(".bin"):

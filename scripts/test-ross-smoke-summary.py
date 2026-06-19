@@ -19,11 +19,11 @@ from ross_smoke_summary import (
 class RossSmokeSummaryTests(unittest.TestCase):
     def valid_identity(self, runtime="gemma_local_runtime"):
         defaults = {
-            "gemma_local_runtime": ("local_model_artifact", "file"),
-            "mlx_swift_lm": ("mlx_directory", "directory"),
-            "apple_foundation_models": ("system_model", "system"),
+            "gemma_local_runtime": ("local_model_artifact", "file", "model.gguf"),
+            "mlx_swift_lm": ("mlx_directory", "directory", "model"),
+            "apple_foundation_models": ("system_model", "system", "system-model"),
         }
-        model_format, artifact_path_type = defaults[runtime]
+        model_format, artifact_path_type, artifact_path = defaults[runtime]
         return {
             "provider": "TestProvider",
             "requested_runtime": runtime,
@@ -31,7 +31,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "pack_runtime": runtime,
             "model_format": model_format,
             "artifact_path_type": artifact_path_type,
-            "artifact_path": "model",
+            "artifact_path": artifact_path,
             "acceleration": "standard",
             "draft_tokens": "nil",
             "draft_model": "nil",
@@ -678,7 +678,11 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):
         self.assertIsNone(
             runtime_identity_artifact_error(
-                {"model_format": "local_model_artifact", "artifact_path_type": "file"},
+                {
+                    "model_format": "local_model_artifact",
+                    "artifact_path_type": "file",
+                    "artifact_path": "model.gguf",
+                },
                 "gemma_local_runtime",
             )
         )
@@ -688,6 +692,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "mlx_swift_lm",
             ),
             "model_format=local_model_artifact",
+        )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "local_model_artifact",
+                    "artifact_path_type": "file",
+                    "artifact_path": "model.bin",
+                },
+                "gemma_local_runtime",
+            ),
+            "gguf_file_path=model.bin",
         )
         self.assertEqual(
             runtime_identity_artifact_error(

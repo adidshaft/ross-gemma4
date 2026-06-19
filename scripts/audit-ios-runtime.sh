@@ -645,6 +645,13 @@ if ! grep -q "benchmark_stage_quality_error" scripts/ross_smoke_summary.py 2>/de
     FAIL=1
 fi
 
+if ! grep -q "gguf_file_path" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "gguf_file_path=model.bin" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q 'GGUF summaries require a `\.gguf` artifact label/path' docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject GGUF identities with non-.gguf artifact paths."
+    FAIL=1
+fi
+
 if ! grep -q "test_benchmark_summary_rejects_missing_source_refs_for_source_bound_stage" scripts/test-ross-smoke-summary.py 2>/dev/null; then
     echo "❌ FAIL: smoke summary tests do not reject source-bound benchmark summaries without retained source refs."
     FAIL=1
