@@ -290,13 +290,16 @@ print_present_or_missing \
 
 printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke runtime=apple_foundation_models artifact_kind=system_model preflight_hint=simulator_system_model_preflight\n'
 
-python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel+PrivateAI.swift" <<'PY'
+python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel+PrivateAI.swift" "${search_roots[@]}" <<'PY'
+import hashlib
+import os
 import re
 import shlex
 import sys
 
 catalog_path = sys.argv[1]
 private_ai_path = sys.argv[2]
+search_roots = [os.path.expanduser(value) for value in sys.argv[3:] if value]
 
 def q(value: str) -> str:
     return shlex.quote(value)
@@ -331,6 +334,66 @@ def hf_repo_id(url: str) -> str:
     match = re.search(r"huggingface\.co/([^/]+/[^/?#]+)", url)
     return match.group(1) if match else "unknown"
 
+def file_size(path: str) -> int:
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return 0
+
+def gguf_has_header(path: str) -> bool:
+    try:
+        with open(path, "rb") as handle:
+            return handle.read(4) == b"GGUF"
+    except OSError:
+        return False
+
+def sha256_file(path: str) -> str | None:
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return None
+
+def find_named_file(file_name: str) -> str | None:
+    if not file_name or file_name == "unknown":
+        return None
+    for root in search_roots:
+        if not os.path.exists(root):
+            continue
+        for current_root, directory_names, file_names in os.walk(root):
+            depth = os.path.relpath(current_root, root).count(os.sep)
+            if depth >= 5:
+                directory_names[:] = []
+            if file_name in file_names:
+                return os.path.join(current_root, file_name)
+    return None
+
+def catalog_file_local_fields(file_name: str, expected_bytes: str, expected_checksum: str) -> str:
+    path = find_named_file(file_name)
+    if not path:
+        return "local_status=missing"
+    actual_bytes = file_size(path)
+    header_ok = gguf_has_header(path)
+    fields = [
+        f"local_status={'candidate' if header_ok else 'invalid_header'}",
+        f"local_path={q(path)}",
+        f"local_bytes={actual_bytes}",
+    ]
+    if expected_bytes != "nil" and str(actual_bytes) != str(expected_bytes):
+        fields[0] = "local_status=size_mismatch"
+        return " ".join(fields)
+    actual_checksum = sha256_file(path)
+    if actual_checksum:
+        fields.append(f"local_checksum={q(actual_checksum)}")
+    if expected_checksum != "nil" and actual_checksum != expected_checksum:
+        fields[0] = "local_status=checksum_mismatch"
+        return " ".join(fields)
+    fields[0] = "local_status=present"
+    return " ".join(fields)
+
 for artifact_match in artifact_pattern.finditer(source):
     body = artifact_match.group("body")
     tier = enum_field(body, "tier") or artifact_match.group("tier").lstrip(".")
@@ -343,6 +406,7 @@ for artifact_match in artifact_pattern.finditer(source):
     artifact_kind = field(body, "artifactKind") or "nil"
     release_ready = bool_field(body, "releaseReady") or "nil"
     repo_id = hf_repo_id(url)
+    local_fields = catalog_file_local_fields(file_name, bytes_value, checksum)
     print(
         "ROSS_RUNTIME_ARTIFACT_INVENTORY "
         f"lane=catalog_gguf status=expected path={q(url)} "
@@ -350,7 +414,7 @@ for artifact_match in artifact_pattern.finditer(source):
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
         f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} "
         f"release_ready={q(release_ready)} repo={q(repo_id)} target_file={q(f'~/model-artifacts/{file_name}')} "
-        "acquisition_hint=hf_download_gguf_file preflight_hint=simulator_gguf_file_preflight"
+        f"{local_fields} acquisition_hint=hf_download_gguf_file preflight_hint=simulator_gguf_file_preflight"
     )
 
     draft_index = body.find("draftArtifact: AlphaAssistantDraftArtifactDescriptor(")
@@ -363,6 +427,7 @@ for artifact_match in artifact_pattern.finditer(source):
     draft_checksum = field(draft_body, "checksumSha256") or "nil"
     draft_kind = field(draft_body, "artifactKind") or "nil"
     draft_repo_id = hf_repo_id(draft_url)
+    draft_local_fields = catalog_file_local_fields(draft_file, draft_bytes, draft_checksum)
     print(
         "ROSS_RUNTIME_ARTIFACT_INVENTORY "
         f"lane=catalog_mtp_draft status=expected path={q(draft_url)} "
@@ -370,7 +435,7 @@ for artifact_match in artifact_pattern.finditer(source):
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(draft_file)} "
         f"artifact_kind={q(draft_kind)} bytes={q(draft_bytes)} checksum={q(draft_checksum)} "
         f"repo={q(draft_repo_id)} target_file={q(f'~/model-artifacts/{draft_file}')} "
-        "acquisition_hint=hf_download_gguf_file preflight_hint=simulator_mtp_draft_preflight"
+        f"{draft_local_fields} acquisition_hint=hf_download_gguf_file preflight_hint=simulator_mtp_draft_preflight"
     )
 
 try:
