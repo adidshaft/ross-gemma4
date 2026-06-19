@@ -779,6 +779,58 @@ device_mlx_directory_looks_usable() {
     device_relative_directory_has_suffix_file "$relative_path" ".safetensors.index.json"
 }
 
+device_mlx_archive_unsupported_reason() {
+  local relative_path="$1"
+  local mode="${2:-primary}"
+  local copied_config="$tmpdir/mlx-config-$(printf '%s-%s' "$relative_path" "$mode" | tr '/ ' '__').json"
+  mkdir -p "$(dirname "$copied_config")"
+  xcrun devicectl device copy from \
+    --device "$device_id" \
+    --domain-type appDataContainer \
+    --domain-identifier "$bundle_id" \
+    --source "Library/Application Support/RossAlpha/$relative_path/config.json" \
+    --destination "$copied_config" \
+    > /dev/null
+  python3 - "$copied_config" "$relative_path" "$mode" <<'PY'
+import json
+import pathlib
+import sys
+
+config_path = pathlib.Path(sys.argv[1])
+relative_path = sys.argv[2]
+mode = sys.argv[3]
+
+try:
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+
+model_type = str(config.get("model_type") or "").lower()
+architectures = [str(value).lower() for value in config.get("architectures") or []]
+name_hints = " ".join(
+    str(value or "").lower()
+    for value in (pathlib.PurePosixPath(relative_path).name, config.get("_name_or_path"), config.get("name_or_path"))
+)
+
+is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
+is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+is_moe = any(
+    key in config
+    for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
+) or "26b-a4b" in name_hints
+is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b", "31b-it"))
+
+if is_assistant and mode != "draft":
+    print("unsupported_gemma4_assistant")
+elif is_multimodal:
+    print("unsupported_gemma4_multimodal")
+elif is_moe:
+    print("unsupported_gemma4_moe")
+elif is_dense_31b:
+    print("unsupported_gemma4_dense_31b")
+PY
+}
+
 if [[ "$selected_artifact_kind" != "system_model" ]] && ! device_relative_path_exists "$selected_relative_path"; then
   echo "Installed artifact file is missing from the app container: $device_model_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
@@ -789,6 +841,14 @@ if [[ "$selected_runtime_raw" == "mlx_swift_lm" ]] && ! device_mlx_directory_loo
   echo "Installed MLX artifact directory is missing required files: config.json, tokenizer metadata, and safetensors weights/index under $device_model_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
+fi
+if [[ "$selected_runtime_raw" == "mlx_swift_lm" ]]; then
+  selected_mlx_unsupported_reason="$(device_mlx_archive_unsupported_reason "$selected_relative_path" "primary")"
+  if [[ -n "$selected_mlx_unsupported_reason" ]]; then
+    echo "Installed MLX artifact is not a supported text-generation archive: $selected_mlx_unsupported_reason under $device_model_path" >&2
+    echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+    exit 1
+  fi
 fi
 
 if [[ -n "$device_draft_path" ]] && ! device_relative_path_exists "$selected_draft_relative_path"; then
@@ -802,6 +862,14 @@ if [[ "$require_draft_acceleration" == "1" && "$selected_runtime_raw" == "mlx_sw
   echo "Installed MLX draft artifact directory is missing required files: config.json, tokenizer metadata, and safetensors weights/index under $device_draft_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
+fi
+if [[ "$require_draft_acceleration" == "1" && "$selected_runtime_raw" == "mlx_swift_lm" ]]; then
+  selected_mlx_draft_unsupported_reason="$(device_mlx_archive_unsupported_reason "$selected_draft_relative_path" "draft")"
+  if [[ -n "$selected_mlx_draft_unsupported_reason" ]]; then
+    echo "Installed MLX draft artifact is not a supported draft archive: $selected_mlx_draft_unsupported_reason under $device_draft_path" >&2
+    echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+    exit 1
+  fi
 fi
 
 echo "Using installed pack path: $device_model_path"

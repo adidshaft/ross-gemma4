@@ -412,6 +412,36 @@ printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-pack
 run_expect_exit_1 "malformed installed MLX directory" "Installed MLX artifact directory is missing required files" "${base_command[@]}" --runtime mlx
 
 write_manifest '{
+  "packId": "unsupported-mlx",
+  "tier": "quick_start",
+  "fileName": "gemma-4-E4B-it-qat-4bit",
+  "relativePath": "model-packs/quick/gemma-4-E4B-it-qat-4bit",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+unsupported_mlx="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/gemma-4-E4B-it-qat-4bit"
+mkdir -p "$unsupported_mlx"
+python3 - "$unsupported_mlx" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+(directory / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(directory / "tokenizer.json").write_text("{}")
+(directory / "model.safetensors").write_text("weights")
+PY
+run_expect_exit_1 "unsupported installed MLX archive" "unsupported_gemma4_multimodal" "${base_command[@]}" --runtime mlx
+
+write_manifest '{
   "packId": "safetensors-mlx-draft",
   "tier": "quick_start",
   "fileName": "mlx-model",
@@ -461,6 +491,48 @@ mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/qu
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/config.json"
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/tokenizer.json"
 run_expect_exit_1 "malformed installed MLX draft directory" "Installed MLX draft artifact directory is missing required files" "${base_command[@]}" --runtime mlx --require-draft-acceleration --smoke-profile mtp_quick
+
+write_manifest '{
+  "packId": "unsupported-mlx-draft",
+  "tier": "quick_start",
+  "fileName": "mlx-model",
+  "relativePath": "model-packs/quick/mlx-model",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "mlx-draft",
+    "relativePath": "model-packs/quick/mlx-draft",
+    "checksumSha256": "b",
+    "bytes": 2000000,
+    "artifactKind": "mlx_directory",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+primary_mlx="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model"
+draft_mlx="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft"
+mkdir -p "$primary_mlx" "$draft_mlx"
+printf '{}' >"$primary_mlx/config.json"
+printf '{}' >"$primary_mlx/tokenizer.json"
+printf 'weights' >"$primary_mlx/model.safetensors"
+python3 - "$draft_mlx" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+(directory / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(directory / "tokenizer.json").write_text("{}")
+(directory / "model.safetensors").write_text("weights")
+PY
+run_expect_exit_1 "unsupported installed MLX draft archive" "unsupported_gemma4_multimodal" "${base_command[@]}" --runtime mlx --require-draft-acceleration --smoke-profile mtp_quick
 
 write_manifest '{
   "packId": "empty-coreml",
