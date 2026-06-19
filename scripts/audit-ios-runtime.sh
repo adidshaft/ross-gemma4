@@ -1104,9 +1104,9 @@ if ! grep -q "benchmark_runtime_identity_missing" docs/REAL_MODEL_QA_REPORT_TEMP
     FAIL=1
 fi
 
-if ! grep -q "positive .*context_tokens.*gpu_offload.*evidence" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
-   ! grep -q "context_tokens.*positive.*gpu_offload.*evidence" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: runtime benchmark docs do not require provider/context/offload evidence for accepted summaries."
+if ! grep -q "checksum_verified.*positive .*context_tokens.*gpu_offload.*evidence" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
+   ! grep -q "checksum_verified.*context_tokens.*positive.*gpu_offload.*evidence" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: runtime benchmark docs do not require provider/checksum/context/offload evidence for accepted summaries."
     FAIL=1
 fi
 
