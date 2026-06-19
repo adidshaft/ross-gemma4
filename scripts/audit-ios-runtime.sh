@@ -981,6 +981,20 @@ if ! grep -q "benchmark_draft_profile_mismatch" docs/REAL_MODEL_QA_REPORT_TEMPLA
     FAIL=1
 fi
 
+for qa_guard_label in \
+    "missing_benchmark_*" \
+    "benchmark_pass_requested_runtime_mismatch" \
+    "benchmark_profile_mismatch" \
+    "benchmark_matrix_shape_mismatch" \
+    "benchmark_runtime_unavailable" \
+    "benchmark_runtime_artifact_mismatch" \
+    "benchmark_draft_artifact_mismatch"; do
+    if ! grep -Fq "$qa_guard_label" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+        echo "❌ FAIL: QA report template does not document benchmark rejection guard: $qa_guard_label"
+        FAIL=1
+    fi
+done
+
 if ! grep -q "runtime_error_detail" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
    ! grep -q "draft_error_detail" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
    ! grep -q "manifest_primary_unusable_artifact" docs/IOS_RUNTIME.md 2>/dev/null; then
