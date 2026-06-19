@@ -119,6 +119,17 @@ case "$smoke_profile" in
     ;;
 esac
 
+if [[ "$require_draft_acceleration" == "1" ]]; then
+  case "$smoke_profile" in
+    mtp|mtp-quick|mtp_quick)
+      ;;
+    *)
+      echo "Draft acceleration proof requires --smoke-profile mtp_quick/mtp-quick/mtp so MTP validation stays low-token and low-context." >&2
+      exit 2
+      ;;
+  esac
+fi
+
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "xcrun is required." >&2
   exit 2

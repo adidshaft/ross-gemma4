@@ -864,6 +864,15 @@ if ! grep -q "full | quick | mtp | mtp-quick | mtp_quick" scripts/ios-device-ins
     FAIL=1
 fi
 
+if ! grep -q "Draft acceleration proof requires --smoke-profile mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "Draft acceleration proof requires --smoke-profile mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "installed-pack draft proof without MTP profile" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "simulator draft proof without MTP profile" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "fail before launch if .*--require-draft-acceleration.*full.*quick.*source-only" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: required MTP proof can still run outside the low-token MTP smoke profile."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not require per-stage token and speed metrics."
     FAIL=1

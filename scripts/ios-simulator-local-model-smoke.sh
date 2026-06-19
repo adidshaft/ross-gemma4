@@ -139,6 +139,17 @@ case "$smoke_profile" in
     ;;
 esac
 
+if [[ "$require_draft_acceleration" == "1" ]]; then
+  case "$smoke_profile" in
+    mtp|mtp-quick|mtp_quick)
+      ;;
+    *)
+      echo "Draft acceleration proof requires --smoke-profile mtp_quick/mtp-quick/mtp so MTP validation stays low-token and low-context." >&2
+      exit 2
+      ;;
+  esac
+fi
+
 case "$stage_timeout" in
   ''|*[!0-9]*)
     echo "Stage timeout must be a positive integer number of seconds: $stage_timeout" >&2

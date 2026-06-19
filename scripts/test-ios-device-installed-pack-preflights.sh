@@ -203,6 +203,11 @@ run_expect_exit_2 \
   "Unsupported smoke profile" \
   "${base_command[@]}" --runtime gguf --smoke-profile typo
 
+run_expect_exit_2 \
+  "installed-pack draft proof without MTP profile" \
+  "Draft acceleration proof requires --smoke-profile mtp_quick" \
+  "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile quick
+
 write_manifest '{
   "packId": "tiny-gguf",
   "tier": "quick_start",
@@ -237,7 +242,7 @@ write_manifest '{
   },
   "verifiedAt": "2026-06-19T00:00:00Z"
 }'
-run_expect_exit_1 "tiny MTP draft installed manifest" "implausibly small draft artifact" "${base_command[@]}" --runtime gguf --require-draft-acceleration
+run_expect_exit_1 "tiny MTP draft installed manifest" "implausibly small draft artifact" "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick
 
 write_manifest '{
   "packId": "missing-primary",
@@ -278,7 +283,7 @@ import pathlib
 import sys
 pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
 PY
-run_expect_exit_1 "missing installed draft artifact" "Installed draft artifact file is missing" "${base_command[@]}" --runtime gguf --require-draft-acceleration
+run_expect_exit_1 "missing installed draft artifact" "Installed draft artifact file is missing" "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick
 
 write_manifest '{
   "packId": "tiny-mlx",
@@ -338,7 +343,7 @@ printf 'weights' >"$fake_device_root/Library/Application Support/RossAlpha/model
 mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft"
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/config.json"
 printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/tokenizer.json"
-run_expect_exit_1 "malformed installed MLX draft directory" "Installed MLX draft artifact directory is missing required files" "${base_command[@]}" --runtime mlx --require-draft-acceleration
+run_expect_exit_1 "malformed installed MLX draft directory" "Installed MLX draft artifact directory is missing required files" "${base_command[@]}" --runtime mlx --require-draft-acceleration --smoke-profile mtp_quick
 
 write_manifest '{
   "packId": "empty-coreml",
