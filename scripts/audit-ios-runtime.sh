@@ -865,6 +865,15 @@ if ! grep -q "mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null ||
     FAIL=1
 fi
 
+if ! grep -q "return 1_024" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "return min(baseline, 128)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "return min(baseline, 64)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "1024-token context cap" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "smaller prompt/physical batches" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: MTP smoke proof profile is not pinned to the low-context activation lane."
+    FAIL=1
+fi
+
 if ! grep -q "full | quick | mtp | mtp-quick | mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "quick | full | mtp | mtp-quick | mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: smoke helper usage text does not advertise all accepted MTP proof profile aliases."

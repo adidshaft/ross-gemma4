@@ -50,7 +50,7 @@ enum AlphaLlamaRuntimeProfile {
             .lowercased()
         switch rawProfile {
         case "mtp", "mtp-quick", "mtp_quick":
-            return 2_048
+            return 1_024
         default:
             return nil
         }
@@ -77,7 +77,7 @@ enum AlphaLlamaRuntimeProfile {
         guard smokeContextOverrideTokens(environment: environment) != nil else {
             return baseline
         }
-        return min(baseline, 256)
+        return min(baseline, 128)
     }
 
     static func effectivePhysicalBatchTokens(
@@ -89,7 +89,7 @@ enum AlphaLlamaRuntimeProfile {
         guard smokeContextOverrideTokens(environment: environment) != nil else {
             return baseline
         }
-        return min(baseline, 128)
+        return min(baseline, 64)
     }
 
     static func minimumSupportedMemoryBytes(forModelPath path: String?) -> UInt64 {
