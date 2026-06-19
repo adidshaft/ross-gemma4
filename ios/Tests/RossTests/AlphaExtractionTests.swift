@@ -17400,8 +17400,8 @@ final class AlphaExtractionTests: XCTestCase {
             maxInputChars: 22_000,
             estimatedContextTokens: 4_096,
             accelerationMode: .standard,
-            accelerationDraftTokens: 2,
-            draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
             draftModelPathType: "file",
             draftAccelerationStatus: "validator_rejected",
             draftAccelerationDetail: "configured_acceleration=standard",
@@ -17418,8 +17418,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(line.contains("acceleration=standard"))
-        XCTAssertTrue(line.contains("draft_tokens=2"))
-        XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
+        XCTAssertTrue(line.contains("draft_tokens=nil"))
+        XCTAssertTrue(line.contains("draft_model=nil"))
         XCTAssertTrue(line.contains("draft_model_path_type=file"))
         XCTAssertTrue(line.contains("draft_status=validator_rejected"))
         XCTAssertTrue(line.contains("draft_error_detail=configured_acceleration=standard"))
