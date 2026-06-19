@@ -1,5 +1,28 @@
 # Real Model QA Results
 
+## 2026-06-19 iOS simulator rebuilt-app CoreAI/Foundation system checkpoint
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `E36AB177-2287-4112-8225-339048142D11`)
+- Whether the simulator app was rebuilt before smoke: Yes, via XcodeBuildMCP using scheme `Ross`
+- Runtime mode requested: `apple_foundation_models` through the `coreml` smoke alias
+- Artifact path/kind requested: `system-model` with `artifactKind=system_model`
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime coreml --model system-model --artifact-kind system_model --tier quickStart --pack-id simulator-coreai-system-identity --smoke-profile quick --stage-timeout 5 --launch-timeout 90`
+- Result: failed generation; no benchmark pass claimed.
+- Runtime identity marker:
+  - `ROSS_RUNTIME_IDENTITY provider=AlphaFoundationModelsLocalProvider requested_runtime=apple_foundation_models actual_runtime=apple_foundation_models pack_runtime=apple_foundation_models model_format=system_model artifact_path_type=system artifact_path=system-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=not_supported draft_error_detail=nil runtime_error_detail=nil context_tokens=8192 gpu_offload=system_managed fallback=none available=true error=nil`
+- Failure summary:
+  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaFoundationModelsLocalProvider runtime=apple_foundation_models requested_runtime=apple_foundation_models pack_runtime=apple_foundation_models model_format=system_model artifact_path_type=system artifact_path=system-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=not_supported draft_error_detail=nil runtime_error_detail=nil context_tokens=8192 gpu_offload=system_managed fallback=none available=true identity_error=nil fail_runtime=apple_foundation_models profile=quick matrix_profile=quick matrix_cases=english_source_bound_document_qa,english_open_no_document_query matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192 matrix_shape_error=nil stage=nil error=nil elapsed=4.00s source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_raw_chars=0 source_refs=1 source_warning_count=1 source_grounded=false source_refs_kept=true source_native_model=true source_error=coreai_generation_failed general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=standard general_draft_tokens=nil general_draft_model=nil general_output_chars=0 general_warning_count=1 general_native_model=true general_error=coreai_generation_failed`
+- Observed behavior:
+  - the rebuilt simulator app selected the real Apple Foundation/CoreAI lane, not GGUF: `provider=AlphaFoundationModelsLocalProvider`, `actual_runtime=apple_foundation_models`, `fallback=none`
+  - the system-model sentinel was recognized as `artifact_path_type=system`
+  - both quick-profile stages failed with `coreai_generation_failed` before token metrics were available
+- Current interpretation:
+  - CoreAI/Foundation routing and identity guardrails are proven on the rebuilt simulator app
+  - CoreAI/Foundation generation is not benchmark-proven because no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
+  - physical-device morning validation is still required before claiming CoreAI/CoreML performance
+
 ## 2026-06-19 iOS simulator rebuilt-app MTP 2k-context checkpoint
 
 - Branch: `main`
