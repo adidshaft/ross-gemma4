@@ -86,6 +86,7 @@ import re
 import signal
 import subprocess
 import sys
+from pathlib import PurePosixPath
 
 sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
@@ -222,6 +223,27 @@ def validate_identity_guard(identity):
         )
         sys.exit(1)
 
+
+def validate_pass_artifact_identity(identity, pass_fields):
+    install_path = (pass_fields or {}).get("install_path") or ""
+    if not install_path or install_path in ("nil", "system-model") or install_path.startswith("system://"):
+        return
+
+    identity_artifact = (identity or {}).get("artifact_path") or ""
+    if identity_artifact in ("system-model",) or identity_artifact.startswith("system://"):
+        return
+
+    expected_artifact = PurePosixPath(install_path.rstrip("/")).name
+    actual_artifact = PurePosixPath(identity_artifact.rstrip("/")).name
+    if expected_artifact and actual_artifact != expected_artifact:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_artifact_path_mismatch "
+            f"expected_artifact={expected_artifact} identity_artifact={actual_artifact or 'nil'}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 def validate_failure_identity_guard(identity, *, outcome):
     if expected_runtime == "auto":
         return
@@ -320,6 +342,7 @@ finally:
 
 if outcome == "pass":
     validate_identity_guard(identity)
+    validate_pass_artifact_identity(identity, pass_fields)
     if expected_runtime != "auto":
         actual_runtime = (pass_fields or {}).get("runtime")
         if actual_runtime != expected_runtime:

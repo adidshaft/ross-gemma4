@@ -37,7 +37,11 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     ;;
   unverified_checksum_identity)
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=false artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
-    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=false"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=false"
+    ;;
+  wrong_artifact_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=other-mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=true"
     ;;
   fail_missing_identity)
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
@@ -56,7 +60,7 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     ;;
   valid)
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
-    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=true"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=true"
     ;;
   *)
     echo "unknown FAKE_ASSISTANT_DOWNLOAD_LOG=$FAKE_ASSISTANT_DOWNLOAD_LOG" >&2
@@ -126,6 +130,11 @@ run_expect_exit_1 \
   "assistant download pass with unverified checksum identity" \
   "checksum_verified=false" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=unverified_checksum_identity "${base_command[@]}"
+
+run_expect_exit_1 \
+  "assistant download pass with wrong artifact identity" \
+  "runtime_identity_artifact_path_mismatch" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=wrong_artifact_identity "${base_command[@]}"
 
 run_expect_exit_1 \
   "assistant download failure without runtime identity" \
