@@ -1032,6 +1032,7 @@ if ! grep -q "Selected CoreAI/CoreML adapter manifest reports an empty artifact"
 fi
 
 if ! grep -q "adapterPathLooksUsable" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "adapterPathHasSupportedShape" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksEmptyConfiguredAdapterFileUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksEmptyConfiguredAdapterDirectoryUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: Swift CoreAI adapter runtime health can still treat empty adapter artifacts as usable."
@@ -1065,6 +1066,7 @@ for coreai_runtime_guard in \
     "testFoundationProviderReportsSpecificGenerationFailure" \
     "testFoundationProviderReportsMissingAdapterArtifactBeforeGeneration" \
     "testFoundationProviderReportsEmptyAdapterArtifactsBeforeGeneration" \
+    "testFoundationProviderRejectsNonAdapterPathShapeBeforeGeneration" \
     "testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape" \
     "testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration" \
     "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration"; do

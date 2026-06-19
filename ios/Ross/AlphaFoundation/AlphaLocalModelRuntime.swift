@@ -3010,6 +3010,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
               fileManager.isReadableFile(atPath: path) else {
             return false
         }
+        guard adapterPathHasSupportedShape(path) else {
+            return false
+        }
         guard !adapterPathLooksLikeForeignModel(path, isDirectory: isDirectory.boolValue) else {
             return false
         }
@@ -3033,6 +3036,14 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             return true
         }
         return false
+    }
+
+    private static func adapterPathHasSupportedShape(_ path: String) -> Bool {
+        let lowerPath = path.lowercased()
+        return lowerPath.hasSuffix(".bundle") ||
+            lowerPath.hasSuffix(".mlmodel") ||
+            lowerPath.hasSuffix(".mlmodelc") ||
+            lowerPath.hasSuffix(".mlpackage")
     }
 
     private static func adapterPathLooksLikeForeignModel(_ path: String, isDirectory: Bool) -> Bool {

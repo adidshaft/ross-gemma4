@@ -24173,6 +24173,58 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderRejectsNonAdapterPathShapeBeforeGeneration() async throws {
+        let textURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("non-coreml-foundation-run-adapter-\(UUID().uuidString)")
+            .appendingPathExtension("txt")
+        try Data("not a CoreAI adapter".utf8).write(to: textURL)
+        defer { try? FileManager.default.removeItem(at: textURL) }
+
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            XCTFail("Non-adapter CoreAI/CoreML path shapes should fail before generation.")
+            return AlphaFoundationModelsGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: textURL.lastPathComponent,
+            modelPath: textURL.path,
+            checksumVerified: true
+        )
+        let health = provider.runtimeHealth()
+
+        XCTAssertFalse(health.available)
+        XCTAssertFalse(health.modelPathPresent)
+        XCTAssertEqual(health.lastErrorCategory, "missing_coreai_artifact")
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(output.runtimeErrorDetail, "missing_coreai_artifact")
+        XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
     func testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration() async throws {
         let ggufURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("foreign-foundation-adapter-\(UUID().uuidString)")
