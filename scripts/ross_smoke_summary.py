@@ -220,6 +220,12 @@ def runtime_identity_diagnostic_error(identity):
 
 def runtime_identity_draft_artifact_error(identity, expected_runtime):
     if identity.get("acceleration") != "draftModelSpeculative":
+        if identity.get("draft_tokens") not in (None, "", "nil"):
+            return f"draft_tokens={summary_value(identity, 'draft_tokens')}"
+        if identity.get("draft_model") not in (None, "", "nil"):
+            return f"draft_model={summary_value(identity, 'draft_model')}"
+        if identity.get("draft_status") == "active":
+            return "draft_status=active"
         return None
     if identity.get("draft_status") != "active":
         return f"draft_status={summary_value(identity, 'draft_status')}"

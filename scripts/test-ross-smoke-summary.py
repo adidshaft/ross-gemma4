@@ -1226,6 +1226,42 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "draft_status=draft_output_degenerate",
         )
+        inactive_candidate = {
+            "acceleration": "standard",
+            "draft_tokens": "nil",
+            "draft_model": "nil",
+            "draft_model_path_type": "file",
+            "draft_candidate_tokens": "2",
+            "draft_candidate_model": "mtp.gguf",
+            "draft_status": "validator_rejected",
+        }
+        self.assertIsNone(
+            runtime_identity_draft_artifact_error(
+                inactive_candidate,
+                "gemma_local_runtime",
+            )
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**inactive_candidate, "draft_tokens": "2"},
+                "gemma_local_runtime",
+            ),
+            "draft_tokens=2",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**inactive_candidate, "draft_model": "mtp.gguf"},
+                "gemma_local_runtime",
+            ),
+            "draft_model=mtp.gguf",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**inactive_candidate, "draft_status": "active"},
+                "gemma_local_runtime",
+            ),
+            "draft_status=active",
+        )
 
     def test_benchmark_summary_rejects_active_draft_identity_when_stage_runs_standard(self):
         identity = parse_fields(
