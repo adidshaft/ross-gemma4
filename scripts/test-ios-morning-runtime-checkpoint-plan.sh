@@ -47,6 +47,8 @@ grep -q "CoreDevice identifier, device name, DNS name, or UDID" /tmp/ross-mornin
 
 "$PLAN" --device TEST_DEVICE > /tmp/ross-morning-plan.out
 grep -q "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier." /tmp/ross-morning-plan.out
+grep -q "0. Plan/download missing local runtime artifacts before any device work" /tmp/ross-morning-plan.out
+grep -q "scripts/ios-runtime-artifact-fetch-plan.sh --tier quickStart --target-root" /tmp/ross-morning-plan.out
 grep -q "MTP low-token proof" /tmp/ross-morning-plan.out
 grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
@@ -390,7 +392,8 @@ fi
 
 "$PLAN" --device TEST_DEVICE --installed-root "$support_root" --physical-memory-bytes 12000000000 > /tmp/ross-morning-plan.out
 grep -q "Inventory MTP memory gate: physical_memory_bytes=12000000000" /tmp/ross-morning-plan.out
-if [[ "$(grep -c -- "--physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out)" -ne 3 ]]; then
+grep -q "scripts/ios-runtime-artifact-fetch-plan.sh --tier quickStart .*--physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+if [[ "$(grep -c -- "--physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out)" -ne 4 ]]; then
   echo "Expected ready installed-pack runtime commands to preserve physical memory guard" >&2
   cat /tmp/ross-morning-plan.out >&2
   exit 1

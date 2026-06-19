@@ -175,6 +175,24 @@ print_command() {
   quote_args "$@"
 }
 
+print_fetch_plan_command() {
+  local label="$1"
+  if [[ -n "$physical_memory_bytes" ]]; then
+    print_command \
+      "$label" \
+      scripts/ios-runtime-artifact-fetch-plan.sh \
+      --tier "$tier" \
+      --target-root "$HOME/model-artifacts" \
+      --physical-memory-bytes "$physical_memory_bytes"
+  else
+    print_command \
+      "$label" \
+      scripts/ios-runtime-artifact-fetch-plan.sh \
+      --tier "$tier" \
+      --target-root "$HOME/model-artifacts"
+  fi
+}
+
 print_installed_pack_command() {
   local label="$1"
   shift
@@ -199,6 +217,9 @@ echo "Order: list installed packs first, run GGUF/MTP as short smokes, then run 
 echo "Pre-device sanity: use scripts/ios-simulator-local-model-smoke.sh --preflight-only for any local GGUF/MLX/CoreAI artifact or system:// sentinel you plan to reference; this emits ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK without launching Simulator or touching the cabled iPhone."
 echo "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query."
 echo
+
+print_fetch_plan_command \
+  "0. Plan/download missing local runtime artifacts before any device work"
 
 print_command \
   "1. List installed manifest-backed packs without launching inference" \
