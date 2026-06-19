@@ -831,8 +831,24 @@ elif is_dense_31b:
 PY
 }
 
+device_coreai_adapter_looks_like_foreign_model() {
+  local relative_path="$1"
+  device_relative_directory_has_named_file "$relative_path" "config.json" || return 1
+  device_relative_directory_has_suffix_file "$relative_path" ".safetensors" ||
+    device_relative_directory_has_suffix_file "$relative_path" ".safetensors.index.json" ||
+    device_relative_directory_has_suffix_file "$relative_path" ".gguf" ||
+    device_relative_directory_has_suffix_file "$relative_path" ".bin"
+}
+
 if [[ "$selected_artifact_kind" != "system_model" ]] && ! device_relative_path_exists "$selected_relative_path"; then
   echo "Installed artifact file is missing from the app container: $device_model_path" >&2
+  echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+  exit 1
+fi
+
+if [[ "$selected_runtime_raw" == "apple_foundation_models" && "$selected_artifact_kind" != "system_model" ]] &&
+   device_coreai_adapter_looks_like_foreign_model "$selected_relative_path"; then
+  echo "Installed CoreAI/CoreML adapter directory looks like a foreign model-weight artifact instead of an adapter package: $device_model_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
 fi

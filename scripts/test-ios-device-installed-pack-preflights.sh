@@ -577,6 +577,24 @@ write_manifest '{
 run_expect_exit_1 "foreign CoreAI adapter installed manifest" "non-CoreML path shape" "${base_command[@]}" --runtime coreml
 
 write_manifest '{
+  "packId": "foreign-coreml-directory",
+  "tier": "quick_start",
+  "fileName": "adapter.mlmodelc",
+  "relativePath": "model-packs/quick/adapter.mlmodelc",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "coreml_model",
+  "runtimeMode": "apple_foundation_models",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+foreign_coreml_dir="$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/adapter.mlmodelc"
+mkdir -p "$foreign_coreml_dir"
+printf '{}' >"$foreign_coreml_dir/config.json"
+printf 'weights' >"$foreign_coreml_dir/model.safetensors"
+run_expect_exit_1 "foreign CoreAI adapter directory contents" "foreign model-weight artifact" "${base_command[@]}" --runtime coreml
+
+write_manifest '{
   "packId": "quick-device-proof",
   "tier": "quick_start",
   "fileName": "main.gguf",
