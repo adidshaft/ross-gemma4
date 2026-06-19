@@ -624,6 +624,26 @@ if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev
     FAIL=1
 fi
 
+if ! grep -q "benchmark_stage_quality_error" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not require per-stage source/native quality evidence."
+    FAIL=1
+fi
+
+if ! grep -q "test_benchmark_summary_rejects_missing_source_refs_for_source_bound_stage" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not reject source-bound benchmark summaries without retained source refs."
+    FAIL=1
+fi
+
+if ! grep -q "test_benchmark_summary_rejects_non_native_stage_output" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not reject benchmark summaries backed by non-native/fallback stage output."
+    FAIL=1
+fi
+
+if ! grep -q "test_benchmark_summary_rejects_stage_error_in_pass_marker" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not reject pass markers that still carry stage errors."
+    FAIL=1
+fi
+
 if ! grep -q "source_token_speed=nil" scripts/test-ross-smoke-summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary tests do not reject nil token speed metrics."
     FAIL=1
@@ -701,6 +721,11 @@ fi
 
 if ! grep -q "benchmark_stage_metrics_missing" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
     echo "❌ FAIL: QA report template does not document per-stage metric benchmark rejection."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_stage_quality_missing" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: QA report template does not document per-stage source/native quality benchmark rejection."
     FAIL=1
 fi
 
