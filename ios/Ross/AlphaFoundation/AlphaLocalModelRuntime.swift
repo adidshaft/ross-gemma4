@@ -3387,7 +3387,7 @@ enum AlphaLocalModelRuntime {
         case .appleFoundationModels:
             let usesSystemModel = modelPath == "system-model" ||
                 modelPath?.hasPrefix("system://") == true ||
-                activePack.map { alphaPackUsesSystemFoundationModel($0) } == true
+                (modelPath == nil && activePack.map { alphaPackUsesSystemFoundationModel($0) } == true)
             guard usesSystemModel || modelPath != nil else {
                 return AlphaUnavailableRealLocalModelProvider(
                     capabilityTier: tier,

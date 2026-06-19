@@ -21100,6 +21100,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testExplicitCoreAIAdapterPathOverridesActiveSystemSentinel() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .appleFoundationModels,
+            packId: "active-system-coreai",
+            installPath: "system-model",
+            artifactKind: "system_model"
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            modelPath: "/tmp/private/device/debug/missing-foundation-adapter.bundle",
+            modelChecksum: String(repeating: "a", count: 64),
+            modelKind: "foundation_adapter"
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.modelPathLabel, "missing-foundation-adapter.bundle")
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertNotEqual(health?.modelPathLabel, "system-model")
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
+    }
+
     func testRuntimeHealthMarksEmptyConfiguredAdapterFileUnavailable() throws {
         let adapterURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("empty-foundation-adapter-\(UUID().uuidString).mlmodel")
