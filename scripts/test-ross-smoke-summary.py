@@ -9,6 +9,7 @@ from ross_smoke_summary import (
     parse_fields,
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
+    runtime_identity_diagnostic_error,
     runtime_identity_draft_artifact_error,
     runtime_identity_resource_error,
     runtime_identity_supported_runtime_error,
@@ -36,6 +37,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "benchmark_runtime_unsupported",
             "benchmark_runtime_unavailable",
             "benchmark_runtime_identity_missing",
+            "benchmark_runtime_diagnostic_error",
             "benchmark_runtime_artifact_mismatch",
             "benchmark_stage_metrics_missing",
             "benchmark_stage_quality_missing",
@@ -1007,6 +1009,43 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
             benchmark_summary_line(unverified_checksum, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_runtime_identity_diagnostics(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+            "source_refs": "1",
+            "source_native_model": "true",
+        }
+
+        identity_error = self.valid_identity()
+        identity_error["error"] = "runtime_health_failed"
+        self.assertEqual(
+            runtime_identity_diagnostic_error(identity_error),
+            "error=runtime_health_failed",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_diagnostic_error"):
+            benchmark_summary_line(identity_error, pass_fields, matrix)
+
+        runtime_detail_error = self.valid_identity()
+        runtime_detail_error["runtime_error_detail"] = "manifest_primary_unusable_artifact"
+        self.assertEqual(
+            runtime_identity_diagnostic_error(runtime_detail_error),
+            "runtime_error_detail=manifest_primary_unusable_artifact",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_diagnostic_error"):
+            benchmark_summary_line(runtime_detail_error, pass_fields, matrix)
 
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
         active_mtp = {

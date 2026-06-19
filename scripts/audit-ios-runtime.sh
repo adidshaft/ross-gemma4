@@ -293,6 +293,13 @@ if ! grep -q 'identity.get("checksum_verified") != "true"' scripts/ross_smoke_su
     FAIL=1
 fi
 
+if ! grep -q "benchmark_runtime_diagnostic_error" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "runtime_identity_diagnostic_error" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_runtime_identity_diagnostics" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not reject accepted summaries with runtime identity diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "system_model_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not require CoreAI system_model sentinel paths."
     FAIL=1
@@ -1263,6 +1270,7 @@ for qa_guard_label in \
     "benchmark_matrix_shape_mismatch" \
     "benchmark_runtime_unavailable" \
     "benchmark_runtime_identity_missing" \
+    "benchmark_runtime_diagnostic_error" \
     "benchmark_runtime_artifact_mismatch" \
     "benchmark_draft_artifact_mismatch"; do
     if ! grep -Fq "$qa_guard_label" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then

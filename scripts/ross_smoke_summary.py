@@ -192,6 +192,16 @@ def runtime_identity_resource_error(identity):
     return None
 
 
+def runtime_identity_diagnostic_error(identity):
+    if identity.get("error") not in (None, "", "nil"):
+        return f"error={summary_value(identity, 'error')}"
+
+    if identity.get("runtime_error_detail") not in (None, "", "nil"):
+        return f"runtime_error_detail={summary_value(identity, 'runtime_error_detail')}"
+
+    return None
+
+
 def runtime_identity_draft_artifact_error(identity, expected_runtime):
     if identity.get("acceleration") != "draftModelSpeculative":
         return None
@@ -476,6 +486,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     resource_error = runtime_identity_resource_error(identity)
     if resource_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_identity_missing {resource_error}")
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_runtime_diagnostic_error {diagnostic_error}")
     artifact_error = runtime_identity_artifact_error(identity, actual_runtime)
     if artifact_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_artifact_mismatch {artifact_error}")
