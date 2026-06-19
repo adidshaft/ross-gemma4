@@ -11,6 +11,8 @@ Options:
   --bundle-id <id>      App bundle identifier. Default: com.ross.ios
   --gguf-model <path>   Local GGUF baseline artifact. Default: artifacts/gemma-2-2b-it-Q4_K_M.gguf
   --installed-root <p>  Optional RossAlpha support root/model-packs root used for dry-run inventory gating
+  --physical-memory-bytes <bytes>
+                       Optional device memory used for dry-run MTP memory-fit gating
   --tier <tier>         Runtime tier for short smokes. Default: quickStart
   --stage-timeout <s>   Per-stage timeout for printed commands. Default: 45
 
@@ -24,6 +26,7 @@ gguf_model="artifacts/gemma-2-2b-it-Q4_K_M.gguf"
 tier="quickStart"
 stage_timeout="45"
 installed_root=""
+physical_memory_bytes=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,6 +44,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --installed-root)
       installed_root="${2:-}"
+      shift 2
+      ;;
+    --physical-memory-bytes)
+      physical_memory_bytes="${2:-}"
       shift 2
       ;;
     --tier)
@@ -68,6 +75,11 @@ if [[ -z "$stage_timeout" || "$stage_timeout" == *[!0-9]* || "$stage_timeout" -l
   exit 2
 fi
 
+if [[ -n "$physical_memory_bytes" && ( "$physical_memory_bytes" == *[!0-9]* || "$physical_memory_bytes" -le 0 ) ]]; then
+  echo "Physical memory bytes must be a positive integer." >&2
+  exit 2
+fi
+
 quote_args() {
   local arg
   for arg in "$@"; do
@@ -78,7 +90,11 @@ quote_args() {
 
 inventory_output=""
 if [[ -n "$installed_root" ]]; then
-  inventory_output="$(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")"
+  inventory_args=(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")
+  if [[ -n "$physical_memory_bytes" ]]; then
+    inventory_args+=(--physical-memory-bytes "$physical_memory_bytes")
+  fi
+  inventory_output="$("${inventory_args[@]}")"
 fi
 
 inventory_tier_pattern() {
@@ -136,6 +152,9 @@ print_command() {
 echo "ROSS_MORNING_RUNTIME_CHECKPOINT_PLAN dry_run=true device=${device_id} bundle_id=${bundle_id} tier=${tier}"
 if [[ -n "$installed_root" ]]; then
   echo "Inventory gate: installed_root=${installed_root}"
+  if [[ -n "$physical_memory_bytes" ]]; then
+    echo "Inventory MTP memory gate: physical_memory_bytes=${physical_memory_bytes}"
+  fi
 else
   echo "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier."
 fi

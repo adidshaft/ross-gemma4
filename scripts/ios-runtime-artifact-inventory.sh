@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-runtime-artifact-inventory.sh [--search-root <path>]... [--installed-root <path>]...
+  scripts/ios-runtime-artifact-inventory.sh [--search-root <path>]... [--installed-root <path>]... [--physical-memory-bytes <bytes>]
 
 Scans local filesystem paths for benchmarkable iOS runtime artifacts without
 launching Simulator, devicectl, or the app. Results are advisory preflight
@@ -14,11 +14,14 @@ evidence only; generation proof still requires a guarded smoke pass.
 
 Use --installed-root with either a RossAlpha support root or its model-packs
 directory to inspect manifest-backed installed packs before a device smoke.
+Use --physical-memory-bytes to apply advisory installed MTP memory-fit checks
+that mirror the app's constrained E4B draft activation policy.
 EOF
 }
 
 search_roots=()
 installed_roots=()
+physical_memory_bytes=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --search-root)
@@ -27,6 +30,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --installed-root)
       installed_roots+=("${2:-}")
+      shift 2
+      ;;
+    --physical-memory-bytes)
+      physical_memory_bytes="${2:-}"
       shift 2
       ;;
     -h|--help)
@@ -40,6 +47,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$physical_memory_bytes" && ( "$physical_memory_bytes" == *[!0-9]* || "$physical_memory_bytes" -le 0 ) ]]; then
+  echo "Physical memory bytes must be a positive integer." >&2
+  exit 2
+fi
 
 if [[ "${#search_roots[@]}" -eq 0 ]]; then
   search_roots=(
@@ -234,7 +246,7 @@ for installed_root in "${installed_roots[@]}"; do
     continue
   }
 
-  python3 - "$installed_root" <<'PY'
+  python3 - "$installed_root" "$physical_memory_bytes" <<'PY'
 import json
 import hashlib
 import pathlib
@@ -242,8 +254,11 @@ import shlex
 import sys
 
 raw_root = pathlib.Path(sys.argv[1]).expanduser()
+physical_memory_bytes = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else None
 model_packs_root = raw_root if raw_root.name == "model-packs" else raw_root / "model-packs"
 support_root = model_packs_root.parent
+constrained_e4b_memory_ceiling = 8_500_000_000
+constrained_e4b_draft_artifact_budget_ratio = 0.72
 
 def q(value: str) -> str:
     return shlex.quote(value)
@@ -268,6 +283,62 @@ def file_size(path: pathlib.Path) -> int:
         return path.stat().st_size
     except OSError:
         return 0
+
+def manifest_size(value: object) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+def artifact_size_bytes(relative_path: str, artifact_kind: str, declared_bytes: object) -> int | None:
+    if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
+        return manifest_size(declared_bytes)
+    candidate = support_root / relative_path
+    size = file_size(candidate)
+    return size if size > 0 else manifest_size(declared_bytes)
+
+def archive_profile_hint(*values: object) -> str:
+    text = " ".join(str(value or "") for value in values).lower()
+    if "26b-a4b" in text:
+        return "gemma26bA4b"
+    if "12b" in text:
+        return "gemma12b"
+    if "e4b" in text:
+        return "e4b"
+    if "e2b" in text:
+        return "flash"
+    return "unknown"
+
+def mtp_memory_policy(
+    runtime: str,
+    primary_relative_path: str,
+    primary_file_name: object,
+    primary_bytes: object,
+    draft_relative_path: str,
+    draft_file_name: object,
+    draft_bytes: object,
+) -> tuple[bool, str, dict[str, object]]:
+    if runtime != "gemma_local_runtime" or physical_memory_bytes is None:
+        return True, "manifest_draft_memory_policy_not_checked", {}
+    if physical_memory_bytes >= constrained_e4b_memory_ceiling:
+        return True, "manifest_draft_memory_policy_not_constrained", {"physical_memory": physical_memory_bytes}
+    if archive_profile_hint(primary_relative_path, primary_file_name) != "e4b":
+        return True, "manifest_draft_memory_policy_non_e4b", {"physical_memory": physical_memory_bytes}
+
+    main_bytes = artifact_size_bytes(primary_relative_path, "local_model_artifact", primary_bytes)
+    candidate_draft_bytes = artifact_size_bytes(draft_relative_path, "local_model_artifact", draft_bytes)
+    if main_bytes is None or candidate_draft_bytes is None:
+        return True, "manifest_draft_memory_policy_unknown_sizes", {"physical_memory": physical_memory_bytes}
+    max_combined_bytes = int(physical_memory_bytes * constrained_e4b_draft_artifact_budget_ratio)
+    allowed = main_bytes + candidate_draft_bytes <= max_combined_bytes
+    reason = "manifest_draft_memory_policy_reachable" if allowed else "manifest_draft_memory_policy_blocked"
+    return allowed, reason, {
+        "physical_memory": physical_memory_bytes,
+        "main_bytes": main_bytes,
+        "draft_bytes": candidate_draft_bytes,
+        "max_combined_bytes": max_combined_bytes,
+    }
 
 def normalized_sha256(value: object) -> str:
     text = str(value or "").strip().lower()
@@ -468,9 +539,20 @@ for manifest_path in manifest_paths:
     draft_exists = artifact_exists(draft_relative_path, runtime, draft_kind)
     draft_usable = draft_exists and artifact_looks_usable(draft_relative_path, runtime, draft_kind)
     draft_checksum_status = artifact_checksum_status(draft_relative_path, draft_kind, draft.get("checksumSha256"))
-    draft_status = "present" if draft_ok and draft_usable and draft_checksum_status != "mismatch" else "missing"
+    memory_ok, memory_reason, memory_fields = mtp_memory_policy(
+        runtime,
+        relative_path,
+        payload.get("fileName"),
+        bytes_value,
+        draft_relative_path,
+        draft.get("fileName"),
+        draft.get("bytes"),
+    )
+    draft_status = "present" if draft_ok and draft_usable and draft_checksum_status != "mismatch" and memory_ok else "missing"
     draft_final_reason = draft_reason if not draft_ok else (
         "manifest_draft_checksum_mismatch" if draft_usable and draft_checksum_status == "mismatch"
+        else
+        memory_reason if draft_usable and not memory_ok
         else
         "manifest_draft_reachable" if draft_usable
         else "manifest_draft_unusable_artifact" if draft_exists
@@ -488,6 +570,7 @@ for manifest_path in manifest_paths:
         bytes=draft.get("bytes"),
         checksum_status=draft_checksum_status,
         draft_tokens=draft.get("draftTokens"),
+        **memory_fields,
     )
 PY
 done

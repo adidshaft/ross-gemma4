@@ -37,6 +37,11 @@ run_expect_exit_2 \
   "Stage timeout must be a positive integer" \
   "$PLAN" --device TEST_DEVICE --stage-timeout 0
 
+run_expect_exit_2 \
+  "nonnumeric morning physical memory" \
+  "Physical memory bytes must be a positive integer" \
+  "$PLAN" --device TEST_DEVICE --physical-memory-bytes nope
+
 "$PLAN" --device TEST_DEVICE > /tmp/ross-morning-plan.out
 grep -q "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier." /tmp/ross-morning-plan.out
 grep -q "MTP low-token proof" /tmp/ross-morning-plan.out
@@ -207,6 +212,52 @@ PY
 grep -q "SKIP reason=manifest_primary_unusable_artifact" /tmp/ross-morning-plan.out
 if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
   echo "Expected broken installed GGUF primary to suppress MTP proof command even with reachable draft" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
+memory_blocked_support_root="$tmpdir/RossAlphaMemoryBlockedMTP"
+memory_blocked_packs_root="$memory_blocked_support_root/model-packs"
+mkdir -p "$memory_blocked_packs_root/quickStart"
+printf 'GGUF' > "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+truncate -s 5130000000 "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
+truncate -s 79000000 "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
+python3 - "$memory_blocked_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "quickStart" / "memory-blocked.manifest.json").write_text(json.dumps({
+    "packId": "quick-e4b-memory-blocked",
+    "tier": "quick_start",
+    "fileName": "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    "relativePath": "model-packs/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    "checksumSha256": "abc",
+    "bytes": 5_130_000_000,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "mtp-gemma-4-E4B-it.gguf",
+        "relativePath": "model-packs/quickStart/mtp-gemma-4-E4B-it.gguf",
+        "checksumSha256": "def",
+        "bytes": 79_000_000,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$memory_blocked_support_root" --tier quickStart --physical-memory-bytes 7200000000 > /tmp/ross-morning-plan.out
+grep -q "Inventory MTP memory gate: physical_memory_bytes=7200000000" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=manifest_draft_memory_policy_blocked" /tmp/ross-morning-plan.out
+if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
+  echo "Expected memory-blocked E4B MTP pair to suppress MTP proof command" >&2
   cat /tmp/ross-morning-plan.out >&2
   exit 1
 fi
