@@ -21684,6 +21684,33 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape() throws {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("not-a-coreml-adapter-\(UUID().uuidString).txt")
+        try Data("not a CoreAI adapter".utf8).write(to: adapterURL)
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "coreml_model"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertNil(health?.modelPathLabel)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
+    }
+
     func testRuntimeHealthMarksGGUFConfiguredAsCoreAIAdapterUnavailable() throws {
         let adapterURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("foreign-foundation-adapter-\(UUID().uuidString).gguf")

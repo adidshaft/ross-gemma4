@@ -3302,6 +3302,32 @@ enum AlphaLocalModelRuntime {
         )
     }
 
+    private static func coreAIAdapterPathMatchesKind(
+        artifactKind rawArtifactKind: String?,
+        modelPath rawModelPath: String?
+    ) -> Bool {
+        guard let rawArtifactKind,
+              let rawModelPath,
+              !rawModelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return true
+        }
+        let artifactKind = rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let modelPath = rawModelPath.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch artifactKind {
+        case "coreml_model":
+            return modelPath.hasSuffix(".mlmodel") ||
+                modelPath.hasSuffix(".mlmodelc") ||
+                modelPath.hasSuffix(".mlpackage")
+        case "foundation_adapter", "coreai_adapter":
+            return modelPath.hasSuffix(".bundle") ||
+                modelPath.hasSuffix(".mlmodel") ||
+                modelPath.hasSuffix(".mlmodelc") ||
+                modelPath.hasSuffix(".mlpackage")
+        default:
+            return true
+        }
+    }
+
     private static func desiredRuntimeMode(
         activePack: AlphaInstalledModelPack?,
         runtimeEnvironment: AlphaLocalRuntimeEnvironment
@@ -3425,6 +3451,21 @@ enum AlphaLocalModelRuntime {
                     plannedTasks: alphaFoundationModelPlannedTasks,
                     errorCategory: "missing_coreai_artifact",
                     explicitOptInEnabled: debug.enableRealInference
+                )
+            }
+            if !usesSystemModel,
+               !coreAIAdapterPathMatchesKind(
+                artifactKind: compatibilityArtifactKind,
+                modelPath: modelPath
+               ) {
+                return incompatibleArtifactProvider(
+                    runtimeMode: .appleFoundationModels,
+                    tier: tier,
+                    checksumVerified: checksumVerified,
+                    modelPathLabel: nil,
+                    errorCategory: "missing_coreai_artifact",
+                    explicitOptInEnabled: debug.enableRealInference || productionRuntimeAllowed,
+                    draftModelPath: debug.draftModelPath
                 )
             }
             #if canImport(FoundationModels)

@@ -506,6 +506,21 @@ if runtime == "apple_foundation_models":
             file=sys.stderr,
         )
         sys.exit(1)
+    lower_relative_path = relative_path.lower()
+    if artifact_kind == "coreml_model" and not lower_relative_path.endswith((".mlmodel", ".mlmodelc", ".mlpackage")):
+        print(
+            "Selected CoreAI/CoreML manifest uses artifactKind=coreml_model with a non-CoreML path shape: "
+            f"artifactKind={artifact_kind} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if artifact_kind in {"foundation_adapter", "coreai_adapter"} and not lower_relative_path.endswith((".bundle", ".mlmodel", ".mlmodelc", ".mlpackage")):
+        print(
+            "Selected CoreAI/CoreML adapter manifest uses a non-adapter path shape: "
+            f"artifactKind={artifact_kind} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     if artifact_kind != "system_model" and relative_path.lower().endswith((".gguf", ".safetensors", ".bin")):
         print(
             "Selected CoreAI/CoreML adapter manifest points at a foreign model artifact: "

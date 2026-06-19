@@ -458,6 +458,20 @@ write_manifest '{
 run_expect_exit_1 "empty CoreAI adapter installed manifest" "empty artifact" "${base_command[@]}" --runtime coreml
 
 write_manifest '{
+  "packId": "txt-coreml",
+  "tier": "quick_start",
+  "fileName": "adapter.txt",
+  "relativePath": "model-packs/quick/adapter.txt",
+  "checksumSha256": "a",
+  "bytes": 128,
+  "artifactKind": "coreml_model",
+  "runtimeMode": "apple_foundation_models",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+run_expect_exit_1 "non-CoreML path shape installed manifest" "non-CoreML path shape" "${base_command[@]}" --runtime coreml
+
+write_manifest '{
   "packId": "foreign-coreml",
   "tier": "quick_start",
   "fileName": "adapter.gguf",
@@ -469,7 +483,7 @@ write_manifest '{
   "developmentOnly": false,
   "verifiedAt": "2026-06-19T00:00:00Z"
 }'
-run_expect_exit_1 "foreign CoreAI adapter installed manifest" "foreign model artifact" "${base_command[@]}" --runtime coreml
+run_expect_exit_1 "foreign CoreAI adapter installed manifest" "non-CoreML path shape" "${base_command[@]}" --runtime coreml
 
 write_manifest '{
   "packId": "quick-device-proof",

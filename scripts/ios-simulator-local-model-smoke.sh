@@ -327,8 +327,29 @@ gguf_mtp_draft_matches_primary() {
 
 coreai_adapter_looks_usable() {
   local path="$1"
+  local kind="${2:-}"
   local lower_path
   lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$kind" in
+    coreml_model)
+      case "$lower_path" in
+        *.mlmodel|*.mlmodelc|*.mlpackage)
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+      ;;
+    foundation_adapter|coreai_adapter)
+      case "$lower_path" in
+        *.bundle|*.mlmodel|*.mlmodelc|*.mlpackage)
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+      ;;
+  esac
   case "$lower_path" in
     *.gguf|*.safetensors|*.bin)
       return 1
@@ -415,8 +436,8 @@ case "$normalized_runtime" in
       echo "CoreAI/CoreML adapter path not found: $model_path" >&2
       exit 2
     fi
-    if [[ "$coreai_system_model_path" != "1" ]] && ! coreai_adapter_looks_usable "$model_path"; then
-      echo "CoreAI/CoreML adapter smoke requires a non-empty adapter artifact: $model_path" >&2
+    if [[ "$coreai_system_model_path" != "1" ]] && ! coreai_adapter_looks_usable "$model_path" "$artifact_kind"; then
+      echo "CoreAI/CoreML adapter smoke requires a non-empty adapter artifact with an adapter/package path shape: $model_path" >&2
       exit 2
     fi
     ;;

@@ -979,6 +979,7 @@ for coreai_runtime_guard in \
     "testFoundationProviderReportsSpecificGenerationFailure" \
     "testFoundationProviderReportsMissingAdapterArtifactBeforeGeneration" \
     "testFoundationProviderReportsEmptyAdapterArtifactsBeforeGeneration" \
+    "testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape" \
     "testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration" \
     "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration"; do
     if ! grep -q "$coreai_runtime_guard" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
@@ -989,8 +990,17 @@ done
 
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
-   ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
-    echo "❌ FAIL: simulator CoreAI adapter smoke does not reject empty adapter artifacts before launch."
+   ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "non-CoreML path shape passed as CoreML adapter" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator CoreAI adapter smoke does not reject empty or non-adapter artifacts before launch."
+    FAIL=1
+fi
+
+if ! grep -q "coreAIAdapterPathMatchesKind" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthRejectsCoreMLKindWithNonAdapterPathShape" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "non-CoreML path shape installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "non-CoreML path shape" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: CoreAI/CoreML adapter validation does not reject non-adapter path shapes."
     FAIL=1
 fi
 

@@ -186,6 +186,12 @@ run_expect_exit_2 \
   "MLX directory passed as CoreAI adapter" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$usable_mlx"
 
+txt_coreml_file="$tmpdir/not-a-coreml-adapter.txt"
+printf 'adapter' >"$txt_coreml_file"
+run_expect_exit_2 \
+  "non-CoreML path shape passed as CoreML adapter" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind coreml_model --model "$txt_coreml_file"
+
 coreml_file="$tmpdir/foundation-adapter.mlmodelc"
 mkdir -p "$coreml_file"
 printf 'adapter' >"$coreml_file/model.bin"
