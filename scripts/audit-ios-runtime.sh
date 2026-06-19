@@ -75,6 +75,11 @@ if ! grep -q 'key: "token_speed"' ios/Ross/AlphaFoundation/AlphaAskConversationS
     FAIL=1
 fi
 
+if ! grep -q 'key: "runtime_acceleration"' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
+    echo "❌ FAIL: answer details sheet does not expose runtime acceleration metrics."
+    FAIL=1
+fi
+
 if ! grep -q 'Label(rossLocalized("answer_details"), systemImage: "info.circle")' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
     echo "❌ FAIL: answer details metrics are not available from the hidden info/context-menu action."
     FAIL=1

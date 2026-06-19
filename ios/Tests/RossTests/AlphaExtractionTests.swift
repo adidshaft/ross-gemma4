@@ -21282,6 +21282,7 @@ final class AlphaExtractionTests: XCTestCase {
                 schemaValid: true,
                 warnings: [],
                 sourceRefs: [sourceRef],
+                accelerationMode: .standard,
                 inputTokenCount: 410,
                 outputTokenCount: 28,
                 outputTokensPerSecond: 19.4,
@@ -21292,6 +21293,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(completed.usesMeasuredTokenCounts)
         XCTAssertEqual(completed.estimatedProcessedTokens, 438)
+        XCTAssertEqual(completed.answerDetailAccelerationLabel, "Standard generation")
     }
     #endif
 
