@@ -633,6 +633,14 @@ if ! grep -q "manifest_draft_memory_policy_blocked" scripts/ios-runtime-artifact
     FAIL=1
 fi
 
+if ! grep -q -- "--physical-memory-bytes" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "constrained E4B draft memory budget" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "memory-blocked E4B MTP installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "installed-pack helper" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: direct installed-pack MTP helper can bypass constrained E4B memory preflight."
+    FAIL=1
+fi
+
 if ! grep -q "manifest_primary_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "manifest_draft_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "checksum_status=mismatch" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||

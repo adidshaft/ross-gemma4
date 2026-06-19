@@ -16,6 +16,8 @@ Options:
   --runtime <mode>        gguf | mlx | coreai | coreml | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
   --launch-timeout <sec>  Overall helper timeout while waiting for a smoke marker. Default: 300
+  --physical-memory-bytes <bytes>
+                          Optional device memory used for pre-launch MTP memory-fit gating.
   --smoke-profile <mode>  full | quick | mtp | mtp-quick | mtp_quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
                           has a usable draft companion.
@@ -42,6 +44,7 @@ selected_pack_id=""
 selected_runtime=""
 stage_timeout="45"
 launch_timeout="300"
+physical_memory_bytes=""
 smoke_profile="full"
 disable_draft="0"
 require_draft_acceleration="0"
@@ -76,6 +79,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --launch-timeout)
       launch_timeout="${2:-}"
+      shift 2
+      ;;
+    --physical-memory-bytes)
+      physical_memory_bytes="${2:-}"
       shift 2
       ;;
     --smoke-profile)
@@ -132,6 +139,11 @@ fi
 
 if [[ -z "$launch_timeout" || "$launch_timeout" == *[!0-9]* || "$launch_timeout" -le 0 ]]; then
   echo "Launch timeout must be a positive integer number of seconds." >&2
+  exit 2
+fi
+
+if [[ -n "$physical_memory_bytes" && ( "$physical_memory_bytes" == *[!0-9]* || "$physical_memory_bytes" -le 0 ) ]]; then
+  echo "Physical memory bytes must be a positive integer." >&2
   exit 2
 fi
 
@@ -608,6 +620,40 @@ if runtime == "gemma_local_runtime" and draft_bytes <= 1_000_000:
     )
     sys.exit(1)
 PY
+
+  if [[ -n "$physical_memory_bytes" && "$selected_runtime_raw" == "gemma_local_runtime" ]]; then
+    python3 - "$selected_relative_path" "$selected_bytes" "$selected_draft_relative_path" "$selected_draft_bytes" "$physical_memory_bytes" "$selected_pack_id" "$selected_tier_raw" <<'PY'
+import sys
+
+primary_path = (sys.argv[1] or "").strip()
+draft_path = (sys.argv[3] or "").strip()
+pack_id = (sys.argv[6] or "").strip()
+tier = (sys.argv[7] or "").strip()
+try:
+    primary_bytes = int(sys.argv[2])
+    draft_bytes = int(sys.argv[4])
+    physical_memory = int(sys.argv[5])
+except ValueError:
+    sys.exit(0)
+
+constrained_e4b_memory_ceiling = 8_500_000_000
+constrained_e4b_draft_artifact_budget_ratio = 0.72
+is_e4b = "e4b" in primary_path.lower()
+if not is_e4b or physical_memory >= constrained_e4b_memory_ceiling:
+    sys.exit(0)
+
+max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
+if primary_bytes + draft_bytes > max_combined_bytes:
+    print(
+        "Selected GGUF/MTP manifest exceeds the constrained E4B draft memory budget for device smoke: "
+        f"main_bytes={primary_bytes} draft_bytes={draft_bytes} "
+        f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
+        f"primary={primary_path} draft={draft_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+  fi
 fi
 
 device_model_path="$container_root/Library/Application Support/RossAlpha/$selected_relative_path"

@@ -224,6 +224,11 @@ run_expect_exit_2 \
   "${base_command[@]}" --runtime gguf --launch-timeout 0
 
 run_expect_exit_2 \
+  "nonnumeric installed-pack physical memory" \
+  "Physical memory bytes must be a positive integer" \
+  "${base_command[@]}" --runtime gguf --physical-memory-bytes nope
+
+run_expect_exit_2 \
   "installed-pack draft proof without MTP profile" \
   "Draft acceleration proof requires --smoke-profile mtp_quick" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile quick
@@ -309,6 +314,38 @@ import sys
 pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
 PY
 run_expect_exit_1 "missing installed draft artifact" "Installed draft artifact file is missing" "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick
+
+write_manifest '{
+  "packId": "memory-blocked-e4b-mtp",
+  "tier": "quick_start",
+  "fileName": "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+  "relativePath": "model-packs/quick/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+  "checksumSha256": "a",
+  "bytes": 5130000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "mtp-gemma-4-E4B-it.gguf",
+    "relativePath": "model-packs/quick/mtp-gemma-4-E4B-it.gguf",
+    "checksumSha256": "b",
+    "bytes": 79000000,
+    "artifactKind": "local_model_artifact",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+python3 - "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/gemma-4-E4B-it-UD-Q4_K_XL.gguf" \
+  "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mtp-gemma-4-E4B-it.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
+PY
+run_expect_exit_1 \
+  "memory-blocked E4B MTP installed manifest" \
+  "exceeds the constrained E4B draft memory budget" \
+  "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
 
 write_manifest '{
   "packId": "tiny-mlx",
