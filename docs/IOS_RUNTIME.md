@@ -56,6 +56,20 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
   - stage token counts: source `207 in / 118 out`, general `190 in / 192 out`, Bengali `328 in / 121 out`, Hindi `278 in / 134 out`, Tamil `382 in / 96 out`, Telugu `433 in / 96 out`
   - stage first-token latency: source `12586ms`, general `13763ms`, Bengali `21958ms`, Hindi `18761ms`, Tamil `27691ms`, Telugu `32447ms`
   - all stages reported `*_native_model=true`, source refs were retained for every source-grounded stage, and all stage metrics were emitted in `ROSS_SMOKE_BENCHMARK_SUMMARY`
+- A June 19, 2026 current-build physical iPhone 15 Pro GGUF full-profile smoke passed after installing the Debug build on `Aman's iPhone` (`iPhone16,1`) and seeding `gemma-2-2b-it-Q4_K_M.gguf` into `RossAlpha/model-packs/quickStart`. This is physical-device GGUF baseline evidence and storage-path proof for a seeded artifact, not app-download proof and not MLX/CoreAI/MTP proof:
+  - runtime identity: `provider=AlphaLlamaCppProvider`, `requested_runtime=gemma_local_runtime`, `actual_runtime=gemma_local_runtime`, `pack_runtime=gemma_local_runtime`, `model_format=gguf`, `artifact_path_type=file`, `acceleration=standard`, `draft_status=no_draft_configured`, `context_tokens=10240`, `gpu_offload=n_gpu_layers:32,offload_kqv:true,op_offload:true`, `fallback=none`, `available=true`
+  - matrix: English source-grounded QA, Bengali/Hindi/Tamil/Telugu source-grounded QA, and an English no-document open query
+  - elapsed: `19.95s`
+  - stage speeds: source `14.63 tok/s`, general `15.00 tok/s`, Bengali `14.03 tok/s`, Hindi `14.29 tok/s`, Tamil `10.26 tok/s`, Telugu `10.00 tok/s`
+  - stage token counts: source `207 in / 105 out`, general `190 in / 190 out`, Bengali `328 in / 192 out`, Hindi `278 in / 192 out`, Tamil `382 in / 54 out`, Telugu `433 in / 60 out`
+  - stage first-token latency: source `817ms`, general `1156ms`, Bengali `2091ms`, Hindi `1785ms`, Tamil `2325ms`, Telugu `2699ms`
+  - memory markers: `resident_mb=2720 phys_footprint_mb=1112` at provider-ready and approximately `2763/1151` by the final Telugu stage
+  - installed-pack listing after the run found seeded `quickStart` and `caseAssociate` GGUF proof packs plus a manifest-backed `quick_start` `gemma-4-e4b-q4` pack with `draft=mtp-gemma-4-E4B-it.gguf`
+- A June 19, 2026 guarded physical iPhone 15 Pro MTP `mtp_quick` attempt against installed pack `gemma-4-e4b-q4` failed before generation and must not be counted as MTP proof:
+  - primary artifact: `gemma-4-E4B-it-UD-Q4_K_XL.gguf`, manifest size `5.13 GB`, runtime `gemma_local_runtime`
+  - draft artifact: `mtp-gemma-4-E4B-it.gguf`
+  - failure: primary GGUF load reported `mmap failed: Cannot allocate memory`; identity stayed baseline GGUF with `acceleration=standard`, `draft_status=validator_failed`, `draft_error_detail=validator_error=couldNotInitializeContext`
+  - guardrail: helper exited non-zero with `error=draft_acceleration_required`, so no MTP benchmark speed or draft token count is recorded from this device
 - The smoke harness now reports native-model markers such as `bengali_native_model` and `hindi_native_model` so QA can distinguish direct multilingual model output from Ross's source-preserving fallback.
 
 ## Still Not Proven
