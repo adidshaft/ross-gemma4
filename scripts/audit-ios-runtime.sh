@@ -816,6 +816,9 @@ if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inven
    ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_gguf" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair_after_download" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PHYSICAL_MEMORY_BYTES" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "physical_memory_bytes=7200000000" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "propagates.*--physical-memory-bytes" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "wrong-tier 12B draft" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "download {shlex.quote(repo)} --local-dir" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "downloader_status" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||

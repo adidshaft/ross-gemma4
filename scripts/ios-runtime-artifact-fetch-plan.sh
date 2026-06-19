@@ -13,6 +13,8 @@ Options:
   --tier <tier>          Runtime tier to plan. Default: quickStart
   --target-root <path>   Local model artifact root for download commands. Default: ~/model-artifacts
   --search-root <path>   Additional local artifact root to inspect before printing downloads.
+  --physical-memory-bytes <bytes>
+                         Optional target memory used for MTP preflight memory-fit gating.
 
 Dry-run only. Prints artifact acquisition and simulator preflight commands for
 GGUF/MTP, MLX, and CoreAI readiness without launching Simulator, devicectl,
@@ -23,6 +25,7 @@ EOF
 tier="quickStart"
 target_root="$HOME/model-artifacts"
 search_roots=()
+physical_memory_bytes=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -36,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --search-root)
       search_roots+=("${2:-}")
+      shift 2
+      ;;
+    --physical-memory-bytes)
+      physical_memory_bytes="${2:-}"
       shift 2
       ;;
     -h|--help)
@@ -64,6 +71,11 @@ if [[ -z "$target_root" ]]; then
   exit 2
 fi
 
+if [[ -n "$physical_memory_bytes" && ( "$physical_memory_bytes" == *[!0-9]* || "$physical_memory_bytes" -le 0 ) ]]; then
+  echo "Physical memory bytes must be a positive integer." >&2
+  exit 2
+fi
+
 quote_args() {
   local arg
   for arg in "$@"; do
@@ -73,6 +85,9 @@ quote_args() {
 }
 
 inventory_args=("$INVENTORY")
+if [[ -n "$physical_memory_bytes" ]]; then
+  inventory_args+=(--physical-memory-bytes "$physical_memory_bytes")
+fi
 if [[ "${#search_roots[@]}" -gt 0 ]]; then
   for root in "${search_roots[@]}"; do
     inventory_args+=(--search-root "$root")
@@ -107,6 +122,7 @@ ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT="$inventory_output" \
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS="$downloader_status" \
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND="$downloader_command" \
 ROSS_RUNTIME_ARTIFACT_FETCH_VENV_PYTHON="$venv_python" \
+ROSS_RUNTIME_ARTIFACT_FETCH_PHYSICAL_MEMORY_BYTES="$physical_memory_bytes" \
 python3 - "$tier" "$target_root" "$ROOT_DIR" <<'PY'
 import os
 import pathlib
@@ -120,6 +136,7 @@ raw_inventory = os.environ.get("ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT", "").spl
 downloader_status = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS", "missing")
 downloader_command = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND", "")
 venv_python = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_VENV_PYTHON", "")
+physical_memory_bytes = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_PHYSICAL_MEMORY_BYTES", "").strip()
 
 tier_aliases = {
     "quickStart": {"quickStart", "quick_start"},
@@ -162,8 +179,12 @@ def emit(lane: str, status: str, action: str, **fields: object) -> None:
 
 print(
     f"ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier={q(tier)} "
-    f"target_root={q(target_root)} downloader_status={q(downloader_status)}"
+    f"target_root={q(target_root)} downloader_status={q(downloader_status)} "
+    f"physical_memory_bytes={q(physical_memory_bytes or 'nil')}"
 )
+
+def maybe_physical_memory_args() -> list[str]:
+    return ["--physical-memory-bytes", physical_memory_bytes] if physical_memory_bytes else []
 
 if downloader_status == "missing":
     emit(
@@ -217,6 +238,7 @@ if catalog_gguf:
                 "--runtime", "gguf",
                 "--model", primary_path,
                 "--smoke-profile", "quick_low_context",
+                *maybe_physical_memory_args(),
                 "--preflight-only",
             ),
         )
@@ -242,6 +264,7 @@ if catalog_gguf:
                 "--runtime", "gguf",
                 "--model", expected_primary_path,
                 "--smoke-profile", "quick_low_context",
+                *maybe_physical_memory_args(),
                 "--preflight-only",
             ),
         )
@@ -271,6 +294,7 @@ if catalog_gguf:
                     "--draft-tokens", 2,
                     "--require-draft-acceleration",
                     "--smoke-profile", "mtp_quick",
+                    *maybe_physical_memory_args(),
                     "--preflight-only",
                 ) if present_gguf else None,
             )
@@ -299,6 +323,7 @@ if catalog_gguf:
                     "--draft-tokens", 2,
                     "--require-draft-acceleration",
                     "--smoke-profile", "mtp_quick",
+                    *maybe_physical_memory_args(),
                     "--preflight-only",
                 ),
             )

@@ -18,9 +18,20 @@ if [[ "$bad_tier_rc" -ne 2 ]]; then
 fi
 grep -q "Unsupported tier: typo" /tmp/ross-runtime-fetch-plan.out
 
+set +e
+"$FETCH_PLAN" --tier quickStart --physical-memory-bytes nope > /tmp/ross-runtime-fetch-plan.out 2>&1
+bad_memory_rc=$?
+set -e
+if [[ "$bad_memory_rc" -ne 2 ]]; then
+  echo "Expected invalid physical memory to exit 2" >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2 || true
+  exit 1
+fi
+grep -q "Physical memory bytes must be a positive integer" /tmp/ross-runtime-fetch-plan.out
+
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=missing \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/empty" > /tmp/ross-runtime-fetch-plan.out
-grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier=quickStart .*downloader_status=missing" /tmp/ross-runtime-fetch-plan.out
+grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier=quickStart .*downloader_status=missing .*physical_memory_bytes=nil" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=downloader status=missing action=install .*command='python3 -m venv $tmpdir/downloads/.hf-venv && $tmpdir/downloads/.hf-venv/bin/python -m pip install --upgrade pip huggingface_hub'" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=gguf status=missing action=download .*repo=unsloth/gemma-4-E4B-it-GGUF .*target_file=$tmpdir/downloads/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*checksum=30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=gguf status=missing action=preflight_after_download .*--runtime gguf .*--model $tmpdir/downloads/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*--smoke-profile quick_low_context .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
@@ -78,9 +89,11 @@ for raw_path in sys.argv[1:]:
     pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 1000000))
 PY
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
-  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$quick_gguf_root" > /tmp/ross-runtime-fetch-plan.out
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$quick_gguf_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-fetch-plan.out
+grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier=quickStart .*physical_memory_bytes=7200000000" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=gguf status=present action=preflight .*path=$quick_gguf_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*--smoke-profile quick_low_context .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
-grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$quick_gguf_root/mtp-gemma-4-E4B-it.gguf .*--draft-tokens 2 .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=present action=preflight .*--physical-memory-bytes 7200000000 .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$quick_gguf_root/mtp-gemma-4-E4B-it.gguf .*--draft-tokens 2 .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--physical-memory-bytes 7200000000 .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 
 mlx_draft_dir="$tmpdir/draft-only/gemma-4-E4B-it-qat-assistant-6bit"
 mkdir -p "$mlx_draft_dir"
