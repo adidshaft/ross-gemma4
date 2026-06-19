@@ -198,6 +198,15 @@ if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotEx
     FAIL=1
 fi
 
+if ! grep -q "timeoutOutput(" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "providerHealth.accelerationMode" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "stageDoneLine(stage: stage, durationMs: durationMs, output: timeoutOutput)" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "smoke_stage_timeout_source" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke stage timeouts do not preserve benchmark/runtime metadata."
+    FAIL=1
+fi
+
 if ! grep -q 'key: "tokens_processed"' ios/Ross/AlphaFoundation/AlphaAskConversationScreen.swift 2>/dev/null; then
     echo "❌ FAIL: answer details sheet does not expose processed-token metrics."
     FAIL=1

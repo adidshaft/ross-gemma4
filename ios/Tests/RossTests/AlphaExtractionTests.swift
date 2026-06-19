@@ -18863,6 +18863,40 @@ final class AlphaExtractionTests: XCTestCase {
             RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
             "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_draft_attempted=nil general_draft_accepted=nil general_runtime_error_detail=nil"
         )
+        let timeoutHealth = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: "gemma-4.gguf",
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 8_000,
+            estimatedContextTokens: 1_024,
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            draftModelPathLabel: "mtp draft.gguf",
+            draftModelPathType: "file",
+            draftCandidateTokens: 2,
+            draftCandidatePathLabel: "mtp draft.gguf",
+            draftAccelerationStatus: "active",
+            draftAccelerationDetail: nil,
+            runtimeErrorDetail: nil,
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+        let timeoutOutput = RossLocalModelSmokeView.timeoutOutput(
+            stage: "source",
+            timeoutSeconds: 12,
+            providerHealth: timeoutHealth
+        )
+
+        XCTAssertEqual(timeoutOutput.errorCategory, "smoke_stage_timeout_source")
+        XCTAssertEqual(timeoutOutput.runtimeErrorDetail, "smoke_stage_timeout_source")
+        XCTAssertEqual(
+            RossLocalModelSmokeView.stageDoneLine(stage: "source", durationMs: 12_345, output: timeoutOutput),
+            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=12345 schema_valid=false error=smoke_stage_timeout_source runtime_error_detail=smoke_stage_timeout_source source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp_draft.gguf source_draft_attempted=nil source_draft_accepted=nil source_runtime_error_detail=smoke_stage_timeout_source"
+        )
         let fullMatrixFields = RossLocalModelSmokeView.benchmarkFields(
             stageOutputs: [
                 ("source", measuredOutput),

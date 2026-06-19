@@ -1161,6 +1161,25 @@ struct RossLocalModelSmokeView: View {
         return seconds
     }
 
+    nonisolated static func timeoutOutput(
+        stage: String,
+        timeoutSeconds: TimeInterval,
+        providerHealth: AlphaLocalRuntimeHealth
+    ) -> AlphaLocalModelOutput {
+        AlphaLocalModelOutput(
+            rawText: "",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: ["Smoke stage \(stage) timed out after \(Int(timeoutSeconds)) seconds."],
+            sourceRefs: [],
+            accelerationMode: providerHealth.accelerationMode,
+            accelerationDraftTokens: providerHealth.accelerationDraftTokens,
+            accelerationDraftModelLabel: providerHealth.draftModelPathLabel,
+            errorCategory: "smoke_stage_timeout_\(stage)",
+            runtimeErrorDetail: providerHealth.runtimeErrorDetail ?? providerHealth.draftAccelerationDetail ?? "smoke_stage_timeout_\(stage)"
+        )
+    }
+
     nonisolated static func runProviderStage(
         provider: any AlphaLocalModelProvider,
         input: AlphaLocalModelInput,
@@ -1169,13 +1188,10 @@ struct RossLocalModelSmokeView: View {
     ) async -> AlphaLocalModelOutput {
         let startedAt = Date.now
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_start"))
-        let timeoutOutput = AlphaLocalModelOutput(
-            rawText: "",
-            parsedJson: nil,
-            schemaValid: false,
-            warnings: ["Smoke stage \(stage) timed out after \(Int(timeoutSeconds)) seconds."],
-            sourceRefs: [],
-            errorCategory: "smoke_stage_timeout_\(stage)"
+        let timeoutOutput = timeoutOutput(
+            stage: stage,
+            timeoutSeconds: timeoutSeconds,
+            providerHealth: provider.runtimeHealth()
         )
         let providerTask = Task {
             await provider.run(input)
@@ -1186,16 +1202,19 @@ struct RossLocalModelSmokeView: View {
             Task {
                 let output = await providerTask.value
                 let durationMs = max(Int(Date.now.timeIntervalSince(startedAt) * 1_000), 0)
-                RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_done"))
-                RossLocalModelSmokeView.log(stageDoneLine(stage: stage, durationMs: durationMs, output: output))
-                _ = gate.resumeIfNeeded(continuation, output: output)
+                if gate.resumeIfNeeded(continuation, output: output) {
+                    RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_done"))
+                    RossLocalModelSmokeView.log(stageDoneLine(stage: stage, durationMs: durationMs, output: output))
+                }
             }
             Task {
                 let nanoseconds = UInt64(max(1, timeoutSeconds) * 1_000_000_000)
                 try? await Task.sleep(nanoseconds: nanoseconds)
                 if gate.resumeIfNeeded(continuation, output: timeoutOutput) {
                     providerTask.cancel()
+                    let durationMs = max(Int(Date.now.timeIntervalSince(startedAt) * 1_000), 0)
                     RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "\(stage)_timeout"))
+                    RossLocalModelSmokeView.log(stageDoneLine(stage: stage, durationMs: durationMs, output: timeoutOutput))
                     RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT stage=\(stage) timeout=\(Int(timeoutSeconds))s")
                 }
             }
