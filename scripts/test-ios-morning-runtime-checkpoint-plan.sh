@@ -7,6 +7,36 @@ PLAN="$ROOT_DIR/scripts/ios-morning-runtime-checkpoint-plan.sh"
 tmpdir="$(mktemp -d /tmp/ross-morning-plan.XXXXXX)"
 trap 'rm -rf "$tmpdir" /tmp/ross-morning-plan.out' EXIT
 
+run_expect_exit_2() {
+  local description="$1"
+  local expected="$2"
+  shift 2
+  set +e
+  "$@" > /tmp/ross-morning-plan.out 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 2 ]]; then
+    echo "FAIL: $description expected exit 2, got $rc" >&2
+    cat /tmp/ross-morning-plan.out >&2 || true
+    return 1
+  fi
+  if ! grep -q "$expected" /tmp/ross-morning-plan.out; then
+    echo "FAIL: $description did not emit expected message: $expected" >&2
+    cat /tmp/ross-morning-plan.out >&2 || true
+    return 1
+  fi
+}
+
+run_expect_exit_2 \
+  "nonnumeric morning stage timeout" \
+  "Stage timeout must be a positive integer" \
+  "$PLAN" --device TEST_DEVICE --stage-timeout nope
+
+run_expect_exit_2 \
+  "zero morning stage timeout" \
+  "Stage timeout must be a positive integer" \
+  "$PLAN" --device TEST_DEVICE --stage-timeout 0
+
 "$PLAN" --device TEST_DEVICE > /tmp/ross-morning-plan.out
 grep -q "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier." /tmp/ross-morning-plan.out
 grep -q "MTP low-token proof" /tmp/ross-morning-plan.out

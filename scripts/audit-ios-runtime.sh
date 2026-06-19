@@ -661,6 +661,13 @@ if ! grep -q "Inventory gate: not provided" scripts/ios-morning-runtime-checkpoi
     FAIL=1
 fi
 
+if ! grep -q "Stage timeout must be a positive integer" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "nonnumeric morning stage timeout" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "zero morning stage timeout" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan does not validate stage timeouts before printing device commands."
+    FAIL=1
+fi
+
 if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "without launching Simulator or touching the cabled iPhone" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
@@ -689,7 +696,8 @@ if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present"
 fi
 
 if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
-   ! grep -q "every benchmark summary stage must keep draft acceleration active" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
+   ! grep -q "every benchmark summary stage must keep draft acceleration active" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
+   ! grep -q "context_tokens=1024" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
     echo "❌ FAIL: model artifact status does not reflect paired MTP inventory and per-stage draft proof requirements."
     FAIL=1
 fi

@@ -63,6 +63,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$stage_timeout" || "$stage_timeout" == *[!0-9]* || "$stage_timeout" -le 0 ]]; then
+  echo "Stage timeout must be a positive integer number of seconds." >&2
+  exit 2
+fi
+
 quote_args() {
   local arg
   for arg in "$@"; do
