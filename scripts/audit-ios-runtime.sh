@@ -591,6 +591,11 @@ if ! grep -q "Product surfaces use the same distinction" docs/IOS_RUNTIME.md 2>/
     FAIL=1
 fi
 
+if ! grep -q "installed MLX/CoreAI lanes with the full varied document/query matrix" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: iOS runtime docs do not match the morning varied MLX/CoreAI benchmark plan."
+    FAIL=1
+fi
+
 for smoke_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
     if ! grep -q "MissingBenchmarkMatrixError as error" "$smoke_helper" 2>/dev/null; then
         echo "❌ FAIL: $smoke_helper does not preserve specific benchmark summary guard errors."
