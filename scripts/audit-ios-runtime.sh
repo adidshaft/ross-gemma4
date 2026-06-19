@@ -499,6 +499,13 @@ if ! grep -q "manifest_primary_unusable_artifact" scripts/ios-runtime-artifact-i
     FAIL=1
 fi
 
+if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "bad-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "file-backed installed CoreAI/CoreML adapter rows must have non-empty reachable adapter contents" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: installed CoreAI adapter inventory can treat empty adapter paths as ready."
+    FAIL=1
+fi
+
 if ! grep -q "installed_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory tests do not cover installed MTP draft manifests."
     FAIL=1

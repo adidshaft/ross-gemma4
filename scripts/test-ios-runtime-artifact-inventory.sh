@@ -159,6 +159,7 @@ grep -q "lane=installed_coreai status=present .*path_type=system" /tmp/ross-runt
 bad_support_root="$tmpdir/RossAlphaBad"
 bad_packs_root="$bad_support_root/model-packs"
 mkdir -p "$bad_packs_root/quickStart" "$bad_packs_root/mlx/bad-mlx"
+mkdir -p "$bad_packs_root/coreai/empty-adapter.mlmodelc"
 printf 'GGUF' > "$bad_packs_root/quickStart/main.gguf"
 printf 'GGUF' > "$bad_packs_root/quickStart/draft.gguf"
 printf '{}' > "$bad_packs_root/mlx/bad-mlx/config.json"
@@ -203,11 +204,26 @@ packs = support / "model-packs"
     "developmentOnly": False,
     "verifiedAt": "2026-06-19T00:00:00Z",
 }))
+
+(packs / "coreai" / "bad.manifest.json").parent.mkdir(parents=True, exist_ok=True)
+(packs / "coreai" / "bad.manifest.json").write_text(json.dumps({
+    "packId": "bad-coreai",
+    "tier": "quickStart",
+    "fileName": "empty-adapter.mlmodelc",
+    "relativePath": "model-packs/coreai/empty-adapter.mlmodelc",
+    "checksumSha256": "abc",
+    "bytes": 0,
+    "artifactKind": "coreml_model",
+    "runtimeMode": "apple_foundation_models",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
 PY
 
 "$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$bad_support_root" > /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mlx status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mlx" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_coreai status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-coreai" /tmp/ross-runtime-inventory.out
 
 echo "iOS runtime artifact inventory tests: PASS"

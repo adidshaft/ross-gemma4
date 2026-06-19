@@ -256,6 +256,13 @@ def mlx_directory_looks_usable(path: pathlib.Path) -> bool:
         return False
     return any(path.glob("**/*.safetensors")) or any(path.glob("**/*.safetensors.index.json"))
 
+def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
+    if path.is_file():
+        return file_size(path) > 0
+    if not path.is_dir():
+        return False
+    return any(child.is_file() and file_size(child) > 0 for child in path.rglob("*"))
+
 def artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) -> bool:
     if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
         return True
@@ -265,7 +272,7 @@ def artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) 
     if runtime == "mlx_swift_lm":
         return mlx_directory_looks_usable(candidate)
     if runtime == "apple_foundation_models":
-        return candidate.exists()
+        return coreai_adapter_looks_usable(candidate)
     return candidate.exists()
 
 def expected_path_type(relative_path: str, artifact_kind: str) -> str:
