@@ -73,10 +73,15 @@ case "$command" in
       exit 2
     fi
     json_output=""
+    search=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --json-output)
           json_output="${2:-}"
+          shift 2
+          ;;
+        --search)
+          search="${2:-}"
           shift 2
           ;;
         *)
@@ -88,15 +93,19 @@ case "$command" in
       echo "missing --json-output" >&2
       exit 2
     fi
-    python3 - "$FAKE_DEVICE_ROOT" "$json_output" <<'PY'
+    python3 - "$FAKE_DEVICE_ROOT" "$json_output" "$search" <<'PY'
 import json
 import pathlib
 import sys
 
 root = pathlib.Path(sys.argv[1]) / "Library/Application Support/RossAlpha"
+search = sys.argv[3]
 files = []
-for manifest in sorted(root.rglob("*.manifest.json")):
-    files.append({"relativePath": str(manifest.relative_to(root))})
+for path in sorted(root.rglob("*")):
+    if search and search not in path.name:
+        continue
+    if path.is_file() or path.is_dir():
+        files.append({"relativePath": str(path.relative_to(root))})
 pathlib.Path(sys.argv[2]).write_text(json.dumps({"result": {"files": files}}))
 PY
     ;;

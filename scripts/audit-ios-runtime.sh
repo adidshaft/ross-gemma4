@@ -586,6 +586,13 @@ if ! grep -q "Selected MLX manifest reports an implausibly small draft artifact"
     FAIL=1
 fi
 
+if ! grep -q "device_relative_path_exists" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   grep -q '! -e "\$device_model_path"' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   grep -q '! -e "\$device_draft_path"' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack smoke must verify artifact existence through devicectl file listings, not host-side checks of device paths."
+    FAIL=1
+fi
+
 if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1

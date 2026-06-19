@@ -578,13 +578,42 @@ if [[ -n "$selected_draft_relative_path" ]]; then
   device_draft_path="$container_root/Library/Application Support/RossAlpha/$selected_draft_relative_path"
 fi
 
-if [[ "$selected_artifact_kind" != "system_model" && ! -e "$device_model_path" ]]; then
+device_relative_path_exists() {
+  local relative_path="$1"
+  local search_name
+  search_name="$(basename "$relative_path")"
+  local existence_json="$tmpdir/existence-$(printf '%s' "$relative_path" | tr '/ ' '__').json"
+
+  xcrun devicectl device info files \
+    --device "$device_id" \
+    --domain-type appDataContainer \
+    --domain-identifier "$bundle_id" \
+    --subdirectory 'Library/Application Support/RossAlpha' \
+    --search "$search_name" \
+    --json-output "$existence_json" \
+    > /dev/null
+
+  python3 - "$existence_json" "$relative_path" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1]).read())
+target = sys.argv[2].strip().strip("/")
+for file_entry in payload.get("result", {}).get("files", []):
+    relative = (file_entry.get("relativePath") or "").strip().strip("/")
+    if relative == target or relative.startswith(target + "/"):
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+if [[ "$selected_artifact_kind" != "system_model" ]] && ! device_relative_path_exists "$selected_relative_path"; then
   echo "Installed artifact file is missing from the app container: $device_model_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
 fi
 
-if [[ -n "$device_draft_path" && ! -e "$device_draft_path" ]]; then
+if [[ -n "$device_draft_path" ]] && ! device_relative_path_exists "$selected_draft_relative_path"; then
   echo "Installed draft artifact file is missing from the app container: $device_draft_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
