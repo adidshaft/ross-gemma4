@@ -192,7 +192,7 @@ print_present_or_missing \
   "coreai_adapter_candidate" \
   "no_mlmodel_or_mlmodelc_adapter_found"
 
-printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke\n'
+printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=system-model reason=requires_os_runtime_availability_and_generation_smoke runtime=apple_foundation_models artifact_kind=system_model preflight_hint=simulator_system_model_preflight\n'
 
 python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel+PrivateAI.swift" <<'PY'
 import re
@@ -226,6 +226,10 @@ def enum_field(body: str, name: str) -> str | None:
 def int_field(body: str, name: str) -> str | None:
     match = re.search(rf"{re.escape(name)}:\s*([0-9_]+)", body)
     return match.group(1).replace("_", "") if match else None
+
+def hf_repo_id(url: str) -> str:
+    match = re.search(r"huggingface\.co/([^/]+/[^/?#]+)", url)
+    return match.group(1) if match else "unknown"
 
 for artifact_match in artifact_pattern.finditer(source):
     body = artifact_match.group("body")
@@ -273,12 +277,16 @@ for descriptor_match in download_descriptor_pattern.finditer(private_ai_source):
     checksum = field(body, "checksumSha256") or "nil"
     lane = "catalog_mlx_draft" if "assistant" in pack.lower() or "assistant" in file_name.lower() else "catalog_mlx"
     reason = "configured_catalog_mlx_draft" if lane == "catalog_mlx_draft" else "configured_catalog_mlx"
+    repo_id = hf_repo_id(url)
+    target_dir = f"~/model-artifacts/{file_name}"
     print(
         "ROSS_RUNTIME_ARTIFACT_INVENTORY "
         f"lane={lane} status=expected path={q(url)} "
         f"reason={reason} "
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
-        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)}"
+        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} "
+        f"repo={q(repo_id)} target_dir={q(target_dir)} acquisition_hint=hf_download_mlx_directory "
+        "preflight_hint=simulator_mlx_directory_preflight"
     )
 PY
 

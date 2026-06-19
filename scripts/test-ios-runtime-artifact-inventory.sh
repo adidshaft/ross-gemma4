@@ -23,7 +23,7 @@ grep -q "lane=gguf status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
-grep -q "lane=coreai_system status=unknown path=system-model" /tmp/ross-runtime-inventory.out
+grep -q "lane=coreai_system status=unknown path=system-model .*runtime=apple_foundation_models .*artifact_kind=system_model .*preflight_hint=simulator_system_model_preflight" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mtp_draft status=expected .*tier=quickStart .*file=mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mtp_draft status=expected .*tier=caseAssociate .*file=mtp-gemma-4-12b-it.gguf" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mtp_draft status=expected .*tier=caseAssociate .*checksum=145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b" /tmp/ross-runtime-inventory.out
@@ -32,6 +32,8 @@ grep -q "lane=catalog_mlx_draft status=expected .*tier=quickStart .*pack=gemma-4
 grep -q "lane=catalog_mlx status=expected .*tier=caseAssociate .*pack=gemma-4-12b-mlx .*file=gemma-4-12B-it-qat-4bit" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx_draft status=expected .*tier=caseAssociate .*pack=gemma-4-12b-mlx-assistant .*file=gemma-4-12B-it-qat-assistant-4bit" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx status=expected .*tier=quickStart .*checksum=2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx status=expected .*repo=mlx-community/gemma-4-E4B-it-qat-4bit .*target_dir='~/model-artifacts/gemma-4-E4B-it-qat-4bit' .*acquisition_hint=hf_download_mlx_directory .*preflight_hint=simulator_mlx_directory_preflight" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx_draft status=expected .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit .*target_dir='~/model-artifacts/gemma-4-E4B-it-qat-assistant-6bit' .*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
 python3 - "$tmpdir/main.gguf" "$tmpdir/gemma-draft.gguf" <<'PY'
 import pathlib
