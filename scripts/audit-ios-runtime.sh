@@ -450,6 +450,18 @@ if ! grep -q "testExplicitCoreAIAdapterPathOverridesActiveSystemSentinel" ios/Te
     FAIL=1
 fi
 
+for identity_runtime_guard in \
+    "testRuntimeIdentityLineUsesActualUnavailableCoreAIProviderName" \
+    "testRuntimeIdentityPreflightProviderNamesStayRuntimeSpecific" \
+    "testRuntimeIdentityLineMarksDeterministicProviderAsFallback" \
+    "testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind" \
+    "testExplicitCoreAIAdapterPathOverridesActiveSystemSentinel"; do
+    if ! grep -q "$identity_runtime_guard" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+        echo "❌ FAIL: standard SwiftPM runtime guardrail suite omits identity/routing proof: $identity_runtime_guard"
+        FAIL=1
+    fi
+done
+
 if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not validate requested runtime identity."
     FAIL=1
