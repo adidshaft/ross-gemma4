@@ -130,6 +130,16 @@ if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; t
     FAIL=1
 fi
 
+if ! grep -q '"fail_runtime"' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: failure summaries do not preserve the raw failure-marker runtime."
+    FAIL=1
+fi
+
+if ! grep -q '"matrix_shape_error"' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: failure summaries do not preserve benchmark matrix shape errors."
+    FAIL=1
+fi
+
 if ! grep -q "tamil_acceleration=standard" scripts/test-ross-smoke-summary.py 2>/dev/null; then
     echo "❌ FAIL: smoke failure summary tests do not cover stage acceleration evidence."
     FAIL=1

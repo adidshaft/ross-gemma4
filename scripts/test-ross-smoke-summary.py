@@ -469,10 +469,12 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
         self.assertIn("runtime=gemma_local_runtime", summary)
+        self.assertIn("fail_runtime=gemma_local_runtime", summary)
         self.assertIn("draft_status=no_draft_configured", summary)
         self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_profile=full", summary)
         self.assertIn("matrix_cases=nil", summary)
+        self.assertIn("matrix_shape_error=cases=0", summary)
         self.assertIn("tamil_grounded=false", summary)
         self.assertIn("tamil_token_speed=7.53", summary)
         self.assertIn("source_acceleration=draftModelSpeculative", summary)
@@ -490,11 +492,33 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
         self.assertIn("runtime=nil", summary)
+        self.assertIn("fail_runtime=mlx_swift_lm", summary)
         self.assertIn("requested_runtime=nil", summary)
         self.assertIn("draft_status=nil", summary)
         self.assertIn("profile=quick", summary)
         self.assertIn("stage=runtime_health", summary)
         self.assertIn("error=missing_runtime_identity", summary)
+
+    def test_failure_summary_preserves_matrix_shape_error(self):
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa,english_open_no_document_query "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=192"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=apple_foundation_models profile=quick "
+            "stage=provider_health error=unsupported_runtime_on_platform elapsed=1.7s"
+        )
+
+        summary = failure_summary_line(
+            {"actual_runtime": "apple_foundation_models", "requested_runtime": "apple_foundation_models"},
+            fail_fields,
+            matrix,
+        )
+
+        self.assertIn("runtime=apple_foundation_models", summary)
+        self.assertIn("fail_runtime=apple_foundation_models", summary)
+        self.assertIn("matrix_shape_error=cases=2", summary)
 
 
 if __name__ == "__main__":
