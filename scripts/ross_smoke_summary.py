@@ -124,6 +124,9 @@ def benchmark_matrix_shape_error(matrix_fields):
     stages = benchmark_matrix_stage_names(matrix_fields)
     if len(cases) != len(stages):
         return f"cases={len(cases)} stages={len(stages)}"
+    unknown_stages = [stage for stage in stages if stage not in STAGES]
+    if unknown_stages:
+        return "unknown_stages=" + ",".join(unknown_stages)
     if len(set(stages)) != len(stages):
         return "duplicate_stages=" + ",".join(stages)
     return None

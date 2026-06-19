@@ -272,6 +272,36 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 matrix,
             )
 
+    def test_benchmark_summary_rejects_unknown_matrix_stages(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa,english_open_no_document_query",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192,"
+            "summary:open_query:en:no_source_refs:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+            "summary_input_tokens": "90",
+            "summary_output_tokens": "20",
+            "summary_token_speed": "10.0",
+            "summary_first_token_ms": "850",
+            "summary_measured_tokens": "false",
+        }
+
+        self.assertEqual(benchmark_matrix_shape_error(matrix), "unknown_stages=summary")
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
+            benchmark_summary_line(
+                self.valid_identity(),
+                pass_fields,
+                matrix,
+            )
+
     def test_benchmark_summary_rejects_token_speed_without_output_tokens(self):
         matrix = {
             "profile": "quick",

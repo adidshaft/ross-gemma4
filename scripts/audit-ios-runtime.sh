@@ -135,6 +135,11 @@ if ! grep -q "benchmark_matrix_shape_mismatch" scripts/ross_smoke_summary.py 2>/
     FAIL=1
 fi
 
+if ! grep -q "unknown_stages" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not reject unknown matrix stages."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_runtime_unavailable" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not reject unavailable/fallback runtime identities."
     FAIL=1
