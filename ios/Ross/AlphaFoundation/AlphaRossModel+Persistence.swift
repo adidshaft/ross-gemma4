@@ -545,7 +545,7 @@ func alphaInstalledAssistantPackPassesRuntimeValidation(_ pack: AlphaInstalledMo
     case .mlxSwiftLm:
         guard pack.artifactKind == "mlx_directory" else { return false }
     case .llamaCppGguf:
-        guard pack.artifactKind == "local_model_artifact" else { return false }
+        guard ["local_model_artifact", "gguf", "gguf_model"].contains(pack.artifactKind) else { return false }
     case .appleFoundationModels:
         guard pack.artifactKind == "foundation_adapter" ||
             pack.artifactKind == "coreai_adapter" ||

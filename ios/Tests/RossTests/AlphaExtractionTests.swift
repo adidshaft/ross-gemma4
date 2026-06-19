@@ -6392,6 +6392,41 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testInstalledGGUFAliasArtifactKindPassesRuntimeValidation() async throws {
+        let previousValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer { AlphaLlamaCppProvider.modelLoadValidator = previousValidator }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-alias-main".utf8)
+        let packId = "gemma-4-e4b-gguf-alias"
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: packId,
+            artifactKind: "gguf",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: packId,
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "gguf",
+            developmentOnly: false
+        )
+
+        XCTAssertTrue(alphaInstalledAssistantPackPassesRuntimeValidation(activePack))
+    }
+
+    @MainActor
     func testRecoveredInstalledPackFromDiskRestoresGGUFCompanionDraftArtifact() async throws {
         let previousValidator = AlphaLlamaCppProvider.modelLoadValidator
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
