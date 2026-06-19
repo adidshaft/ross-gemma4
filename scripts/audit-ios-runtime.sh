@@ -718,6 +718,11 @@ if ! grep -q "testFoundationProviderReportsEmptyAdapterArtifactsBeforeGeneration
     FAIL=1
 fi
 
+if ! grep -q "testFoundationProviderReportsUnsupportedPlatformBeforeGeneration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: CoreAI unsupported-platform run path can still reach generation."
+    FAIL=1
+fi
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then

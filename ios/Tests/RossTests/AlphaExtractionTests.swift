@@ -23439,6 +23439,45 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderReportsUnsupportedPlatformBeforeGeneration() async {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            XCTFail("Unavailable CoreAI/CoreML runtime should fail before generation.")
+            return AlphaFoundationModelsGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "system-model",
+            modelPath: nil,
+            checksumVerified: true
+        )
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "unsupported_runtime_on_platform")
+        XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
     func testFoundationProviderReportsSpecificGenerationFailure() async {
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
         let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
