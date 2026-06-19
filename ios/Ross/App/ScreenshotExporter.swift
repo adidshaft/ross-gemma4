@@ -1053,6 +1053,8 @@ struct RossLocalModelSmokeView: View {
             ("draft_tokens", providerHealth.accelerationDraftTokens.map(String.init) ?? "nil"),
             ("draft_model", providerHealth.draftModelPathLabel ?? "nil"),
             ("draft_model_path_type", providerHealth.draftModelPathType ?? "nil"),
+            ("draft_candidate_tokens", providerHealth.draftCandidateTokens.map(String.init) ?? "nil"),
+            ("draft_candidate_model", providerHealth.draftCandidatePathLabel ?? "nil"),
             ("draft_status", providerHealth.draftAccelerationStatus ?? "nil"),
             ("draft_error_detail", providerHealth.draftAccelerationDetail ?? "nil"),
             ("runtime_error_detail", providerHealth.runtimeErrorDetail ?? "nil"),

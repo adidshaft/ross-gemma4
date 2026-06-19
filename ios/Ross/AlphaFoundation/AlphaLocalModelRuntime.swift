@@ -225,6 +225,8 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var accelerationDraftTokens: Int? = nil
     var draftModelPathLabel: String? = nil
     var draftModelPathType: String? = nil
+    var draftCandidateTokens: Int? = nil
+    var draftCandidatePathLabel: String? = nil
     var draftAccelerationStatus: String? = nil
     var draftAccelerationDetail: String? = nil
     var runtimeErrorDetail: String? = nil
@@ -2500,6 +2502,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             accelerationDraftTokens: nil,
             draftModelPathLabel: draftModelPathLabel(),
             draftModelPathType: draftModelPathType(),
+            draftCandidatePathLabel: draftModelPathLabel(),
             draftAccelerationStatus: unavailableDraftAccelerationStatus(),
             runtimeErrorDetail: errorCategory,
             lastErrorCategory: errorCategory,

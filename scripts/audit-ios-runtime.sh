@@ -96,6 +96,11 @@ if ! grep -q "draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/de
     echo "❌ FAIL: draft model path type missing from runtime identity marker."
     FAIL=1
 fi
+if ! grep -q "draft_candidate_model" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "draft_candidate_tokens" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: configured draft candidate metadata missing from runtime identity marker."
+    FAIL=1
+fi
 
 if ! grep -q "runtimeIdentityUsesSimulatorCPUOffload" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "testRuntimeIdentityLineReportsSimulatorGGUFCPUOffload" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
@@ -1475,7 +1480,8 @@ if ! grep -q "testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutCl
     FAIL=1
 fi
 
-if ! grep -q 'active draft tokens/model only when `draft_status=active`' docs/IOS_RUNTIME.md 2>/dev/null; then
+if ! grep -q 'draft_candidate_tokens' docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q 'active draft tokens/model only when `draft_status=active`' docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: iOS runtime docs do not document active-only draft token/model disclosure."
     FAIL=1
 fi

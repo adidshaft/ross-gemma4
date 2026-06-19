@@ -65,7 +65,7 @@ Existing compatibility:
 
 ## Runtime Proof Guardrails
 
-Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, active pack runtime, artifact kind/path type, checksum verification status, acceleration mode, draft model metadata, `draft_status`, safe `draft_error_detail`, safe `runtime_error_detail`, context size, GPU/offload summary, fallback status, and availability.
+Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, active pack runtime, artifact kind/path type, checksum verification status, acceleration mode, active draft model metadata, configured draft-candidate metadata, `draft_status`, safe `draft_error_detail`, safe `runtime_error_detail`, context size, GPU/offload summary, fallback status, and availability.
 
 Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity marker proves that exact lane:
 

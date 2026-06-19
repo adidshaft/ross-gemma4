@@ -69,6 +69,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "draft_tokens": "nil",
             "draft_model": "nil",
             "draft_model_path_type": "nil",
+            "draft_candidate_tokens": "nil",
+            "draft_candidate_model": "nil",
             "draft_status": "no_draft_configured",
             "fallback": "none",
             "available": "true",
@@ -124,6 +126,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             summary,
         )
         self.assertIn("draft_model_path_type=nil", summary)
+        self.assertIn("draft_candidate_tokens=nil", summary)
+        self.assertIn("draft_candidate_model=nil", summary)
         self.assertIn("draft_error_detail=no_draft_configured", summary)
         self.assertIn("runtime_error_detail=nil", summary)
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
@@ -1156,7 +1160,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "pack_runtime=gemma_local_runtime "
             "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
-            "draft_model_path_type=file draft_status=active context_tokens=4096 "
+            "draft_model_path_type=file draft_candidate_tokens=2 draft_candidate_model=mtp.gguf "
+            "draft_status=active context_tokens=4096 "
             "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
         )
         matrix = parse_fields(
@@ -1250,7 +1255,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "pack_runtime=gemma_local_runtime "
             "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
-            "draft_model_path_type=file draft_status=active context_tokens=4096 "
+            "draft_model_path_type=file draft_candidate_tokens=2 draft_candidate_model=mtp.gguf "
+            "draft_status=active context_tokens=4096 "
             "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
         )
         matrix = parse_fields(
@@ -1274,6 +1280,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         summary = benchmark_summary_line(identity, pass_fields, matrix)
 
         self.assertIn("acceleration=draftModelSpeculative", summary)
+        self.assertIn("draft_candidate_model=mtp.gguf", summary)
         self.assertIn("source_acceleration=draftModelSpeculative", summary)
         self.assertIn("general_draft_model=mtp.gguf", summary)
 
