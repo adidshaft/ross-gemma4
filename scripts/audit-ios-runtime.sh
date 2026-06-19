@@ -453,6 +453,12 @@ if ! grep -q -- "--installed-root" scripts/ios-runtime-artifact-inventory.sh 2>/
     FAIL=1
 fi
 
+if ! grep -q "manifest_primary_unusable_artifact" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "manifest_draft_unusable_artifact" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack runtime inventory does not reject malformed reachable artifacts."
+    FAIL=1
+fi
+
 if ! grep -q "installed_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory tests do not cover installed MTP draft manifests."
     FAIL=1

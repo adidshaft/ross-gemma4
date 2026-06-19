@@ -156,4 +156,58 @@ grep -q "lane=installed_mlx status=present .*pack=mlx-pack" /tmp/ross-runtime-in
 grep -q "lane=installed_mlx_draft status=missing .*reason=manifest_draft_file_missing .*pack=mlx-pack" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=present .*path_type=system" /tmp/ross-runtime-inventory.out
 
+bad_support_root="$tmpdir/RossAlphaBad"
+bad_packs_root="$bad_support_root/model-packs"
+mkdir -p "$bad_packs_root/quickStart" "$bad_packs_root/mlx/bad-mlx"
+printf 'GGUF' > "$bad_packs_root/quickStart/main.gguf"
+printf 'GGUF' > "$bad_packs_root/quickStart/draft.gguf"
+printf '{}' > "$bad_packs_root/mlx/bad-mlx/config.json"
+python3 - "$bad_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "quickStart" / "bad.manifest.json").write_text(json.dumps({
+    "packId": "bad-mtp",
+    "tier": "quickStart",
+    "fileName": "main.gguf",
+    "relativePath": "model-packs/quickStart/main.gguf",
+    "checksumSha256": "abc",
+    "bytes": 4,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "draft.gguf",
+        "relativePath": "model-packs/quickStart/draft.gguf",
+        "checksumSha256": "def",
+        "bytes": 4,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
+(packs / "mlx" / "bad.manifest.json").write_text(json.dumps({
+    "packId": "bad-mlx",
+    "tier": "quickStart",
+    "fileName": "bad-mlx",
+    "relativePath": "model-packs/mlx/bad-mlx",
+    "checksumSha256": "abc",
+    "bytes": 10,
+    "artifactKind": "mlx_directory",
+    "runtimeMode": "mlx_swift_lm",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$bad_support_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mlx status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mlx" /tmp/ross-runtime-inventory.out
+
 echo "iOS runtime artifact inventory tests: PASS"

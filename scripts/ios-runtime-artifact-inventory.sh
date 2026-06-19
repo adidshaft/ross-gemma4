@@ -235,6 +235,39 @@ def artifact_exists(relative_path: str, runtime: str, artifact_kind: str) -> boo
     candidate = support_root / relative_path
     return candidate.exists()
 
+def file_size(path: pathlib.Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+def gguf_file_looks_usable(path: pathlib.Path) -> bool:
+    if not path.is_file() or file_size(path) <= 1_000_000:
+        return False
+    try:
+        return path.open("rb").read(4) == b"GGUF"
+    except OSError:
+        return False
+
+def mlx_directory_looks_usable(path: pathlib.Path) -> bool:
+    if not path.is_dir() or not (path / "config.json").is_file():
+        return False
+    if not any((path / name).is_file() for name in ("tokenizer.json", "tokenizer.model", "tokenizer_config.json")):
+        return False
+    return any(path.glob("**/*.safetensors")) or any(path.glob("**/*.safetensors.index.json"))
+
+def artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) -> bool:
+    if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
+        return True
+    candidate = support_root / relative_path
+    if runtime == "gemma_local_runtime":
+        return gguf_file_looks_usable(candidate)
+    if runtime == "mlx_swift_lm":
+        return mlx_directory_looks_usable(candidate)
+    if runtime == "apple_foundation_models":
+        return candidate.exists()
+    return candidate.exists()
+
 def expected_path_type(relative_path: str, artifact_kind: str) -> str:
     if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
         return "system"
@@ -312,8 +345,13 @@ for manifest_path in manifest_paths:
     lane = runtime_lane(runtime)
     primary_ok, primary_reason = compatible_primary(runtime, artifact_kind, relative_path)
     primary_exists = artifact_exists(relative_path, runtime, artifact_kind)
-    status = "present" if primary_ok and primary_exists else "missing"
-    reason = primary_reason if not primary_ok else ("manifest_primary_reachable" if primary_exists else "manifest_primary_file_missing")
+    primary_usable = primary_exists and artifact_looks_usable(relative_path, runtime, artifact_kind)
+    status = "present" if primary_ok and primary_usable else "missing"
+    reason = primary_reason if not primary_ok else (
+        "manifest_primary_reachable" if primary_usable
+        else "manifest_primary_unusable_artifact" if primary_exists
+        else "manifest_primary_file_missing"
+    )
     emit(
         lane,
         status,
@@ -347,8 +385,13 @@ for manifest_path in manifest_paths:
     draft_kind = str(draft.get("artifactKind") or artifact_kind)
     draft_ok, draft_reason = compatible_draft(runtime, draft_kind, draft_relative_path)
     draft_exists = artifact_exists(draft_relative_path, runtime, draft_kind)
-    draft_status = "present" if draft_ok and draft_exists else "missing"
-    draft_final_reason = draft_reason if not draft_ok else ("manifest_draft_reachable" if draft_exists else "manifest_draft_file_missing")
+    draft_usable = draft_exists and artifact_looks_usable(draft_relative_path, runtime, draft_kind)
+    draft_status = "present" if draft_ok and draft_usable else "missing"
+    draft_final_reason = draft_reason if not draft_ok else (
+        "manifest_draft_reachable" if draft_usable
+        else "manifest_draft_unusable_artifact" if draft_exists
+        else "manifest_draft_file_missing"
+    )
     emit(
         "installed_mtp_draft" if runtime == "gemma_local_runtime" else "installed_mlx_draft",
         draft_status,
