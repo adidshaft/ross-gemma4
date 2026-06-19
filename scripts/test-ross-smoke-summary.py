@@ -1388,6 +1388,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIsNone(benchmark_stage_draft_error(identity, valid_pass_fields, matrix))
         invalid_cases = [
             ("source_draft_attempted=-1 source_draft_accepted=0", "source_draft_attempted=-1"),
+            ("source_draft_attempted=0 source_draft_accepted=0", "source_draft_attempted=0"),
+            ("source_draft_attempted=4 source_draft_accepted=0", "source_draft_accepted=0"),
             ("source_draft_attempted=four source_draft_accepted=0", "source_draft_attempted=four"),
             ("source_draft_attempted=4 source_draft_accepted=5", "source_draft_accepted=5>draft_attempted=4"),
             ("source_draft_attempted=4 source_draft_accepted=five", "source_draft_accepted=five"),

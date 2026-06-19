@@ -371,9 +371,13 @@ def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
             attempted = nonnegative_int_value(pass_fields, f"{stage}_draft_attempted")
             if attempted is None:
                 return f"{stage}_draft_attempted={summary_value(pass_fields, f'{stage}_draft_attempted')}"
+            if attempted <= 0:
+                return f"{stage}_draft_attempted={stage_draft_attempted}"
             accepted = nonnegative_int_value(pass_fields, f"{stage}_draft_accepted")
             if accepted is None:
                 return f"{stage}_draft_accepted={summary_value(pass_fields, f'{stage}_draft_accepted')}"
+            if accepted <= 0:
+                return f"{stage}_draft_accepted={stage_draft_accepted}"
             if accepted > attempted:
                 return f"{stage}_draft_accepted={stage_draft_accepted}>draft_attempted={stage_draft_attempted}"
         elif stage_draft_accepted not in (None, "", "nil"):
