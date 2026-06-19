@@ -778,6 +778,31 @@ if ! grep -q "draft_output_degenerate" docs/IOS_RUNTIME.md 2>/dev/null; then
     FAIL=1
 fi
 
+if ! grep -q 'activeDraftMetadata = draftValidation.status == "active"' ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "accelerationDraftTokens: activeDraftMetadata?.tokens" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "draftModelPathLabel: activeDraftMetadata?.label" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP health can expose draft token/model metadata without active draft validation."
+    FAIL=1
+fi
+
+if ! grep -q "draftModelPathLabel: nil" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: unavailable runtime health can expose inactive draft model labels."
+    FAIL=1
+fi
+
+if ! grep -q "testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutClaimingAcceleration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draft_status=validator_rejected" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draft_tokens=nil" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draft_model=nil" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: runtime identity tests do not lock inactive GGUF draft metadata suppression."
+    FAIL=1
+fi
+
+if ! grep -q 'active draft tokens/model only when `draft_status=active`' docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: iOS runtime docs do not document active-only draft token/model disclosure."
+    FAIL=1
+fi
+
 if ! grep -q "draft_status=draft_output_degenerate" scripts/test-ross-smoke-summary.py 2>/dev/null; then
     echo "❌ FAIL: shared smoke summary tests do not cover degenerate MTP draft status."
     FAIL=1
