@@ -109,8 +109,8 @@ for directory in (primary, draft):
 }))
 PY
 "$INVENTORY" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-inventory.out
-grep -q "lane=mlx status=missing .*path=.*gemma-4-E4B-it-qat-4bit .*reason=unsupported_model_archive" /tmp/ross-runtime-inventory.out
-grep -q "lane=mlx_draft status=missing .*path=.*gemma-4-E4B-it-qat-draft-vision .*reason=unsupported_model_archive" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx status=missing .*path=.*gemma-4-E4B-it-qat-4bit .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=missing .*path=.*gemma-4-E4B-it-qat-draft-vision .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
 
 printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 
@@ -462,8 +462,8 @@ grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_unusabl
 grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mlx status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mlx" /tmp/ross-runtime-inventory.out
-grep -q "lane=installed_mlx status=missing .*reason=unsupported_model_archive .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
-grep -q "lane=installed_mlx_draft status=missing .*reason=unsupported_model_archive .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mlx status=missing .*reason=unsupported_gemma4_multimodal .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mlx_draft status=missing .*reason=unsupported_gemma4_multimodal .*pack=unsupported-mlx" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-coreai" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_foreign_coreai_adapter .*pack=foreign-coreai" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_non_coreai_adapter_path .*pack=txt-coreai" /tmp/ross-runtime-inventory.out

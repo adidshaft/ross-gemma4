@@ -624,7 +624,7 @@ fi
 
 if ! grep -q "unsupportedGemma4Multimodal" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksUnsupportedGemma4MultimodalMLXArchiveUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
-   ! grep -q "multimodal/conditional-generation Gemma 4" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "unsupported_gemma4_multimodal" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: crash-prone Gemma 4 multimodal MLX archives are not fail-closed before generation."
     FAIL=1
 fi
@@ -818,6 +818,8 @@ fi
 
 if ! grep -q "mlx_path_is_draft_like" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=mlx_draft status=present" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "unsupported_gemma4_multimodal" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "unsupported_gemma4_multimodal" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "status=blocked action=waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "missing_compatible_mlx_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
@@ -961,7 +963,7 @@ if ! grep -q "inventory_tier_pattern" scripts/ios-morning-runtime-checkpoint-pla
 fi
 
 if ! grep -q "mlx_archive_unsupported_reason" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
-   ! grep -q "unsupported_model_archive" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "unsupported_gemma4_multimodal" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "runtime-compatible text-only archive config" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: MLX inventory does not mirror runtime archive-compatibility fail-closed checks."
     FAIL=1

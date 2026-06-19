@@ -144,11 +144,11 @@ is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b"
 if is_assistant and mode != "draft":
     print("unsupported_gemma4_assistant")
 elif is_multimodal:
-    print("unsupported_model_archive")
+    print("unsupported_gemma4_multimodal")
 elif is_moe:
-    print("unsupported_model_archive")
+    print("unsupported_gemma4_moe")
 elif is_dense_31b:
-    print("unsupported_model_archive")
+    print("unsupported_gemma4_dense_31b")
 PY
 }
 
@@ -569,8 +569,12 @@ def mlx_archive_unsupported_reason(path: pathlib.Path, mode: str = "primary") ->
 
     if is_assistant and mode != "draft":
         return "unsupported_gemma4_assistant"
-    if is_multimodal or is_moe or is_dense_31b:
-        return "unsupported_model_archive"
+    if is_multimodal:
+        return "unsupported_gemma4_multimodal"
+    if is_moe:
+        return "unsupported_gemma4_moe"
+    if is_dense_31b:
+        return "unsupported_gemma4_dense_31b"
     return ""
 
 def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
