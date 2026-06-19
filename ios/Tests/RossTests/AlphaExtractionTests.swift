@@ -7042,14 +7042,15 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
-        XCTAssertEqual(health?.accelerationDraftTokens, 6)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathType, "file")
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_rejected")
         XCTAssertEqual(health?.draftAccelerationDetail, "configured_acceleration=standard")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
-            "Standard generation (draft inactive: \(draftURL.lastPathComponent))"
+            "Standard generation"
         )
     }
 
@@ -7115,9 +7116,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertEqual(health?.draftModelPathType, "file")
-        XCTAssertEqual(health?.accelerationDraftTokens, 2)
+        XCTAssertNil(health?.accelerationDraftTokens)
         XCTAssertEqual(health?.draftAccelerationStatus, "draft_format_unsupported")
         XCTAssertEqual(health?.lastErrorCategory, "draft_format_unsupported")
     }
@@ -7187,8 +7188,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
-        XCTAssertEqual(health?.accelerationDraftTokens, 2)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathType, "file")
         XCTAssertEqual(health?.draftAccelerationStatus, "draft_format_unsupported")
         XCTAssertEqual(health?.runtimeErrorDetail, nil)
         XCTAssertEqual(health?.lastErrorCategory, "draft_format_unsupported")
@@ -7255,8 +7257,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.accelerationMode, .standard)
-        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
-        XCTAssertEqual(health?.accelerationDraftTokens, 6)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(health?.draftModelPathType, "file")
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_failed")
         XCTAssertEqual(health?.draftAccelerationDetail, "validator_error=couldNotInitializeContext")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_failed")
@@ -7569,8 +7572,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(healthAfterDegenerateOutput.accelerationMode, .standard)
         XCTAssertEqual(healthAfterDegenerateOutput.draftAccelerationStatus, "draft_output_degenerate")
         XCTAssertEqual(healthAfterDegenerateOutput.lastErrorCategory, "draft_output_degenerate")
-        XCTAssertEqual(healthAfterDegenerateOutput.draftModelPathLabel, draftURL.lastPathComponent)
-        XCTAssertEqual(healthAfterDegenerateOutput.accelerationDraftTokens, 6)
+        XCTAssertNil(healthAfterDegenerateOutput.draftModelPathLabel)
+        XCTAssertNil(healthAfterDegenerateOutput.accelerationDraftTokens)
+        XCTAssertEqual(healthAfterDegenerateOutput.draftModelPathType, "file")
 
         let followUpOutput = await provider.run(
             AlphaLocalModelInput(
@@ -8003,8 +8007,9 @@ final class AlphaExtractionTests: XCTestCase {
 
         let health = provider.runtimeHealth()
         XCTAssertEqual(health.accelerationMode, .standard)
-        XCTAssertEqual(health.accelerationDraftTokens, 4)
-        XCTAssertEqual(health.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertNil(health.accelerationDraftTokens)
+        XCTAssertNil(health.draftModelPathLabel)
+        XCTAssertEqual(health.draftModelPathType, "file")
         XCTAssertEqual(health.draftAccelerationStatus, "draft_token_policy_blocked")
         XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertNil(output.accelerationDraftTokens)

@@ -512,6 +512,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             availability.available && draftValidation.status == "active"
             ? .draftModelSpeculative
             : .standard
+        let activeDraftMetadata = draftValidation.status == "active" ? draftValidation.metadata : nil
         let draftErrorCategory = Self.draftAccelerationErrorCategory(
             for: draftValidation.status,
             runtimeAvailable: availability.available
@@ -526,8 +527,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: accelerationMode,
-            accelerationDraftTokens: draftValidation.metadata?.tokens,
-            draftModelPathLabel: draftValidation.metadata?.label,
+            accelerationDraftTokens: activeDraftMetadata?.tokens,
+            draftModelPathLabel: activeDraftMetadata?.label,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftValidation.status,
             draftAccelerationDetail: draftValidation.detail,
