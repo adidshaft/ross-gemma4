@@ -985,6 +985,13 @@ if ! grep -q "draft_context_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProvid
     FAIL=1
 fi
 
+if ! grep -q "draft_acceleration_inactive" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderFailsStrictDraftProofWhenContextRunsStandard" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draft_acceleration_inactive" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP required-draft smoke can still publish a standard-generation context as proof."
+    FAIL=1
+fi
+
 if ! grep -Fq 'draft_status=\(providerHealth.draftAccelerationStatus' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: app-side MTP failure marker does not report draft status."
     FAIL=1

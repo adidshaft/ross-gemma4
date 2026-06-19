@@ -766,6 +766,18 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 samplerSettings: taskInput.samplerSettings ?? .legalQA
             )
             let promptTokenCount = await context.promptTokenCount()
+            if Self.smokeRequiresDraftAcceleration(),
+               stagedDraftModelPath() != nil {
+                let initialAccelerationMode = await context.accelerationMode()
+                guard initialAccelerationMode == .draftModelSpeculative else {
+                    return draftAccelerationInactiveOutput(
+                        pack: pack,
+                        promptTokenCount: promptTokenCount,
+                        outputTokenCount: await context.generatedTokenCount(),
+                        activeAccelerationMode: initialAccelerationMode
+                    )
+                }
+            }
             
             var generatedResponse = ""
             var lastEmittedPartialText: String?
@@ -773,6 +785,18 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let generationLoopStartedAt = Date()
             while await !context.isDone() {
                 let tokenStr = await context.completionLoop()
+                if Self.smokeRequiresDraftAcceleration(),
+                   stagedDraftModelPath() != nil {
+                    let loopAccelerationMode = await context.accelerationMode()
+                    guard loopAccelerationMode == .draftModelSpeculative else {
+                        return draftAccelerationInactiveOutput(
+                            pack: pack,
+                            promptTokenCount: promptTokenCount,
+                            outputTokenCount: await context.generatedTokenCount(),
+                            activeAccelerationMode: loopAccelerationMode
+                        )
+                    }
+                }
                 generatedResponse += tokenStr
                 let generatedTokenCount = await context.generatedTokenCount()
                 if generatedTokenCount > 0, timeToFirstTokenMs == nil {
@@ -920,6 +944,34 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "draft_acceleration_required"
         }
         return contextCreationFailed ? "draft_context_failed" : "draft_generation_failed"
+    }
+
+    private func draftAccelerationInactiveOutput(
+        pack: AlphaLocalPromptPack,
+        promptTokenCount: Int,
+        outputTokenCount: Int,
+        activeAccelerationMode: AlphaLocalRuntimeAccelerationMode
+    ) -> AlphaLocalModelOutput {
+        AlphaLocalModelOutput(
+            rawText: "",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
+            sourceRefs: pack.includedSourceRefs,
+            packedSourceCount: pack.includedSourceRefs.count,
+            omittedSourceCount: pack.omittedSourceRefs.count,
+            omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+            executionPathLabel: activeAccelerationMode == .draftModelSpeculative
+                ? "Gemma GGUF with draft acceleration"
+                : "Gemma GGUF via llama.cpp",
+            accelerationMode: activeAccelerationMode,
+            accelerationDraftTokens: nil,
+            accelerationDraftModelLabel: nil,
+            inputChars: pack.inputChars,
+            inputTokenCount: promptTokenCount,
+            outputTokenCount: outputTokenCount,
+            errorCategory: "draft_acceleration_inactive"
+        )
     }
     
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
