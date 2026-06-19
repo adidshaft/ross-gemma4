@@ -21365,6 +21365,9 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "missing_mlx_artifact")
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
     }
 
     func testMLXRunReturnsInvalidArtifactCategoryBeforeGeneration() async throws {
@@ -21401,6 +21404,9 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
     }
 
     func testRuntimeHealthMarksEmptyMLXWeightsUnavailable() throws {

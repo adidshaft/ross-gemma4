@@ -1130,6 +1130,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: pack.includedSourceRefs.count,
                 omittedSourceCount: pack.omittedSourceRefs.count,
                 omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+                executionPathLabel: "MLX standard generation",
+                accelerationMode: .standard,
+                inputChars: pack.inputChars,
                 errorCategory: availability.errorCategory ?? "missing_mlx_artifact"
             )
         }
@@ -1144,6 +1147,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: pack.includedSourceRefs.count,
                 omittedSourceCount: pack.omittedSourceRefs.count,
                 omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+                executionPathLabel: "MLX standard generation",
+                accelerationMode: .standard,
+                inputChars: pack.inputChars,
                 errorCategory: "missing_mlx_artifact"
             )
         }
