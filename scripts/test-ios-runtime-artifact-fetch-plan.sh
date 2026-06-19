@@ -120,6 +120,31 @@ if grep -q "lane=mlx_draft status=missing action=download" /tmp/ross-runtime-fet
   exit 1
 fi
 
+unsupported_mlx_root="$tmpdir/unsupported-mlx"
+unsupported_mlx_primary="$unsupported_mlx_root/gemma-4-E4B-it-qat-4bit"
+unsupported_mlx_draft="$unsupported_mlx_root/gemma-4-E4B-it-qat-assistant-6bit"
+mkdir -p "$unsupported_mlx_primary" "$unsupported_mlx_draft"
+python3 - "$unsupported_mlx_primary" "$unsupported_mlx_draft" <<'PY'
+import json
+import pathlib
+import sys
+
+primary = pathlib.Path(sys.argv[1])
+draft = pathlib.Path(sys.argv[2])
+for directory in (primary, draft):
+    (directory / "tokenizer.json").write_text("{}")
+    (directory / "model.safetensors").write_text("weights")
+    (directory / "config.json").write_text(json.dumps({
+        "model_type": "gemma4",
+        "architectures": ["Gemma4ForConditionalGeneration"],
+        "vision_config": {},
+    }))
+PY
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx status=blocked action=await_compatible_archive .*reason=catalog_primary_not_release_ready .*local_unsupported_path=$unsupported_mlx_primary .*local_unsupported_reason=unsupported_model_archive" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=blocked action=waiting_for_primary .*reason=missing_compatible_mlx_primary .*local_unsupported_primary_path=$unsupported_mlx_primary .*local_unsupported_primary_reason=unsupported_model_archive .*local_unsupported_draft_path=$unsupported_mlx_draft .*local_unsupported_draft_reason=unsupported_model_archive" /tmp/ross-runtime-fetch-plan.out
+
 primary_only_mlx_dir="$tmpdir/primary-only/usable-mlx"
 mkdir -p "$primary_only_mlx_dir"
 printf '{}' > "$primary_only_mlx_dir/config.json"

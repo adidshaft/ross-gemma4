@@ -177,6 +177,18 @@ def emit(lane: str, status: str, action: str, **fields: object) -> None:
         line += f" {extras}"
     print(line)
 
+def unsupported_local_row(lane: str) -> dict[str, str] | None:
+    return next(
+        (
+            row for row in rows
+            if row.get("lane") == lane
+            and row.get("status") == "missing"
+            and row.get("path") not in {None, "", "nil"}
+            and row.get("reason", "").startswith("unsupported_")
+        ),
+        None,
+    )
+
 print(
     f"ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier={q(tier)} "
     f"target_root={q(target_root)} downloader_status={q(downloader_status)} "
@@ -330,6 +342,8 @@ if catalog_gguf:
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
 present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)
+unsupported_mlx = unsupported_local_row("mlx")
+unsupported_mlx_draft = unsupported_local_row("mlx_draft")
 catalog_mlx_draft = next(
     (
         row for row in rows
@@ -425,6 +439,8 @@ else:
                 target_dir=target_dir,
                 reason="catalog_primary_not_release_ready",
                 compatibility_hint="runtime_requires_supported_text_mlx_archive",
+                local_unsupported_path=unsupported_mlx.get("path") if unsupported_mlx else None,
+                local_unsupported_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
             )
             continue
         if lane == "mlx_draft" and present_mlx_draft:
@@ -446,6 +462,10 @@ else:
                     target_dir=target_dir,
                     reason="missing_compatible_mlx_primary",
                     compatibility_hint="runtime_requires_supported_text_mlx_archive",
+                    local_unsupported_primary_path=unsupported_mlx.get("path") if unsupported_mlx else None,
+                    local_unsupported_primary_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
+                    local_unsupported_draft_path=unsupported_mlx_draft.get("path") if unsupported_mlx_draft else None,
+                    local_unsupported_draft_reason=unsupported_mlx_draft.get("reason") if unsupported_mlx_draft else None,
                 )
                 continue
             emit(
