@@ -312,12 +312,15 @@ if ! grep -q "stageDoneLine(stage:" ios/Ross/App/ScreenshotExporter.swift 2>/dev
     FAIL=1
 fi
 
-if ! grep -q "completed_stage_fields" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
-   ! grep -q 'outcome == "timeout"' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
-   ! grep -q "failure_summary_line(identity, fail_fields, matrix_fields)" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
-    echo "❌ FAIL: simulator helper timeout path does not preserve completed stage metrics in failure summaries."
-    FAIL=1
-fi
+for timeout_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh; do
+    if ! grep -q "completed_stage_fields" "$timeout_helper" 2>/dev/null ||
+       ! grep -q "STAGE_AUX_METRICS" "$timeout_helper" 2>/dev/null ||
+       ! grep -q 'outcome == "timeout"' "$timeout_helper" 2>/dev/null ||
+       ! grep -q "failure_summary_line(identity, fail_fields, matrix_fields)" "$timeout_helper" 2>/dev/null; then
+        echo "❌ FAIL: $timeout_helper timeout path does not preserve completed stage metrics in failure summaries."
+        FAIL=1
+    fi
+done
 
 if ! grep -q '"fail_runtime"' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: failure summaries do not preserve the raw failure-marker runtime."
