@@ -1078,8 +1078,8 @@ if ! grep -q 'activeDraftMetadata = draftValidation.status == "active"' ios/Ross
     FAIL=1
 fi
 
-if ! grep -q "draftModelPathLabel: nil" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
-    echo "❌ FAIL: unavailable runtime health can expose inactive draft model labels."
+if ! grep -q "draftModelPathLabel: draftModelPathLabel()" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: unavailable runtime health drops configured draft model diagnostics."
     FAIL=1
 fi
 
