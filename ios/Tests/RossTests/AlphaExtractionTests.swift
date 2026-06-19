@@ -21743,6 +21743,48 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotNil(output.inputChars)
     }
 
+    func testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-unsupported-mlx-run-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#.utf8)
+            .write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, _ in
+            XCTFail("Unsupported MLX archive should fail before generation.")
+            return AlphaMLXGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "unsupported_model_archive")
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNotNil(output.inputChars)
+    }
+
     func testRuntimeHealthMarksEmptyMLXWeightsUnavailable() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-empty-mlx-weights-\(UUID().uuidString)", isDirectory: true)

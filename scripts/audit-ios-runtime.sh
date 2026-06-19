@@ -425,6 +425,11 @@ if ! grep -q "fileLooksNonEmpty" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.
     FAIL=1
 fi
 
+if ! grep -q "testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift MLX run path can still reach generation for known-unsupported primary archives."
+    FAIL=1
+fi
+
 if ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null ||
    ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Documents.swift 2>/dev/null ||
