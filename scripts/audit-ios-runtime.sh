@@ -89,6 +89,13 @@ if ! grep -q "runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev
     FAIL=1
 fi
 
+if ! grep -q "artifactCompatibilityError" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: runtime resolver does not reject incompatible MLX/CoreAI artifact kinds before provider construction."
+    FAIL=1
+fi
+
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
     FAIL=1

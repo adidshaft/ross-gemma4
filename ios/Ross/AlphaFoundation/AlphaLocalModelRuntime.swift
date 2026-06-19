@@ -3167,6 +3167,50 @@ enum AlphaLocalModelRuntime {
         )
     }
 
+    private static func artifactCompatibilityError(
+        activePack: AlphaInstalledModelPack?,
+        requestedRuntimeMode: AlphaPackRuntimeMode
+    ) -> String? {
+        guard let activePack else { return nil }
+        let artifactKind = activePack.artifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch requestedRuntimeMode {
+        case .llamaCppGguf:
+            let allowedKinds: Set<String> = ["local_model_artifact", "gguf", "gguf_model"]
+            return allowedKinds.contains(artifactKind) ? nil : "missing_model_file"
+        case .mlxSwiftLm:
+            return artifactKind == "mlx_directory" ? nil : "missing_mlx_artifact"
+        case .appleFoundationModels:
+            let allowedKinds: Set<String> = ["system_model", "foundation_adapter", "coreai_adapter", "coreml_model"]
+            return allowedKinds.contains(artifactKind) ? nil : "missing_coreai_artifact"
+        case .mediapipeLlm:
+            return artifactKind == "mediapipe_llm" ? nil : "unsupported_runtime"
+        case .deterministicDev, .unavailable:
+            return nil
+        }
+    }
+
+    private static func incompatibleArtifactProvider(
+        runtimeMode: AlphaPackRuntimeMode,
+        tier: AlphaCapabilityTier,
+        checksumVerified: Bool,
+        modelPathLabel: String?,
+        errorCategory: String,
+        explicitOptInEnabled: Bool,
+        draftModelPath: String?
+    ) -> AlphaUnavailableRealLocalModelProvider {
+        AlphaUnavailableRealLocalModelProvider(
+            capabilityTier: tier,
+            runtimeMode: runtimeMode,
+            modelPathLabel: modelPathLabel,
+            checksumVerified: checksumVerified,
+            statusMessage: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
+            plannedTasks: Set(AlphaLocalModelTask.allCases),
+            errorCategory: errorCategory,
+            explicitOptInEnabled: explicitOptInEnabled,
+            draftModelPath: draftModelPath
+        )
+    }
+
     private static func desiredRuntimeMode(
         activePack: AlphaInstalledModelPack?,
         runtimeEnvironment: AlphaLocalRuntimeEnvironment
@@ -3210,6 +3254,20 @@ enum AlphaLocalModelRuntime {
                 checksumVerified: checksumVerified,
                 modelPathLabel: modelPathLabel,
                 explicitOptInEnabled: false
+            )
+        }
+        if let artifactError = artifactCompatibilityError(
+            activePack: activePack,
+            requestedRuntimeMode: runtimeMode
+        ) {
+            return incompatibleArtifactProvider(
+                runtimeMode: runtimeMode,
+                tier: tier,
+                checksumVerified: checksumVerified,
+                modelPathLabel: modelPathLabel,
+                errorCategory: artifactError,
+                explicitOptInEnabled: debug.enableRealInference || productionRuntimeAllowed,
+                draftModelPath: debug.draftModelPath
             )
         }
         switch runtimeMode {
