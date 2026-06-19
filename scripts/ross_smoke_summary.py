@@ -292,6 +292,12 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"benchmark_pass_requested_runtime_mismatch pass_requested_runtime={pass_requested_runtime} "
             f"identity_requested_runtime={identity_requested_runtime}"
         )
+    identity_pack_runtime = identity.get("pack_runtime")
+    if identity_pack_runtime not in (None, "nil", actual_runtime):
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_pack_runtime_mismatch pack_runtime={identity_pack_runtime} "
+            f"identity_runtime={actual_runtime}"
+        )
     supported_runtime_error = runtime_identity_supported_runtime_error(identity)
     if supported_runtime_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_unsupported {supported_runtime_error}")
@@ -328,6 +334,7 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": summary_value(identity, "requested_runtime"),
+        "pack_runtime": summary_value(identity, "pack_runtime"),
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),
         "artifact_path": summary_value(identity, "artifact_path"),
@@ -372,6 +379,7 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": requested_runtime if requested_runtime not in (None, "") else "nil",
+        "pack_runtime": summary_value(identity, "pack_runtime"),
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),
         "artifact_path": summary_value(identity, "artifact_path"),

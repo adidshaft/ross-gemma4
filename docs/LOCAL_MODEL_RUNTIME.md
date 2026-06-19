@@ -65,14 +65,14 @@ Existing compatibility:
 
 ## Runtime Proof Guardrails
 
-Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, artifact kind/path type, acceleration mode, draft model metadata, `draft_status`, context size, GPU/offload summary, fallback status, and availability.
+Real-runtime benchmarks must be tied to the app's `ROSS_RUNTIME_IDENTITY` marker, not just a smoke pass line. The marker records requested runtime, actual provider runtime, active pack runtime, artifact kind/path type, acceleration mode, draft model metadata, `draft_status`, context size, GPU/offload summary, fallback status, and availability.
 
 Do not publish MLX, CoreAI/Foundation Models, or MTP numbers unless the identity marker proves that exact lane:
 
 - MLX requires `actual_runtime=mlx_swift_lm`.
 - CoreAI/Foundation Models requires `actual_runtime=apple_foundation_models`.
 - MTP requires identity `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and draft model metadata. Smoke benchmark summaries must also prove every matrix stage used draft acceleration with matching `*_acceleration`, `*_draft_tokens`, and `*_draft_model` fields.
-- Benchmark summaries must also prove the pass runtime matches a known benchmark lane, matches identity `actual_runtime`, identity `requested_runtime` does not disagree, every matrix stage is one of the supported smoke stages, and every matrix stage reports token count, token speed, first-token latency, and measured/estimated status.
+- Benchmark summaries must also prove the pass runtime matches a known benchmark lane, matches identity `actual_runtime`, identity `requested_runtime` and `pack_runtime` do not disagree, every matrix stage is one of the supported smoke stages, and every matrix stage reports token count, token speed, first-token latency, and measured/estimated status.
 - Any fallback to `gemma_local_runtime`, `deterministic_dev`, or `unavailable` invalidates the requested lane's benchmark.
 - A GGUF+MTP draft pair that produces degenerate output is reported as `draft_output_degenerate` and quarantined for the current process, so follow-up runs use standard GGUF instead of repeatedly treating the same bad MTP pair as active.
 - In required draft-acceleration smoke mode, MLX speculative generation failure is reported as `mlx_draft_generation_failed` instead of retrying standard generation, so a draft-proof run cannot publish standard MLX numbers.

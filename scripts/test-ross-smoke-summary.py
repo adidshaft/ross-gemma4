@@ -28,6 +28,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "provider": "TestProvider",
             "requested_runtime": runtime,
             "actual_runtime": runtime,
+            "pack_runtime": runtime,
             "model_format": model_format,
             "artifact_path_type": artifact_path_type,
             "artifact_path": "model",
@@ -45,6 +46,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
             "model_format=gguf artifact_path_type=file artifact_path=gemma-2b.gguf "
             "acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil "
             "draft_status=no_draft_configured context_tokens=4096 gpu_offload=n_gpu_layers:0 "
@@ -71,6 +73,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("provider=AlphaLlamaCppProvider", summary)
+        self.assertIn("pack_runtime=gemma_local_runtime", summary)
         self.assertIn("artifact_path=gemma-2b.gguf", summary)
         self.assertIn("fallback=none", summary)
         self.assertIn("available=true", summary)
@@ -207,6 +210,34 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 {
                     "runtime": "gemma_local_runtime",
                     "requested_runtime": "mlx_swift_lm",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_benchmark_summary_rejects_pack_runtime_mismatch(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_pack_runtime_mismatch"):
+            benchmark_summary_line(
+                {
+                    "actual_runtime": "mlx_swift_lm",
+                    "requested_runtime": "mlx_swift_lm",
+                    "pack_runtime": "gemma_local_runtime",
+                    "model_format": "mlx_directory",
+                    "artifact_path_type": "directory",
+                    "available": "true",
+                    "fallback": "none",
+                },
+                {
+                    "runtime": "mlx_swift_lm",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -728,6 +759,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
             "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
             "draft_model_path_type=file draft_status=active context_tokens=4096 "
@@ -760,6 +792,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
             "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
             "draft_model_path_type=file draft_status=active context_tokens=4096 "
@@ -791,6 +824,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "pack_runtime=gemma_local_runtime "
             "model_format=local_model_artifact artifact_path_type=file acceleration=standard "
             "draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured"
         )
@@ -816,6 +850,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("fail_runtime=gemma_local_runtime", summary)
+        self.assertIn("pack_runtime=gemma_local_runtime", summary)
         self.assertIn("draft_status=no_draft_configured", summary)
         self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_profile=full", summary)
