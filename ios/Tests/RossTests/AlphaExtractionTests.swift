@@ -21252,7 +21252,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_llama_needs_more_memory"))
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
-        XCTAssertEqual(health?.draftModelPathLabel, "ross-missing-mlx-draft")
+        XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertEqual(health?.draftModelPathType, "missing")
         XCTAssertEqual(health?.draftAccelerationStatus, "insufficient_device_memory")
     }

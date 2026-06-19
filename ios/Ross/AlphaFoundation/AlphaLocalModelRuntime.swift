@@ -2484,7 +2484,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: unavailableAccelerationMode(),
             accelerationDraftTokens: nil,
-            draftModelPathLabel: draftModelPathLabel(),
+            draftModelPathLabel: nil,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: unavailableDraftAccelerationStatus(),
             runtimeErrorDetail: errorCategory,
