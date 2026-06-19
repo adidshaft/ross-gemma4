@@ -47,6 +47,14 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
   - tier: `quick_start`
   - artifact: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
   - SHA-256: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
+- A June 19, 2026 current-build simulator GGUF full-profile smoke passed under the guarded benchmark summary path. This is simulator-only GGUF baseline evidence, not a physical-device result and not MLX/CoreAI/MTP proof:
+  - runtime identity: `provider=AlphaLlamaCppProvider`, `requested_runtime=gemma_local_runtime`, `actual_runtime=gemma_local_runtime`, `model_format=local_model_artifact`, `artifact_path_type=file`, `fallback=none`, `available=true`
+  - matrix: English source-grounded QA, Bengali/Hindi/Tamil/Telugu source-grounded QA, and an English no-document open query
+  - elapsed: `54.44s`
+  - stage speeds: source `11.14 tok/s`, general `10.92 tok/s`, Bengali `10.51 tok/s`, Hindi `10.07 tok/s`, Tamil `8.45 tok/s`, Telugu `9.33 tok/s`
+  - stage token counts: source `207 in / 118 out`, general `190 in / 192 out`, Bengali `328 in / 121 out`, Hindi `278 in / 134 out`, Tamil `382 in / 96 out`, Telugu `433 in / 96 out`
+  - stage first-token latency: source `12586ms`, general `13763ms`, Bengali `21958ms`, Hindi `18761ms`, Tamil `27691ms`, Telugu `32447ms`
+  - all stages reported `*_native_model=true`, source refs were retained for every source-grounded stage, and all stage metrics were emitted in `ROSS_SMOKE_BENCHMARK_SUMMARY`
 - The smoke harness now reports native-model markers such as `bengali_native_model` and `hindi_native_model` so QA can distinguish direct multilingual model output from Ross's source-preserving fallback.
 
 ## Still Not Proven
