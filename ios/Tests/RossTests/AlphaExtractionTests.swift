@@ -8819,6 +8819,64 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_llama_needs_more_memory"))
     }
 
+    func testRuntimeHealthRejectsMLXRequestAgainstGGUFPackBeforeFallback() {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-e4b-q4",
+            installPath: "model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_mlx_artifact")
+    }
+
+    func testRuntimeHealthRejectsCoreAIRequestAgainstGGUFPackBeforeFallback() {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-e4b-q4",
+            installPath: "model-packs/quick_start/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
+    }
+
     func testPreferredAssistantRuntimeModePreservesInstalledMLXRuntime() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
