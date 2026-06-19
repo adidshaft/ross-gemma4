@@ -21744,15 +21744,6 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ross-unsupported-mlx-run-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try Data(#"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#.utf8)
-            .write(to: directory.appendingPathComponent("config.json"))
-        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
-        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
-
         let previousGenerator = AlphaMLXLocalProvider.streamGenerator
         defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
         AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, _ in
@@ -21760,29 +21751,44 @@ final class AlphaExtractionTests: XCTestCase {
             return AlphaMLXGenerationSnapshot(text: "")
         }
 
-        let provider = AlphaMLXLocalProvider(
-            capabilityTier: .caseAssociate,
-            modelPathLabel: directory.lastPathComponent,
-            modelPath: directory.path,
-            checksumVerified: true
-        )
+        let unsupportedConfigs = [
+            #"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#,
+            #"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#
+        ]
 
-        let output = await provider.run(
-            AlphaLocalModelInput(
-                task: .matterQuestionAnswer,
-                instruction: "What happened in the selected order?",
-                sourcePack: [],
-                expectedSchema: "plain_text",
-                maxOutputTokens: 128,
-                extractionMode: .caseAssociate
+        for config in unsupportedConfigs {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ross-unsupported-mlx-run-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            try Data(config.utf8).write(to: directory.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+            let provider = AlphaMLXLocalProvider(
+                capabilityTier: .caseAssociate,
+                modelPathLabel: directory.lastPathComponent,
+                modelPath: directory.path,
+                checksumVerified: true
             )
-        )
 
-        XCTAssertFalse(output.schemaValid)
-        XCTAssertEqual(output.errorCategory, "unsupported_model_archive")
-        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
-        XCTAssertEqual(output.accelerationMode, .standard)
-        XCTAssertNotNil(output.inputChars)
+            let output = await provider.run(
+                AlphaLocalModelInput(
+                    task: .matterQuestionAnswer,
+                    instruction: "What happened in the selected order?",
+                    sourcePack: [],
+                    expectedSchema: "plain_text",
+                    maxOutputTokens: 128,
+                    extractionMode: .caseAssociate
+                )
+            )
+
+            XCTAssertFalse(output.schemaValid)
+            XCTAssertEqual(output.errorCategory, "unsupported_model_archive")
+            XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+            XCTAssertEqual(output.accelerationMode, .standard)
+            XCTAssertNotNil(output.inputChars)
+        }
     }
 
     func testRuntimeHealthMarksEmptyMLXWeightsUnavailable() throws {
