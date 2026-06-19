@@ -90,13 +90,22 @@ case "$tier" in
     ;;
 esac
 
+model_basename="$(basename "$model_path")"
+model_basename_lower="$(printf '%s' "$model_basename" | tr '[:upper:]' '[:lower:]')"
+case "$model_basename_lower" in
+  *.gguf)
+    ;;
+  *)
+    echo "GGUF device smoke requires a .gguf model file: $model_path" >&2
+    exit 2
+    ;;
+esac
+
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "xcrun is required." >&2
   exit 2
 fi
 
-model_basename="$(basename "$model_path")"
-manifest_basename="${model_basename%.*}.manifest.json"
 if [[ -z "$pack_id" ]]; then
   pack_id="${model_basename%.*}-device-proof"
 fi
@@ -104,6 +113,10 @@ fi
 checksum="$(shasum -a 256 "$model_path" | awk '{print $1}')"
 bytes="$(wc -c < "$model_path" | tr -d '[:space:]')"
 verified_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+run_id="$(date -u +"%Y%m%dT%H%M%SZ")"
+safe_pack_id="$(printf '%s' "$pack_id" | tr -c 'A-Za-z0-9._-' '-')"
+seed_model_basename="${safe_pack_id}-${checksum:0:12}-${run_id}.gguf"
+manifest_basename="${seed_model_basename%.*}.manifest.json"
 
 tmpdir="$(mktemp -d /tmp/ross-ios-device-gguf-smoke.XXXXXX)"
 trap 'rm -rf "$tmpdir"' EXIT
@@ -114,14 +127,14 @@ mkdir -p "$seed_dir"
 
 probe_file="$probe_dir/.device-proof-probe"
 printf 'ross-device-proof\n' > "$probe_file"
-cp "$model_path" "$seed_dir/$model_basename"
+cp "$model_path" "$seed_dir/$seed_model_basename"
 
 cat > "$seed_dir/$manifest_basename" <<EOF
 {
   "packId": "$pack_id",
   "tier": "$tier",
-  "fileName": "$model_basename",
-  "relativePath": "model-packs/$tier/$model_basename",
+  "fileName": "$seed_model_basename",
+  "relativePath": "model-packs/$tier/$seed_model_basename",
   "checksumSha256": "$checksum",
   "bytes": $bytes,
   "artifactKind": "local_model_artifact",
@@ -148,16 +161,24 @@ if [[ -z "$probe_device_path" ]]; then
 fi
 
 container_root="${probe_device_path%/Library/Application Support/RossAlpha/.device-proof-probe}"
-device_model_path="$container_root/Library/Application Support/RossAlpha/model-packs/$tier/$model_basename"
+device_model_path="$container_root/Library/Application Support/RossAlpha/model-packs/$tier/$seed_model_basename"
 
 echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
+echo "Publishing manifest after model transfer: $manifest_basename"
 
 xcrun devicectl device copy to \
   --device "$device_id" \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
-  --source "$seed_dir/$model_basename" \
+  --source "$seed_dir/$seed_model_basename" \
+  --destination "Library/Application Support/RossAlpha/model-packs/$tier/" \
+  > /dev/null
+
+xcrun devicectl device copy to \
+  --device "$device_id" \
+  --domain-type appDataContainer \
+  --domain-identifier "$bundle_id" \
   --source "$seed_dir/$manifest_basename" \
   --destination "Library/Application Support/RossAlpha/model-packs/$tier/" \
   > /dev/null

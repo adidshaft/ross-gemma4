@@ -630,6 +630,18 @@ if [ ! -x scripts/test-ios-device-installed-pack-preflights.sh ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/test-ios-device-gguf-smoke-guards.sh ]; then
+    echo "❌ FAIL: executable GGUF device smoke guard test script missing."
+    FAIL=1
+fi
+
+if ! grep -q "seed_model_basename" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "Publishing manifest after model transfer" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "model before publishing its manifest" scripts/test-ios-device-gguf-smoke-guards.sh 2>/dev/null; then
+    echo "❌ FAIL: GGUF device smoke helper does not avoid reusing partially copied model paths."
+    FAIL=1
+fi
+
 if ! grep -q "seeded device-proof pack excluded by default" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack preflight tests do not cover seeded device-proof exclusion."
     FAIL=1
@@ -1395,6 +1407,7 @@ if [ "$FAIL" -eq 1 ]; then
     exit 1
 else
     scripts/test-ios-runtime-smoke-preflights.sh
+    scripts/test-ios-device-gguf-smoke-guards.sh
     scripts/test-ios-device-installed-pack-preflights.sh
     scripts/test-ios-device-assistant-download-smoke-guards.sh
     scripts/test-ios-morning-runtime-checkpoint-plan.sh
