@@ -608,6 +608,21 @@ if ! grep -q "draft_validator_rejected" ios/Ross/AlphaFoundation/AlphaLlamaCppPr
     FAIL=1
 fi
 
+if ! grep -q "draft_output_degenerate" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP health does not quarantine degenerate draft output."
+    FAIL=1
+fi
+
+if ! grep -q "draft_output_degenerate" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: iOS runtime docs do not document degenerate MTP quarantine."
+    FAIL=1
+fi
+
+if ! grep -q "draft_status=draft_output_degenerate" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared smoke summary tests do not cover degenerate MTP draft status."
+    FAIL=1
+fi
+
 if ! grep -q "draft_format_unsupported" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not reject non-GGUF draft candidates before validation."
     FAIL=1

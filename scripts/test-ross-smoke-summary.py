@@ -716,6 +716,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "draft_status=validator_rejected",
         )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**active_mtp, "draft_status": "draft_output_degenerate"},
+                "gemma_local_runtime",
+            ),
+            "draft_status=draft_output_degenerate",
+        )
 
     def test_benchmark_summary_rejects_active_draft_identity_when_stage_runs_standard(self):
         identity = parse_fields(
