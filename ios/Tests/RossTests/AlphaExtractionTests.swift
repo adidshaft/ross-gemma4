@@ -21694,6 +21694,75 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
     }
 
+    func testExperimentalMLXProviderReportsStandardGenerationFailureAsMLXFailure() async throws {
+        enum StandardFailure: Error {
+            case generationFailed
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-standard-failure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        AlphaMLXLocalProvider.streamGenerator = { _, draftURL, draftTokens, _, _, _, _ in
+            XCTAssertNil(draftURL)
+            XCTAssertNil(draftTokens)
+            throw StandardFailure.generationFailed
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "1", count: 64),
+                modelKind: "mlx_directory"
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output?.schemaValid ?? true)
+        XCTAssertEqual(output?.errorCategory, "mlx_generation_failed")
+        XCTAssertEqual(output?.accelerationMode, .standard)
+        XCTAssertNil(output?.accelerationDraftTokens)
+        XCTAssertNil(output?.accelerationDraftModelLabel)
+    }
+
     func testExperimentalMLXProviderPreservesMeasuredGenerationMetrics() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-metrics-\(UUID().uuidString)", isDirectory: true)

@@ -82,6 +82,7 @@ Clear unavailable categories for benchmark triage:
 - `missing_mlx_artifact`: the requested MLX lane did not receive a usable MLX directory path, including the case where a GGUF file was supplied to `--runtime mlx`.
 - `invalid_mlx_artifact`: the requested MLX directory exists but lacks the required MLX runtime files.
 - `invalid_mlx_draft_artifact`: the primary MLX directory is usable, but the configured draft companion is not.
+- `mlx_generation_failed`: the MLX provider was selected with a usable MLX primary artifact, but standard generation failed before returning a usable answer.
 - `mlx_draft_generation_failed`: MLX draft acceleration was requested in smoke proof mode, the primary/draft identity was staged, but speculative draft generation failed before a valid answer. In that mode Ross does not retry standard MLX generation, so a required-draft smoke cannot publish standard MLX numbers.
 - MLX identity markers also carry `draft_status`; MLX draft acceleration is reported as `active` only when the primary runtime is available and the draft directory is usable. Invalid or unsupported draft companions stay `acceleration=standard` with a concrete `draft_status` instead of poisoning the whole MLX lane.
 - When the primary MLX runtime is available but the draft companion is missing, invalid, or unsupported, `ROSS_RUNTIME_IDENTITY` keeps `available=true` for MLX and reports the draft-specific `error` category. Treat that as failed MLX draft proof, not failed MLX standard-generation proof.

@@ -1321,7 +1321,12 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: activePromptPack?.includedSourceRefs.count,
                 omittedSourceCount: activePromptPack?.omittedSourceRefs.count,
                 omittedSourceLabels: activePromptPack?.omittedSourceRefs.map(\.label),
-                errorCategory: "inference_failed"
+                executionPathLabel: draftDirectoryURL == nil ? "MLX standard generation" : executionPathLabel,
+                accelerationMode: draftDirectoryURL == nil ? .standard : accelerationMode,
+                accelerationDraftTokens: draftDirectoryURL == nil ? nil : draftTokens,
+                accelerationDraftModelLabel: draftDirectoryURL == nil ? nil : draftModelLabel,
+                inputChars: activePromptPack?.inputChars,
+                errorCategory: "mlx_generation_failed"
             )
         }
     }

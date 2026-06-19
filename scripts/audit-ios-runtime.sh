@@ -404,6 +404,15 @@ if ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvid
     FAIL=1
 fi
 
+if ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null ||
+   ! grep -q "mlx_generation_failed" ios/Ross/AlphaFoundation/AlphaRossModel+Documents.swift 2>/dev/null ||
+   ! grep -q "testExperimentalMLXProviderReportsStandardGenerationFailureAsMLXFailure" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "mlx_generation_failed" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: MLX standard generation failures are not wired through provider, fallback handling, tests, and docs."
+    FAIL=1
+fi
+
 if grep -q 'return (false, "invalid_mlx_draft_artifact"' ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
     echo "❌ FAIL: invalid MLX draft companion still poisons primary MLX availability."
     FAIL=1
