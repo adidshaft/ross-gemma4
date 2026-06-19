@@ -323,6 +323,12 @@ if ! grep -q "installed MLX request rejects GGUF identity" scripts/test-ios-devi
     FAIL=1
 fi
 
+if ! grep -q "installed CoreAI request rejects GGUF identity" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "requested_runtime=apple_foundation_models actual_runtime=gemma_local_runtime" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack smoke tests do not cover rejecting GGUF identity for a requested CoreAI/CoreML lane."
+    FAIL=1
+fi
+
 if ! grep -q "preferredRuntimeMode != nil" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null; then
     echo "❌ FAIL: Ask runtime resolver does not fail closed for explicit preferred runtime requests."
     FAIL=1
