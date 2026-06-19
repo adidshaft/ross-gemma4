@@ -153,6 +153,27 @@
   - this is still not benchmark-pass evidence because generation timed out and no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
   - physical-device morning validation is still required before claiming MTP performance
 
+### 2026-06-20 1024-context simulator MTP degenerate-output checkpoint
+
+- Platform: iOS Simulator (`iPhone 15 Pro`, `A5BDAF71-43EE-4566-A9A5-D1BC7B1FCC5F`)
+- Runtime mode requested: `gemma_local_runtime` with MTP draft acceleration required
+- Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
+- Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
+- Smoke commands:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --simulator A5BDAF71-43EE-4566-A9A5-D1BC7B1FCC5F --bundle-id com.ross.ios --tier caseAssociate --stage-timeout 120 --launch-timeout 900`
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 1 --require-draft-acceleration --smoke-profile mtp_quick --simulator A5BDAF71-43EE-4566-A9A5-D1BC7B1FCC5F --bundle-id com.ross.ios --tier caseAssociate --stage-timeout 120 --launch-timeout 900`
+- Result: both runs activated MTP and failed closed as degenerate output; no benchmark pass claimed.
+- Runtime context evidence:
+  - main context: `n_ctx=1024`, `n_batch=256`, `n_ubatch=64`
+  - draft context loaded from `mtp-gemma-4-12b-it.gguf`
+- Failure summary highlights:
+  - `draft_tokens=2`: `draft_status=active`, `source_acceleration=draftModelSpeculative`, `source_draft_model=mtp-gemma-4-12b-it.gguf`, `source_error=draft_output_degenerate`, `source_output=<|channel>11111111111`, `source_token_speed=1.83`, `source_first_token_ms=91834`
+  - `draft_tokens=1`: `draft_status=active`, `source_acceleration=draftModelSpeculative`, `source_draft_model=mtp-gemma-4-12b-it.gguf`, `source_error=draft_output_degenerate`, `source_output=<|channel>11111111111`, `source_token_speed=1.64`, `source_first_token_ms=96106`
+- Current interpretation:
+  - the 12B MTP pair can initialize and report active draft acceleration under the current 1024-context simulator profile
+  - lowering draft tokens from `2` to `1` did not fix the control-token degeneration
+  - these runs prove activation plus fail-closed behavior only; they must not be used as MTP performance evidence
+
 ### 2026-06-19 bounded 90-second rerun
 
 - Smoke command:
