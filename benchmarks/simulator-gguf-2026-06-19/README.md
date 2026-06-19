@@ -26,16 +26,16 @@ scripts/ios-simulator-local-model-smoke.sh \
   --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf \
   --simulator E36AB177-2287-4112-8225-339048142D11 \
   --smoke-profile quick \
-  --stage-timeout 120 \
-  --launch-timeout 360
+  --stage-timeout 60 \
+  --launch-timeout 300
 
 scripts/ios-simulator-local-model-smoke.sh \
   --runtime gguf \
   --model /Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf \
   --simulator E36AB177-2287-4112-8225-339048142D11 \
   --smoke-profile full \
-  --stage-timeout 150 \
-  --launch-timeout 720
+  --stage-timeout 60 \
+  --launch-timeout 420
 ```
 
 ## Results
@@ -49,14 +49,14 @@ scripts/ios-simulator-local-model-smoke.sh \
 
 | Profile | Stage | Tokens processed | Token speed | First token |
 | --- | --- | ---: | ---: | ---: |
-| quick | Source document QA | 325 | 10.29 tok/s | 13.13s |
-| quick | General query | 382 | 10.54 tok/s | 12.58s |
-| full | Source document QA | 325 | 7.78 tok/s | 15.02s |
-| full | General query | 382 | 8.76 tok/s | 14.48s |
-| full | Bengali source QA | 449 | 8.05 tok/s | 29.66s |
-| full | Hindi source QA | 412 | 7.88 tok/s | 22.82s |
-| full | Tamil source QA | 369 | 7.53 tok/s | 29.64s |
-| full | Telugu source QA | 396 | 6.31 tok/s | 29.76s |
+| quick | Source document QA | 325 | 8.93 tok/s | 14.48s |
+| quick | General query | 382 | 7.86 tok/s | 14.80s |
+| full | Source document QA | 325 | 9.05 tok/s | 13.27s |
+| full | General query | 382 | 10.72 tok/s | 13.08s |
+| full | Bengali source QA | 449 | 9.26 tok/s | 24.02s |
+| full | Hindi source QA | 412 | 7.91 tok/s | 22.15s |
+| full | Tamil source QA | 369 | 8.55 tok/s | 24.39s |
+| full | Telugu source QA | 396 | 8.41 tok/s | 28.03s |
 
 `Tokens processed` is `input_tokens + output_tokens` from the smoke fields. Token counts are estimator-backed in this simulator run (`*_measured_tokens=false`).
 
