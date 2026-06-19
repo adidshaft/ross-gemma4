@@ -7675,6 +7675,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(healthAfterDegenerateOutput.lastErrorCategory, "draft_output_degenerate")
         XCTAssertNil(healthAfterDegenerateOutput.draftModelPathLabel)
         XCTAssertNil(healthAfterDegenerateOutput.accelerationDraftTokens)
+        XCTAssertEqual(healthAfterDegenerateOutput.draftCandidatePathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(healthAfterDegenerateOutput.draftCandidateTokens, 6)
         XCTAssertEqual(healthAfterDegenerateOutput.draftModelPathType, "file")
 
         let followUpOutput = await provider.run(
