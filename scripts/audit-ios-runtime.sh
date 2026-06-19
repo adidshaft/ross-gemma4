@@ -359,6 +359,16 @@ if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summa
     FAIL=1
 fi
 
+if ! grep -q "benchmark_stage_draft_error" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not verify stage-level draft acceleration."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_draft_stage_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject active identity with standard generation stages."
+    FAIL=1
+fi
+
 if ! grep -q "draft_model_format" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared MTP guard does not reject non-GGUF draft artifact labels."
     FAIL=1
