@@ -1005,6 +1005,23 @@ def validate_identity_guard(identity, *, require_identity):
             )
             sys.exit(1)
 
+def validate_required_draft_failure_metrics(fields):
+    if require_draft_acceleration != "1":
+        return
+    for stage in STAGES:
+        attempted = fields.get(f"{stage}_draft_attempted")
+        accepted = fields.get(f"{stage}_draft_accepted")
+        if attempted in (None, "", "nil") and accepted in (None, "", "nil"):
+            continue
+        if f"{stage}_draft_failure" not in fields:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                f"reason=missing_draft_failure_metric stage={stage} "
+                "hint=rebuild_and_reinstall_device_app",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
 outcome = None
 identity = None
 matrix_fields = None
@@ -1098,6 +1115,7 @@ finally:
 if outcome == "pass":
     validate_identity_guard(identity, require_identity=True)
     if pass_fields is not None:
+        validate_required_draft_failure_metrics(pass_fields)
         try:
             print_benchmark_summary(identity, pass_fields, matrix_fields)
         except MissingBenchmarkMatrixError as error:
@@ -1106,10 +1124,12 @@ if outcome == "pass":
     sys.exit(0)
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
+    validate_required_draft_failure_metrics(fail_fields)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 if outcome == "timeout":
     validate_identity_guard(identity, require_identity=False)
+    validate_required_draft_failure_metrics(fail_fields)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 print(f"ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome={outcome}", file=sys.stderr)

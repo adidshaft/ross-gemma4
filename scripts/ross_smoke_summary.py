@@ -13,6 +13,7 @@ METRICS = [
     "draft_model",
     "draft_attempted",
     "draft_accepted",
+    "draft_failure",
 ]
 STAGE_AUX_METRICS = [
     "raw_chars",
