@@ -205,6 +205,11 @@ if [[ "$(grep -c -- "--smoke-profile full" /tmp/ross-morning-plan.out)" -ne 2 ]]
   exit 1
 fi
 grep -q -- "--smoke-profile mtp_quick" /tmp/ross-morning-plan.out
+if grep -q -- "--allow-device-proof-pack" /tmp/ross-morning-plan.out; then
+  echo "Morning MTP proof plan must not allow seeded device-proof packs" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
 if grep -q "SKIP reason=" /tmp/ross-morning-plan.out; then
   echo "Expected ready inventory plan to avoid runtime SKIP lines" >&2
   cat /tmp/ross-morning-plan.out >&2

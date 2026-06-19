@@ -617,6 +617,11 @@ if grep -q -- "--allow-device-proof-pack" scripts/ios-morning-runtime-checkpoint
     FAIL=1
 fi
 
+if ! grep -q "Morning MTP proof plan must not allow seeded device-proof packs" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan tests do not prove printed commands omit seeded device-proof pack allowance."
+    FAIL=1
+fi
+
 if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
     echo "❌ FAIL: CoreAI missing-artifact error category missing."
     FAIL=1
