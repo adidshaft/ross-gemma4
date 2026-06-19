@@ -236,6 +236,13 @@ for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-devic
     fi
 done
 
+for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
+    if ! grep -q "pack_runtime_mismatch" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script does not fail early on active pack/runtime identity mismatches."
+        FAIL=1
+    fi
+done
+
 if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator smoke runtime identity guard missing."
     FAIL=1
