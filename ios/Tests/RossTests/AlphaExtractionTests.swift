@@ -18975,6 +18975,53 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testLocalModelSmokeDraftStageAcceptanceGateRejectsZeroAcceptedTokens() {
+        let validDraftOutput = AlphaLocalModelOutput(
+            rawText: "Article 417: verify citation.",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [],
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            accelerationDraftModelLabel: "mtp draft.gguf",
+            speculativeDraftTokenAttempts: 22,
+            speculativeDraftTokenAccepts: 4
+        )
+        let zeroAcceptedDraftOutput = AlphaLocalModelOutput(
+            rawText: "Article 417: verify citation.",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [],
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            accelerationDraftModelLabel: "mtp draft.gguf",
+            speculativeDraftTokenAttempts: 22,
+            speculativeDraftTokenAccepts: 0
+        )
+
+        XCTAssertNil(
+            RossLocalModelSmokeView.draftStageAcceptanceError(
+                requireDraftAcceleration: true,
+                stageOutputs: [("source", validDraftOutput)]
+            )
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.draftStageAcceptanceError(
+                requireDraftAcceleration: true,
+                stageOutputs: [("source", zeroAcceptedDraftOutput)]
+            ),
+            "source_draft_accepted=0"
+        )
+        XCTAssertNil(
+            RossLocalModelSmokeView.draftStageAcceptanceError(
+                requireDraftAcceleration: false,
+                stageOutputs: [("source", zeroAcceptedDraftOutput)]
+            )
+        )
+    }
+
     func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
         let config = RossAssistantDownloadSmokeConfig.fromEnvironment([
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER": "caseAssociate",

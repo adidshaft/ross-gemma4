@@ -174,6 +174,31 @@
   - lowering draft tokens from `2` to `1` did not fix the control-token degeneration
   - these runs prove activation plus fail-closed behavior only; they must not be used as MTP performance evidence
 
+### 2026-06-20 E4B simulator MTP zero-acceptance checkpoint
+
+- Platform: iOS Simulator (`iPhone 15 Pro`, `A5BDAF71-43EE-4566-A9A5-D1BC7B1FCC5F`)
+- Runtime mode requested: `gemma_local_runtime` with MTP draft acceleration required
+- Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-E4B-it-UD-Q4_K_XL.gguf`
+- Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-E4B-it.gguf`
+- Smoke command:
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-E4B-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-E4B-it.gguf --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 8589934592 --stage-timeout 90 --launch-timeout 300`
+- Result: failed closed; no benchmark pass claimed.
+- Runtime context evidence:
+  - `context_tokens=1024`
+  - main context: `n_ctx=1024`, `n_batch=256`, `n_ubatch=64`
+  - draft context: `n_ctx=1024`, `n_batch=32`, `n_ubatch=32`
+- Failure summary highlights:
+  - `draft_status=active`, `acceleration=draftModelSpeculative`, `draft_tokens=2`, `draft_model=mtp-gemma-4-E4B-it.gguf`
+  - `source_input_tokens=198`, `source_output_tokens=12`, `source_token_speed=7.20`, `source_first_token_ms=21956`
+  - `general_input_tokens=170`, `general_output_tokens=12`, `general_token_speed=7.08`, `general_first_token_ms=20027`
+  - `source_draft_attempted=22`, `source_draft_accepted=0`
+  - `general_draft_attempted=22`, `general_draft_accepted=0`
+  - `failure_mtp_proof_status=draft_stage_invalid`, `failure_mtp_proof_error=source_draft_accepted=0`
+- Current interpretation:
+  - the E4B GGUF+MTP pair loads and reports active draft acceleration under the low-context simulator profile
+  - the draft path did not provide useful accepted speculative tokens in this run, so it is not an MTP performance proof
+  - app-side smoke pass gating now also rejects required-draft stages with zero accepted tokens before a pass marker can be emitted
+
 ### 2026-06-19 bounded 90-second rerun
 
 - Smoke command:

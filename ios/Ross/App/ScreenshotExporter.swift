@@ -819,6 +819,13 @@ struct RossLocalModelSmokeView: View {
         let generalNativeModel = !generalUsedLanguageFallback
         let sourceBenchmarkFields = RossLocalModelSmokeView.benchmarkFields(stage: "source", output: sourceBoundOutput)
         let generalBenchmarkFields = RossLocalModelSmokeView.benchmarkFields(stage: "general", output: generalOutput)
+        let shortDraftStageError = RossLocalModelSmokeView.draftStageAcceptanceError(
+            requireDraftAcceleration: requireDraftAcceleration,
+            stageOutputs: [
+                ("source", sourceBoundOutput),
+                ("general", generalOutput),
+            ]
+        )
 
         if smokeProfile.isShortGenerationProfile {
             if sourceBoundOutput.schemaValid,
@@ -826,12 +833,13 @@ struct RossLocalModelSmokeView: View {
                generalOutput.schemaValid,
                generalOutput.errorCategory == nil,
                sourceUsedFileFact,
-               sourceKeptRefs {
+               sourceKeptRefs,
+               shortDraftStageError == nil {
                 status = RossLocalModelSmokeStatusCopy.passedStatus
                 RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) general_output_chars=\(generalOutputLength) source_refs=\(sourceBoundOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) general_native_model=\(generalNativeModel) \(sourceBenchmarkFields) \(generalBenchmarkFields)")
             } else {
                 status = RossLocalModelSmokeStatusCopy.failedStatus
-                RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_grounded=\(sourceUsedFileFact) source_refs_kept=\(sourceKeptRefs) source_refs=\(sourceBoundOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) general_output_chars=\(generalOutputLength) \(sourceBenchmarkFields) \(generalBenchmarkFields)")
+                RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") draft_stage_error=\(shortDraftStageError ?? "nil") source_grounded=\(sourceUsedFileFact) source_refs_kept=\(sourceKeptRefs) source_refs=\(sourceBoundOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) general_output_chars=\(generalOutputLength) \(sourceBenchmarkFields) \(generalBenchmarkFields)")
                 RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT source=\(RossLocalModelSmokeView.compactLogExcerpt(sourceBoundText))")
                 RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT general=\(RossLocalModelSmokeView.compactLogExcerpt(generalText))")
             }
@@ -900,6 +908,17 @@ struct RossLocalModelSmokeView: View {
                 ("general", generalOutput),
             ]
         )
+        let fullDraftStageError = RossLocalModelSmokeView.draftStageAcceptanceError(
+            requireDraftAcceleration: requireDraftAcceleration,
+            stageOutputs: [
+                ("source", sourceBoundOutput),
+                ("bengali", bengaliOutput),
+                ("hindi", hindiOutput),
+                ("tamil", tamilOutput),
+                ("telugu", teluguOutput),
+                ("general", generalOutput),
+            ]
+        )
 
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE final_validation profile=\(smokeProfile.rawValue)")
         if sourceBoundOutput.schemaValid,
@@ -923,12 +942,13 @@ struct RossLocalModelSmokeView: View {
            bengaliKeptRefs,
            hindiKeptRefs,
            tamilKeptRefs,
-           teluguKeptRefs {
+           teluguKeptRefs,
+           fullDraftStageError == nil {
             status = RossLocalModelSmokeStatusCopy.passedStatus
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) tamil_output_chars=\(tamilOutputLength) telugu_output_chars=\(teluguOutputLength) general_output_chars=\(generalOutputLength) source_refs=\(sourceBoundOutput.sourceRefs.count) bengali_source_refs=\(bengaliOutput.sourceRefs.count) hindi_source_refs=\(hindiOutput.sourceRefs.count) tamil_source_refs=\(tamilOutput.sourceRefs.count) telugu_source_refs=\(teluguOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) tamil_native_model=\(tamilNativeModel) telugu_native_model=\(teluguNativeModel) general_native_model=\(generalNativeModel) \(fullBenchmarkFields)")
         } else {
             status = RossLocalModelSmokeStatusCopy.failedStatus
-            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") bengali_error=\(bengaliOutput.errorCategory ?? "nil") hindi_error=\(hindiOutput.errorCategory ?? "nil") tamil_error=\(tamilOutput.errorCategory ?? "nil") telugu_error=\(teluguOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_grounded=\(sourceUsedFileFact) bengali_grounded=\(bengaliUsedFileFact) hindi_grounded=\(hindiUsedFileFact) tamil_grounded=\(tamilUsedFileFact) telugu_grounded=\(teluguUsedFileFact) source_refs_kept=\(sourceKeptRefs) bengali_refs_kept=\(bengaliKeptRefs) hindi_refs_kept=\(hindiKeptRefs) tamil_refs_kept=\(tamilKeptRefs) telugu_refs_kept=\(teluguKeptRefs) source_refs=\(sourceBoundOutput.sourceRefs.count) bengali_source_refs=\(bengaliOutput.sourceRefs.count) hindi_source_refs=\(hindiOutput.sourceRefs.count) tamil_source_refs=\(tamilOutput.sourceRefs.count) telugu_source_refs=\(teluguOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) tamil_native_model=\(tamilNativeModel) telugu_native_model=\(teluguNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) bengali_warning_count=\(bengaliOutput.warnings.count) hindi_warning_count=\(hindiOutput.warnings.count) tamil_warning_count=\(tamilOutput.warnings.count) telugu_warning_count=\(teluguOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) tamil_output_chars=\(tamilOutputLength) telugu_output_chars=\(teluguOutputLength) general_output_chars=\(generalOutputLength) \(fullBenchmarkFields)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") bengali_error=\(bengaliOutput.errorCategory ?? "nil") hindi_error=\(hindiOutput.errorCategory ?? "nil") tamil_error=\(tamilOutput.errorCategory ?? "nil") telugu_error=\(teluguOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") draft_stage_error=\(fullDraftStageError ?? "nil") source_grounded=\(sourceUsedFileFact) bengali_grounded=\(bengaliUsedFileFact) hindi_grounded=\(hindiUsedFileFact) tamil_grounded=\(tamilUsedFileFact) telugu_grounded=\(teluguUsedFileFact) source_refs_kept=\(sourceKeptRefs) bengali_refs_kept=\(bengaliKeptRefs) hindi_refs_kept=\(hindiKeptRefs) tamil_refs_kept=\(tamilKeptRefs) telugu_refs_kept=\(teluguKeptRefs) source_refs=\(sourceBoundOutput.sourceRefs.count) bengali_source_refs=\(bengaliOutput.sourceRefs.count) hindi_source_refs=\(hindiOutput.sourceRefs.count) tamil_source_refs=\(tamilOutput.sourceRefs.count) telugu_source_refs=\(teluguOutput.sourceRefs.count) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) tamil_native_model=\(tamilNativeModel) telugu_native_model=\(teluguNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) bengali_warning_count=\(bengaliOutput.warnings.count) hindi_warning_count=\(hindiOutput.warnings.count) tamil_warning_count=\(tamilOutput.warnings.count) telugu_warning_count=\(teluguOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) tamil_output_chars=\(tamilOutputLength) telugu_output_chars=\(teluguOutputLength) general_output_chars=\(generalOutputLength) \(fullBenchmarkFields)")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT source=\(RossLocalModelSmokeView.compactLogExcerpt(sourceBoundText))")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT bengali=\(RossLocalModelSmokeView.compactLogExcerpt(bengaliText))")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT hindi=\(RossLocalModelSmokeView.compactLogExcerpt(hindiText))")
@@ -1146,6 +1166,36 @@ struct RossLocalModelSmokeView: View {
         stageOutputs
             .map { benchmarkFields(stage: $0.stage, output: $0.output) }
             .joined(separator: " ")
+    }
+
+    nonisolated static func draftStageAcceptanceError(
+        requireDraftAcceleration: Bool,
+        stageOutputs: [(stage: String, output: AlphaLocalModelOutput)]
+    ) -> String? {
+        guard requireDraftAcceleration else { return nil }
+        for stageOutput in stageOutputs {
+            let stage = stableSmokeValue(stageOutput.stage)
+            let output = stageOutput.output
+            guard output.accelerationMode == .draftModelSpeculative else {
+                return "\(stage)_acceleration=\(output.accelerationMode?.rawValue ?? "nil")"
+            }
+            guard output.accelerationDraftTokens != nil else {
+                return "\(stage)_draft_tokens=nil"
+            }
+            guard output.accelerationDraftModelLabel?.isEmpty == false else {
+                return "\(stage)_draft_model=nil"
+            }
+            guard let attempted = output.speculativeDraftTokenAttempts, attempted > 0 else {
+                return "\(stage)_draft_attempted=\(output.speculativeDraftTokenAttempts.map(String.init) ?? "nil")"
+            }
+            guard let accepted = output.speculativeDraftTokenAccepts, accepted > 0 else {
+                return "\(stage)_draft_accepted=\(output.speculativeDraftTokenAccepts.map(String.init) ?? "nil")"
+            }
+            if accepted > attempted {
+                return "\(stage)_draft_accepted=\(accepted)>draft_attempted=\(attempted)"
+            }
+        }
+        return nil
     }
 
     nonisolated static func stageDoneLine(stage: String, durationMs: Int, output: AlphaLocalModelOutput) -> String {
