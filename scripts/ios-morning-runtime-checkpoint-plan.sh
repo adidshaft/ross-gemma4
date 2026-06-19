@@ -149,6 +149,16 @@ print_command() {
   quote_args "$@"
 }
 
+print_installed_pack_command() {
+  local label="$1"
+  shift
+  if [[ -n "$physical_memory_bytes" ]]; then
+    print_command "$label" "$@" --physical-memory-bytes "$physical_memory_bytes"
+  else
+    print_command "$label" "$@"
+  fi
+}
+
 echo "ROSS_MORNING_RUNTIME_CHECKPOINT_PLAN dry_run=true device=${device_id} bundle_id=${bundle_id} tier=${tier}"
 if [[ -n "$installed_root" ]]; then
   echo "Inventory gate: installed_root=${installed_root}"
@@ -187,7 +197,7 @@ fi
 
 if inventory_has_present_lane "installed_gguf" "$tier" &&
    inventory_has_present_lane "installed_mtp_draft" "$tier"; then
-  print_command \
+  print_installed_pack_command \
     "3. MTP low-token proof from installed GGUF pack" \
     scripts/ios-device-installed-pack-smoke.sh \
     --device "$device_id" \
@@ -207,7 +217,7 @@ else
 fi
 
 if inventory_has_present_lane "installed_mlx" "$tier"; then
-  print_command \
+  print_installed_pack_command \
     "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
     scripts/ios-device-installed-pack-smoke.sh \
     --device "$device_id" \
@@ -223,7 +233,7 @@ else
 fi
 
 if inventory_has_present_lane "installed_coreai" "$tier"; then
-  print_command \
+  print_installed_pack_command \
     "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
     scripts/ios-device-installed-pack-smoke.sh \
     --device "$device_id" \

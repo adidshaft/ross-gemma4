@@ -687,6 +687,12 @@ if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-check
     FAIL=1
 fi
 
+if ! grep -q "print_installed_pack_command" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q -- "--physical-memory-bytes 12000000000" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan does not propagate physical-memory MTP guard into copied commands."
+    FAIL=1
+fi
+
 if ! grep -q "every benchmark matrix stage" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not explain stage-level MTP proof."
     FAIL=1

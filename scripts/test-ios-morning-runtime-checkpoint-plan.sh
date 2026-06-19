@@ -347,4 +347,15 @@ if grep -q "SKIP reason=" /tmp/ross-morning-plan.out; then
   exit 1
 fi
 
+"$PLAN" --device TEST_DEVICE --installed-root "$support_root" --physical-memory-bytes 12000000000 > /tmp/ross-morning-plan.out
+grep -q "Inventory MTP memory gate: physical_memory_bytes=12000000000" /tmp/ross-morning-plan.out
+if [[ "$(grep -c -- "--physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out)" -ne 3 ]]; then
+  echo "Expected ready installed-pack runtime commands to preserve physical memory guard" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+grep -q -- "--runtime gguf --tier quickStart --smoke-profile mtp_quick --stage-timeout 45 --require-draft-acceleration --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+grep -q -- "--runtime mlx --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+grep -q -- "--runtime coreai --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+
 echo "iOS morning runtime checkpoint plan tests: PASS"
