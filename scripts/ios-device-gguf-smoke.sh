@@ -6,10 +6,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-device-gguf-smoke.sh --device <udid> --model <path-to-gguf> [options]
+  scripts/ios-device-gguf-smoke.sh --device <device> --model <path-to-gguf> [options]
 
 Options:
-  --device <udid>         Physical iPhone UDID accepted by devicectl.
+  --device <device>       Physical iPhone CoreDevice identifier, device name,
+                          DNS name, or UDID accepted by devicectl.
   --model <path>          Local GGUF file to seed into the app container.
   --draft-model <path>    Optional local GGUF draft companion to seed for MTP proof.
   --draft-tokens <n>      Draft tokens to request when --draft-model is supplied.

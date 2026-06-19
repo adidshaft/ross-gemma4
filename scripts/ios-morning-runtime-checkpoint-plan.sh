@@ -7,7 +7,7 @@ Usage:
   scripts/ios-morning-runtime-checkpoint-plan.sh [options]
 
 Options:
-  --device <udid>       Device UDID placeholder for printed commands. Default: DEVICE_UDID
+  --device <device>     CoreDevice identifier, device name, DNS name, or UDID for printed devicectl commands. Default: DEVICE
   --bundle-id <id>      App bundle identifier. Default: com.ross.ios
   --gguf-model <path>   Local GGUF baseline artifact. Default: artifacts/gemma-2-2b-it-Q4_K_M.gguf
   --installed-root <p>  Optional RossAlpha support root/model-packs root used for dry-run inventory gating
@@ -20,7 +20,7 @@ This script is dry-run only. It never calls devicectl, simctl, or launches the a
 EOF
 }
 
-device_id="DEVICE_UDID"
+device_id="DEVICE"
 bundle_id="com.ross.ios"
 gguf_model="artifacts/gemma-2-2b-it-Q4_K_M.gguf"
 tier="quickStart"

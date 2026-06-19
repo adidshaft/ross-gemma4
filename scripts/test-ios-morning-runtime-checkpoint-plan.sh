@@ -42,6 +42,9 @@ run_expect_exit_2 \
   "Physical memory bytes must be a positive integer" \
   "$PLAN" --device TEST_DEVICE --physical-memory-bytes nope
 
+"$PLAN" --help > /tmp/ross-morning-plan.out
+grep -q "CoreDevice identifier, device name, DNS name, or UDID" /tmp/ross-morning-plan.out
+
 "$PLAN" --device TEST_DEVICE > /tmp/ross-morning-plan.out
 grep -q "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier." /tmp/ross-morning-plan.out
 grep -q "MTP low-token proof" /tmp/ross-morning-plan.out

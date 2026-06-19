@@ -6,10 +6,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-device-installed-pack-smoke.sh --device <udid> [options]
+  scripts/ios-device-installed-pack-smoke.sh --device <device> [options]
 
 Options:
-  --device <udid>         Physical iPhone UDID accepted by devicectl.
+  --device <device>       Physical iPhone CoreDevice identifier, device name,
+                          DNS name, or UDID accepted by devicectl.
   --bundle-id <id>        App bundle identifier. Default: com.ross.ios
   --tier <tier>           quickStart | caseAssociate | seniorDraftingSupport | flash
   --pack-id <id>          Exact installed pack id to target.
