@@ -23,6 +23,7 @@ STAGE_AUX_METRICS = [
     "refs_kept",
     "native_model",
     "error",
+    "runtime_error_detail",
 ]
 
 CASE_EXPECTATIONS = {

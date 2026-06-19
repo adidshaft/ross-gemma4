@@ -539,6 +539,7 @@ sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
     MissingBenchmarkMatrixError,
     METRICS,
+    STAGE_AUX_METRICS,
     STAGES,
     benchmark_summary_line,
     failure_summary_line,
@@ -737,7 +738,7 @@ try:
         if stage_done_re.search(line):
             stage_fields = parse_fields(line)
             for stage in STAGES:
-                for metric in METRICS:
+                for metric in METRICS + STAGE_AUX_METRICS:
                     key = f"{stage}_{metric}"
                     if key in stage_fields:
                         completed_stage_fields[key] = stage_fields[key]

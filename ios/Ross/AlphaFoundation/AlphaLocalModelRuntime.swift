@@ -162,6 +162,20 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var timeToFirstTokenMs: Int? = nil
     var usesMeasuredTokenCounts: Bool = false
     var errorCategory: String? = nil
+    var runtimeErrorDetail: String? = nil
+}
+
+func alphaRuntimeSafeErrorDetail(_ error: Error) -> String {
+    let nsError = error as NSError
+    let sanitizedDomain = nsError.domain
+        .map { character -> Character in
+            if character.isLetter || character.isNumber || character == "." || character == "_" || character == "-" {
+                return character
+            }
+            return "_"
+        }
+    let domain = String(sanitizedDomain).trimmingCharacters(in: CharacterSet(charactersIn: "._-"))
+    return "domain:\(domain.nilIfEmpty ?? "unknown"),code:\(nsError.code)"
 }
 
 enum AlphaLocalModelWarningCopy {
@@ -2854,7 +2868,8 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
                 accelerationMode: .standard,
                 inputChars: promptPack.inputChars,
-                errorCategory: "coreai_generation_failed"
+                errorCategory: "coreai_generation_failed",
+                runtimeErrorDetail: alphaRuntimeSafeErrorDetail(error)
             )
         }
     }

@@ -18729,7 +18729,8 @@ final class AlphaExtractionTests: XCTestCase {
             outputTokenCount: 28,
             outputTokensPerSecond: 19.375,
             timeToFirstTokenMs: 480,
-            usesMeasuredTokenCounts: true
+            usesMeasuredTokenCounts: true,
+            runtimeErrorDetail: "domain:CoreAITest,code:-42"
         )
         let missingMetricsOutput = AlphaLocalModelOutput(
             rawText: "",
@@ -18741,15 +18742,15 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "source stage", output: measuredOutput),
-            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf"
+            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
         )
         XCTAssertEqual(
             RossLocalModelSmokeView.stageDoneLine(stage: "source stage", durationMs: 1_234, output: measuredOutput),
-            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source_stage duration_ms=1234 schema_valid=true error=nil source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf"
+            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source_stage duration_ms=1234 schema_valid=true error=nil runtime_error_detail=domain:CoreAITest,code:-42 source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
         )
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
-            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil"
+            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_runtime_error_detail=nil"
         )
     }
 
@@ -23825,6 +23826,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "coreai_generation_failed")
+        XCTAssertEqual(output.runtimeErrorDetail, "domain:RossFoundationTest,code:42")
         XCTAssertEqual(output.warnings, [AlphaLocalModelWarningCopy.assistantCouldNotFinish])
         XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
         XCTAssertEqual(output.accelerationMode, .standard)

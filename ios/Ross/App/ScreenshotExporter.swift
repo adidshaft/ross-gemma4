@@ -1090,6 +1090,7 @@ struct RossLocalModelSmokeView: View {
             ("\(prefix)_acceleration", output.accelerationMode?.rawValue ?? "nil"),
             ("\(prefix)_draft_tokens", output.accelerationDraftTokens.map(String.init) ?? "nil"),
             ("\(prefix)_draft_model", output.accelerationDraftModelLabel.map(stableSmokeValue) ?? "nil"),
+            ("\(prefix)_runtime_error_detail", output.runtimeErrorDetail.map(stableSmokeValue) ?? "nil"),
         ]
         return fields
             .map { "\($0.0)=\($0.1)" }
@@ -1098,7 +1099,7 @@ struct RossLocalModelSmokeView: View {
 
     nonisolated static func stageDoneLine(stage: String, durationMs: Int, output: AlphaLocalModelOutput) -> String {
         let safeStage = stableSmokeValue(stage)
-        return "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(safeStage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil") \(benchmarkFields(stage: stage, output: output))"
+        return "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(safeStage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil") runtime_error_detail=\(output.runtimeErrorDetail.map(stableSmokeValue) ?? "nil") \(benchmarkFields(stage: stage, output: output))"
     }
 
     nonisolated static func stageTimeoutSeconds() -> TimeInterval {

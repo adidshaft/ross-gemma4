@@ -1300,7 +1300,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         accelerationDraftTokens: draftTokens,
                         accelerationDraftModelLabel: draftModelLabel,
                         inputChars: activePromptPack?.inputChars,
-                        errorCategory: "mlx_draft_generation_failed"
+                        errorCategory: "mlx_draft_generation_failed",
+                        runtimeErrorDetail: alphaRuntimeSafeErrorDetail(error)
                     )
                 }
                 let fallbackGeneration = try await Self.streamGenerator(
@@ -1345,7 +1346,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 accelerationDraftTokens: draftDirectoryURL == nil ? nil : draftTokens,
                 accelerationDraftModelLabel: draftDirectoryURL == nil ? nil : draftModelLabel,
                 inputChars: activePromptPack?.inputChars,
-                errorCategory: "mlx_generation_failed"
+                errorCategory: "mlx_generation_failed",
+                runtimeErrorDetail: alphaRuntimeSafeErrorDetail(error)
             )
         }
     }
