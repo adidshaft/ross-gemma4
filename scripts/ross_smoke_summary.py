@@ -176,6 +176,23 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
+    actual_runtime = identity.get("actual_runtime") if identity else None
+    if not actual_runtime:
+        raise MissingBenchmarkMatrixError("missing_runtime_identity")
+    pass_runtime = pass_fields.get("runtime") if pass_fields else None
+    if not pass_runtime:
+        raise MissingBenchmarkMatrixError("missing_benchmark_pass_runtime")
+    if pass_runtime != actual_runtime:
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_runtime_mismatch pass_runtime={summary_value(pass_fields, 'runtime')} "
+            f"identity_runtime={summary_value(identity, 'actual_runtime')}"
+        )
+    identity_requested_runtime = identity.get("requested_runtime")
+    if identity_requested_runtime not in (None, "nil", actual_runtime):
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_requested_runtime_mismatch requested_runtime={identity_requested_runtime} "
+            f"identity_runtime={actual_runtime}"
+        )
     for required_key in ("profile", "cases", "stages"):
         if not matrix_fields.get(required_key):
             raise MissingBenchmarkMatrixError(f"missing_benchmark_matrix_{required_key}")

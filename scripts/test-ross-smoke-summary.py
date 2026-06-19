@@ -70,13 +70,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix_cases"):
-            benchmark_summary_line({}, {}, incomplete_matrix)
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime"},
+                {"runtime": "gemma_local_runtime", "profile": "quick"},
+                incomplete_matrix,
+            )
 
     def test_mismatched_benchmark_profile_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_profile_mismatch"):
             benchmark_summary_line(
-                {},
-                {"profile": "quick"},
+                {"actual_runtime": "gemma_local_runtime"},
+                {"runtime": "gemma_local_runtime", "profile": "quick"},
                 {
                     "profile": "full",
                     "cases": "english_source_bound_document_qa",
@@ -87,8 +91,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_missing_pass_profile_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_pass_profile"):
             benchmark_summary_line(
-                {},
-                {},
+                {"actual_runtime": "gemma_local_runtime"},
+                {"runtime": "gemma_local_runtime"},
                 {
                     "profile": "quick",
                     "cases": "english_source_bound_document_qa",
@@ -96,10 +100,63 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
             )
 
-    def test_empty_identity_and_pass_fields_are_reported_as_nil(self):
+    def test_missing_identity_is_rejected_for_benchmark_summary(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_runtime_identity"):
+            benchmark_summary_line(
+                {},
+                {"runtime": "gemma_local_runtime", "profile": "quick"},
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_benchmark_summary_rejects_pass_runtime_mismatch(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_mismatch"):
+            benchmark_summary_line(
+                {"actual_runtime": "mlx_swift_lm", "requested_runtime": "mlx_swift_lm"},
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_benchmark_summary_rejects_requested_runtime_mismatch(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_requested_runtime_mismatch"):
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime", "requested_runtime": "mlx_swift_lm"},
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
+    def test_present_identity_with_missing_optional_fields_reports_nil(self):
         summary = benchmark_summary_line(
-            {},
+            {"actual_runtime": "gemma_local_runtime"},
             {
+                "runtime": "gemma_local_runtime",
                 "profile": "quick",
                 "source_input_tokens": "120",
                 "source_output_tokens": "32",
@@ -114,7 +171,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             },
         )
 
-        self.assertIn("runtime=nil", summary)
+        self.assertIn("runtime=gemma_local_runtime", summary)
+        self.assertIn("requested_runtime=nil", summary)
         self.assertIn("matrix_cases=english_source_bound_document_qa", summary)
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
 
@@ -124,14 +182,18 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "cases": "english_source_bound_document_qa",
             "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
         }
-        pass_fields = {"profile": "quick"}
+        pass_fields = {"runtime": "gemma_local_runtime", "profile": "quick"}
 
         self.assertEqual(
             benchmark_stage_metric_error(pass_fields, matrix),
             "source_input_tokens=nil",
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
-            benchmark_summary_line({}, pass_fields, matrix)
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime"},
+                pass_fields,
+                matrix,
+            )
 
     def test_benchmark_summary_rejects_token_speed_without_output_tokens(self):
         matrix = {
@@ -140,6 +202,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
         }
         pass_fields = {
+            "runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "nil",
@@ -153,7 +216,11 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_output_tokens=nil",
         )
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_stage_metrics_missing"):
-            benchmark_summary_line({}, pass_fields, matrix)
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime"},
+                pass_fields,
+                matrix,
+            )
 
     def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):
         self.assertIsNone(

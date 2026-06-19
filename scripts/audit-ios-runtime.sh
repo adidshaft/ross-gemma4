@@ -384,6 +384,16 @@ if ! grep -q "benchmark_stage_metric_error" scripts/ross_smoke_summary.py 2>/dev
     FAIL=1
 fi
 
+if ! grep -q "benchmark_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject pass runtime and identity runtime mismatches."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject requested/runtime identity mismatches."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metrics_missing" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject missing per-stage token and speed metrics."
     FAIL=1
