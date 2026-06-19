@@ -951,6 +951,19 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_draft_profile_mismatch"):
             benchmark_summary_line(identity, pass_fields, matrix)
 
+    def test_benchmark_profile_draft_error_recognizes_hyphenated_mtp_alias(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "actual_runtime=gemma_local_runtime acceleration=standard"
+        )
+        matrix = parse_fields("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp-quick")
+        pass_fields = parse_fields("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp-quick")
+
+        self.assertEqual(
+            benchmark_profile_draft_error(identity, pass_fields, matrix),
+            "acceleration=standard",
+        )
+
     def test_benchmark_summary_accepts_active_draft_identity_when_all_stages_match(self):
         identity = parse_fields(
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
