@@ -24,6 +24,16 @@ This report records the physical-device benchmark evidence captured on Aman's at
 | CoreAI / Foundation Models | Requested, not benchmarked | The smoke request entered `runtime=apple_foundation_models`, but the installed state resolved through GGUF files and loader logs. No CoreAI artifact-backed generation result was produced. |
 | Gemma 4 12B GGUF | Blocked safely | The app refused generation with `insufficient_device_memory` on this 7 GB device class. |
 
+## Fresh Checkpoint - 2026-06-19 13:10 IST
+
+A fresh Debug build was installed on Aman's physical iPhone 15 Pro (`iPhone16,1`) with `xcrun devicectl device install app`. The installed app container preserved the E4B Quick Start pack, the 2B seeded proof pack, and the 12B seeded proof pack.
+
+The 2B proof pack passed the full physical-device benchmark matrix after the fresh install. This covered English source-bound document Q&A, Bengali source-bound document Q&A, Hindi source-bound document Q&A, Tamil source-bound document Q&A, Telugu source-bound document Q&A, and an English open no-document query. The guarded `ROSS_SMOKE_BENCHMARK_SUMMARY` matched `requested_runtime=gemma_local_runtime`, `actual_runtime=gemma_local_runtime`, `fallback=none`, `available=true`, `artifact_path_type=file`, and `profile=full`.
+
+The E4B Quick Start GGUF pack still loads on the physical device, but the fresh full-matrix run with a 90s stage timeout did not produce a benchmark summary: the first source-bound stage timed out after real generation started. Treat this checkpoint as load/routing evidence, not a fresh E4B benchmark.
+
+The E4B MTP proof attempt failed safely. Strict draft validation required active speculative acceleration, but the run reported `draft_status=validator_failed`, `error=draft_validator_failed`, `acceleration=standard`, and `draft_tokens=nil` after `llama_model_load` failed with `mmap failed: Cannot allocate memory`. This is not MTP benchmark evidence.
+
 ## Installed Packs Observed
 
 | Tier | Pack | Runtime | Artifact | Size | Notes |
@@ -124,6 +134,12 @@ The MLX and CoreAI requests were stopped after they resolved into the existing G
 | E4B full | Telugu | 473 scheduled tokens | 20.37s | 9.43 output tok/s, 23.22 total tok/s |
 | 2B baseline | Source document query | 399 scheduled tokens | 6.28s | 30.56 output tok/s, 63.51 total tok/s |
 | 2B baseline | General query | 382 scheduled tokens | 10.58s | 18.15 output tok/s, 36.11 total tok/s |
+| 2B full checkpoint | Source document query | 312 measured tokens | 6.92s | 15.36 output tok/s |
+| 2B full checkpoint | Bengali | 520 measured tokens | 13.03s | 14.78 output tok/s |
+| 2B full checkpoint | Hindi | 470 measured tokens | 12.88s | 14.95 output tok/s |
+| 2B full checkpoint | Tamil | 436 measured tokens | 5.11s | 10.64 output tok/s |
+| 2B full checkpoint | Telugu | 493 measured tokens | 5.87s | 10.29 output tok/s |
+| 2B full checkpoint | General query | 380 measured tokens | 11.90s | 16.01 output tok/s |
 
 The smoke path did not emit exact final decoded token counts. `output tok/s` is calculated as `max_new_tokens / stage duration`; `tokens processed` is `prompt_tokens + max_new_tokens`.
 
