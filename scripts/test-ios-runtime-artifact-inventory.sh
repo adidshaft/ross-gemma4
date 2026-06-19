@@ -171,6 +171,12 @@ mkdir -p "$bad_packs_root/quickStart" "$bad_packs_root/mlx/bad-mlx"
 mkdir -p "$bad_packs_root/coreai/empty-adapter.mlmodelc"
 printf 'GGUF' > "$bad_packs_root/quickStart/main.gguf"
 printf 'GGUF' > "$bad_packs_root/quickStart/draft.gguf"
+python3 - "$bad_packs_root/quickStart/checksum-main.gguf" "$bad_packs_root/quickStart/checksum-draft.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
 python3 - "$bad_packs_root/coreai/foreign-adapter.gguf" <<'PY'
 import pathlib
 import sys
@@ -182,10 +188,12 @@ printf '{}' > "$bad_packs_root/mlx/bad-mlx/tokenizer.json"
 python3 - "$bad_support_root" <<'PY'
 import json
 import pathlib
+import hashlib
 import sys
 
 support = pathlib.Path(sys.argv[1])
 packs = support / "model-packs"
+wrong_checksum = hashlib.sha256(b"not the installed artifact").hexdigest()
 
 (packs / "quickStart" / "bad.manifest.json").write_text(json.dumps({
     "packId": "bad-mtp",
@@ -247,11 +255,34 @@ packs = support / "model-packs"
     "developmentOnly": False,
     "verifiedAt": "2026-06-19T00:00:00Z",
 }))
+
+(packs / "quickStart" / "checksum.manifest.json").write_text(json.dumps({
+    "packId": "checksum-mismatch",
+    "tier": "quickStart",
+    "fileName": "checksum-main.gguf",
+    "relativePath": "model-packs/quickStart/checksum-main.gguf",
+    "checksumSha256": wrong_checksum,
+    "bytes": 1000004,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "checksum-draft.gguf",
+        "relativePath": "model-packs/quickStart/checksum-draft.gguf",
+        "checksumSha256": wrong_checksum,
+        "bytes": 1000004,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
 PY
 
 "$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$bad_support_root" > /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_unusable_artifact .*pack=bad-mtp" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_gguf status=missing .*reason=manifest_primary_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_checksum_mismatch .*pack=checksum-mismatch .*checksum_status=mismatch" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mlx status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-mlx" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_primary_unusable_artifact .*pack=bad-coreai" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_coreai status=missing .*reason=manifest_foreign_coreai_adapter .*pack=foreign-coreai" /tmp/ross-runtime-inventory.out

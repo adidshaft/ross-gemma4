@@ -516,6 +516,14 @@ if ! grep -q "manifest_primary_unusable_artifact" scripts/ios-runtime-artifact-i
     FAIL=1
 fi
 
+if ! grep -q "manifest_primary_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "manifest_draft_checksum_mismatch" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "checksum_status=mismatch" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "manifest_primary_checksum_mismatch" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: installed artifact inventory does not reject checksum-mismatched file artifacts."
+    FAIL=1
+fi
+
 if ! grep -q "device_mlx_directory_looks_usable" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "malformed installed MLX directory" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
    ! grep -q "malformed installed MLX draft directory" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then

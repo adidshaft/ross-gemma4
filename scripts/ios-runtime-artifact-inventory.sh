@@ -236,6 +236,7 @@ for installed_root in "${installed_roots[@]}"; do
 
   python3 - "$installed_root" <<'PY'
 import json
+import hashlib
 import pathlib
 import shlex
 import sys
@@ -267,6 +268,24 @@ def file_size(path: pathlib.Path) -> int:
         return path.stat().st_size
     except OSError:
         return 0
+
+def normalized_sha256(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if len(text) == 64 and all(character in "0123456789abcdef" for character in text):
+        return text
+    return ""
+
+def file_sha256(path: pathlib.Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
 
 def gguf_file_looks_usable(path: pathlib.Path) -> bool:
     if not path.is_file() or file_size(path) <= 1_000_000:
@@ -311,6 +330,18 @@ def artifact_looks_usable(relative_path: str, runtime: str, artifact_kind: str) 
     if runtime == "apple_foundation_models":
         return coreai_adapter_looks_usable(candidate)
     return candidate.exists()
+
+def artifact_checksum_status(relative_path: str, artifact_kind: str, expected_checksum: object) -> str:
+    expected = normalized_sha256(expected_checksum)
+    if not expected:
+        return "not_checked"
+    if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
+        return "not_applicable"
+    candidate = support_root / relative_path
+    actual = file_sha256(candidate)
+    if actual is None:
+        return "not_checked"
+    return "match" if actual == expected else "mismatch"
 
 def expected_path_type(relative_path: str, artifact_kind: str) -> str:
     if artifact_kind == "system_model" and (relative_path == "system-model" or relative_path.startswith("system://")):
@@ -392,8 +423,11 @@ for manifest_path in manifest_paths:
     primary_ok, primary_reason = compatible_primary(runtime, artifact_kind, relative_path)
     primary_exists = artifact_exists(relative_path, runtime, artifact_kind)
     primary_usable = primary_exists and artifact_looks_usable(relative_path, runtime, artifact_kind)
-    status = "present" if primary_ok and primary_usable else "missing"
+    primary_checksum_status = artifact_checksum_status(relative_path, artifact_kind, payload.get("checksumSha256"))
+    status = "present" if primary_ok and primary_usable and primary_checksum_status != "mismatch" else "missing"
     reason = primary_reason if not primary_ok else (
+        "manifest_primary_checksum_mismatch" if primary_usable and primary_checksum_status == "mismatch"
+        else
         "manifest_primary_reachable" if primary_usable
         else "manifest_primary_unusable_artifact" if primary_exists
         else "manifest_primary_file_missing"
@@ -408,6 +442,7 @@ for manifest_path in manifest_paths:
         runtime=runtime,
         artifact_kind=artifact_kind,
         bytes=bytes_value,
+        checksum_status=primary_checksum_status,
         path_type=expected_path_type(relative_path, artifact_kind),
     )
 
@@ -432,8 +467,11 @@ for manifest_path in manifest_paths:
     draft_ok, draft_reason = compatible_draft(runtime, draft_kind, draft_relative_path)
     draft_exists = artifact_exists(draft_relative_path, runtime, draft_kind)
     draft_usable = draft_exists and artifact_looks_usable(draft_relative_path, runtime, draft_kind)
-    draft_status = "present" if draft_ok and draft_usable else "missing"
+    draft_checksum_status = artifact_checksum_status(draft_relative_path, draft_kind, draft.get("checksumSha256"))
+    draft_status = "present" if draft_ok and draft_usable and draft_checksum_status != "mismatch" else "missing"
     draft_final_reason = draft_reason if not draft_ok else (
+        "manifest_draft_checksum_mismatch" if draft_usable and draft_checksum_status == "mismatch"
+        else
         "manifest_draft_reachable" if draft_usable
         else "manifest_draft_unusable_artifact" if draft_exists
         else "manifest_draft_file_missing"
@@ -448,6 +486,7 @@ for manifest_path in manifest_paths:
         runtime=runtime,
         artifact_kind=draft_kind,
         bytes=draft.get("bytes"),
+        checksum_status=draft_checksum_status,
         draft_tokens=draft.get("draftTokens"),
     )
 PY
