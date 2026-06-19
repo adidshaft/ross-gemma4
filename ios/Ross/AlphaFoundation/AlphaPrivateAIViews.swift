@@ -2799,7 +2799,8 @@ func alphaAssistantVariantOptions(
     var options = installedPacks
         .filter {
             AlphaCapabilityTier.assistantSelectionsMatch($0.tier, normalizedTier) &&
-                runtimeSupported($0.runtimeMode)
+                runtimeSupported($0.runtimeMode) &&
+                alphaInstalledAssistantPackPassesRuntimeValidation($0)
         }
         .map { pack in
             let isActive = activePack?.id == pack.id

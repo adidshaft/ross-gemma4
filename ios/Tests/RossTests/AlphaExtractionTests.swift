@@ -10179,7 +10179,7 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testAssistantVariantOptionsIncludeLegacyFlashPackUnderQuickStart() {
-        let legacyPack = installedPack(.flash, runtimeMode: .llamaCppGguf, developmentOnly: false)
+        let legacyPack = installedPack(.flash, runtimeMode: .llamaCppGguf, developmentOnly: true)
 
         let options = alphaAssistantVariantOptions(
             for: .quickStart,
@@ -12780,7 +12780,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "case-mlx",
             installPath: "model-packs/case_associate/case-mlx",
             artifactKind: "mlx_directory",
-            developmentOnly: false
+            developmentOnly: true
         )
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
@@ -12789,7 +12789,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -12854,7 +12854,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "coreml_model",
             runtimeMode: .appleFoundationModels,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -12879,6 +12879,33 @@ final class AlphaExtractionTests: XCTestCase {
                 option.runtimeMode == .appleFoundationModels &&
                 option.isBuiltIn == true
         })
+    }
+
+    func testAssistantVariantOptionsHideInvalidInstalledRuntimePack() {
+        let mislabeledMLXPack = AlphaInstalledModelPack(
+            packId: "case-mlx-mislabeled",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [mislabeledMLXPack],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
+        )
+
+        XCTAssertFalse(options.contains { $0.pack?.packId == mislabeledMLXPack.packId })
+        XCTAssertTrue(options.contains { $0.pack == nil && $0.runtimeMode == .mlxSwiftLm })
     }
 
     func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
@@ -12924,7 +12951,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -12978,7 +13005,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "f", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -13065,7 +13092,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "d", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -13076,7 +13103,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -13103,7 +13130,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "d", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )
@@ -13114,7 +13141,7 @@ final class AlphaExtractionTests: XCTestCase {
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
-            developmentOnly: false,
+            developmentOnly: true,
             checksumVerified: true,
             isActive: false
         )

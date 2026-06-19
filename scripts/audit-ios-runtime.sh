@@ -85,6 +85,16 @@ if ! grep -q 'Label(rossLocalized("answer_details"), systemImage: "info.circle")
     FAIL=1
 fi
 
+if ! grep -q "alphaInstalledAssistantPackPassesRuntimeValidation" ios/Ross/AlphaFoundation/AlphaPrivateAIViews.swift 2>/dev/null; then
+    echo "❌ FAIL: assistant runtime variant options do not filter invalid installed packs."
+    FAIL=1
+fi
+
+if ! grep -q "testAssistantVariantOptionsHideInvalidInstalledRuntimePack" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not cover invalid installed packs being hidden from runtime options."
+    FAIL=1
+fi
+
 for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
     if ! grep -q "MissingBenchmarkMatrixError" "$smoke_script" 2>/dev/null; then
         echo "❌ FAIL: $smoke_script does not require benchmark matrix before benchmark summary."
