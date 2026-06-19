@@ -267,6 +267,52 @@ write_manifest '{
 run_expect_exit_1 "tiny MLX installed manifest" "implausibly small artifact" "${base_command[@]}" --runtime mlx
 
 write_manifest '{
+  "packId": "malformed-mlx",
+  "tier": "quick_start",
+  "fileName": "mlx-model",
+  "relativePath": "model-packs/quick/mlx-model",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/config.json"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/tokenizer.json"
+run_expect_exit_1 "malformed installed MLX directory" "Installed MLX artifact directory is missing required files" "${base_command[@]}" --runtime mlx
+
+write_manifest '{
+  "packId": "malformed-mlx-draft",
+  "tier": "quick_start",
+  "fileName": "mlx-model",
+  "relativePath": "model-packs/quick/mlx-model",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "mlx_directory",
+  "runtimeMode": "mlx_swift_lm",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "mlx-draft",
+    "relativePath": "model-packs/quick/mlx-draft",
+    "checksumSha256": "b",
+    "bytes": 2000000,
+    "artifactKind": "mlx_directory",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/config.json"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/tokenizer.json"
+printf 'weights' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-model/model.safetensors"
+mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/config.json"
+printf '{}' >"$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/mlx-draft/tokenizer.json"
+run_expect_exit_1 "malformed installed MLX draft directory" "Installed MLX draft artifact directory is missing required files" "${base_command[@]}" --runtime mlx --require-draft-acceleration
+
+write_manifest '{
   "packId": "empty-coreml",
   "tier": "quick_start",
   "fileName": "adapter.mlmodelc",

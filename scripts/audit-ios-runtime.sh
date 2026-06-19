@@ -499,6 +499,13 @@ if ! grep -q "manifest_primary_unusable_artifact" scripts/ios-runtime-artifact-i
     FAIL=1
 fi
 
+if ! grep -q "device_mlx_directory_looks_usable" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "malformed installed MLX directory" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "malformed installed MLX draft directory" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: device installed-pack smoke can still treat malformed MLX directories as launch-ready."
+    FAIL=1
+fi
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "bad-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=coreai_adapter status=missing" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||

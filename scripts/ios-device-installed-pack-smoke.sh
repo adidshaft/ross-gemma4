@@ -607,14 +607,99 @@ sys.exit(1)
 PY
 }
 
+device_relative_directory_has_named_file() {
+  local relative_path="$1"
+  local search_name="$2"
+  local existence_json="$tmpdir/dir-file-$(printf '%s-%s' "$relative_path" "$search_name" | tr '/ ' '__').json"
+
+  xcrun devicectl device info files \
+    --device "$device_id" \
+    --domain-type appDataContainer \
+    --domain-identifier "$bundle_id" \
+    --subdirectory 'Library/Application Support/RossAlpha' \
+    --search "$search_name" \
+    --json-output "$existence_json" \
+    > /dev/null
+
+  python3 - "$existence_json" "$relative_path" "$search_name" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1]).read())
+target = sys.argv[2].strip().strip("/")
+search_name = sys.argv[3]
+for file_entry in payload.get("result", {}).get("files", []):
+    relative = (file_entry.get("relativePath") or "").strip().strip("/")
+    if relative.startswith(target + "/") and relative.endswith("/" + search_name):
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+device_relative_directory_has_suffix_file() {
+  local relative_path="$1"
+  local suffix="$2"
+  local existence_json="$tmpdir/dir-suffix-$(printf '%s-%s' "$relative_path" "$suffix" | tr '/ ' '__').json"
+
+  xcrun devicectl device info files \
+    --device "$device_id" \
+    --domain-type appDataContainer \
+    --domain-identifier "$bundle_id" \
+    --subdirectory 'Library/Application Support/RossAlpha' \
+    --search "$suffix" \
+    --json-output "$existence_json" \
+    > /dev/null
+
+  python3 - "$existence_json" "$relative_path" "$suffix" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1]).read())
+target = sys.argv[2].strip().strip("/")
+suffix = sys.argv[3]
+for file_entry in payload.get("result", {}).get("files", []):
+    relative = (file_entry.get("relativePath") or "").strip().strip("/")
+    if relative.startswith(target + "/") and relative.endswith(suffix):
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
+device_mlx_directory_looks_usable() {
+  local relative_path="$1"
+  device_relative_directory_has_named_file "$relative_path" "config.json" || return 1
+
+  if ! device_relative_directory_has_named_file "$relative_path" "tokenizer.json" &&
+     ! device_relative_directory_has_named_file "$relative_path" "tokenizer.model" &&
+     ! device_relative_directory_has_named_file "$relative_path" "tokenizer_config.json"; then
+    return 1
+  fi
+
+  device_relative_directory_has_suffix_file "$relative_path" ".safetensors" ||
+    device_relative_directory_has_suffix_file "$relative_path" ".safetensors.index.json"
+}
+
 if [[ "$selected_artifact_kind" != "system_model" ]] && ! device_relative_path_exists "$selected_relative_path"; then
   echo "Installed artifact file is missing from the app container: $device_model_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
 fi
 
+if [[ "$selected_runtime_raw" == "mlx_swift_lm" ]] && ! device_mlx_directory_looks_usable "$selected_relative_path"; then
+  echo "Installed MLX artifact directory is missing required files: config.json, tokenizer metadata, and safetensors weights/index under $device_model_path" >&2
+  echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+  exit 1
+fi
+
 if [[ -n "$device_draft_path" ]] && ! device_relative_path_exists "$selected_draft_relative_path"; then
   echo "Installed draft artifact file is missing from the app container: $device_draft_path" >&2
+  echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
+  exit 1
+fi
+
+if [[ "$require_draft_acceleration" == "1" && "$selected_runtime_raw" == "mlx_swift_lm" ]] &&
+   ! device_mlx_directory_looks_usable "$selected_draft_relative_path"; then
+  echo "Installed MLX draft artifact directory is missing required files: config.json, tokenizer metadata, and safetensors weights/index under $device_draft_path" >&2
   echo "Selected pack: $selected_pack_id runtime=$selected_runtime_raw tier=$selected_tier_raw" >&2
   exit 1
 fi
