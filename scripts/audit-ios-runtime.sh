@@ -115,6 +115,11 @@ if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; t
     FAIL=1
 fi
 
+if ! grep -q "tamil_acceleration=standard" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke failure summary tests do not cover stage acceleration evidence."
+    FAIL=1
+fi
+
 if ! grep -q "draft_model_path_type" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared smoke parser omits draft model path type."
     FAIL=1

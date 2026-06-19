@@ -298,7 +298,9 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "source_error=nil tamil_error=nil source_grounded=true tamil_grounded=false "
             "source_refs_kept=true tamil_refs_kept=true source_native_model=true tamil_native_model=true "
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=7.78 "
-            "tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=7.53"
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "tamil_input_tokens=310 tamil_output_tokens=59 tamil_token_speed=7.53 "
+            "tamil_acceleration=standard tamil_draft_tokens=nil tamil_draft_model=nil"
         )
 
         summary = failure_summary_line(identity, fail_fields, matrix)
@@ -311,6 +313,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("matrix_cases=nil", summary)
         self.assertIn("tamil_grounded=false", summary)
         self.assertIn("tamil_token_speed=7.53", summary)
+        self.assertIn("source_acceleration=draftModelSpeculative", summary)
+        self.assertIn("source_draft_model=mtp.gguf", summary)
+        self.assertIn("tamil_acceleration=standard", summary)
+        self.assertIn("tamil_draft_model=nil", summary)
 
     def test_failure_summary_survives_missing_runtime_identity(self):
         fail_fields = parse_fields(
