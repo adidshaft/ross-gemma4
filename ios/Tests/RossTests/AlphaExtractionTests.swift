@@ -17721,6 +17721,145 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(pack.checksumVerified)
     }
 
+    func testInstalledModelSmokePackTargetsExactPackIDOverride() {
+        var activeGGUF = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUF.isActive = true
+        var targetMLX = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "target-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        targetMLX.isActive = false
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            packIDOverride: "target-mlx",
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [activeGGUF, targetMLX],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertEqual(selected?.packId, "target-mlx")
+        XCTAssertEqual(selected?.runtimeMode, .mlxSwiftLm)
+    }
+
+    func testInstalledModelSmokePackPrefersRequestedRuntimeOverActiveFallback() {
+        var activeGGUF = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUF.isActive = true
+        var installedMLX = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        installedMLX.isActive = false
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [activeGGUF, installedMLX],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertEqual(selected?.packId, "case-mlx")
+        XCTAssertEqual(selected?.runtimeMode, .mlxSwiftLm)
+    }
+
+    func testInstalledModelSmokePackRespectsRuntimeTierOverride() {
+        var activeGGUF = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUF.isActive = true
+        let quickMLX = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "quick-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let caseMLX = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [quickMLX, caseMLX, activeGGUF],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertEqual(selected?.packId, "case-mlx")
+    }
+
+    func testInstalledModelSmokePackFailsClosedForMissingExactPackID() {
+        let activeGGUF = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            packIDOverride: "missing-mlx",
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [activeGGUF],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertNil(selected)
+    }
+
     func testLocalModelSmokeProfileParsesQuickAliases() {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([

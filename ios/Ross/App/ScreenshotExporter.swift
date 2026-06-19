@@ -340,6 +340,48 @@ func alphaDebugSmokePathUsesSystemFoundationModel(
         )
 }
 
+func alphaInstalledModelSmokePack(
+    installedPacks: [AlphaInstalledModelPack],
+    fallbackPack: AlphaInstalledModelPack?,
+    environment: AlphaLocalRuntimeEnvironment
+) -> AlphaInstalledModelPack? {
+    func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    if let requestedPackID = nonEmpty(environment.packIDOverride) {
+        return installedPacks.first { $0.packId == requestedPackID }
+    }
+
+    guard environment.enableRealInference,
+          let requestedRuntime = environment.runtimeModeOverride else {
+        return fallbackPack
+    }
+
+    let requestedTier = environment.tierOverride ?? fallbackPack?.tier
+    if let fallbackPack,
+       fallbackPack.runtimeMode == requestedRuntime,
+       requestedTier.map({ AlphaCapabilityTier.assistantSelectionsMatch(fallbackPack.tier, $0) }) ?? true {
+        return fallbackPack
+    }
+
+    let candidates = installedPacks.filter { pack in
+        pack.runtimeMode == requestedRuntime &&
+            (requestedTier.map { AlphaCapabilityTier.assistantSelectionsMatch(pack.tier, $0) } ?? true)
+    }
+
+    return candidates.sorted { lhs, rhs in
+        if lhs.isActive != rhs.isActive {
+            return lhs.isActive && !rhs.isActive
+        }
+        if lhs.checksumVerified != rhs.checksumVerified {
+            return lhs.checksumVerified && !rhs.checksumVerified
+        }
+        return lhs.packId.localizedCaseInsensitiveCompare(rhs.packId) == .orderedAscending
+    }.first ?? fallbackPack
+}
+
 struct RossLocalModelSmokeView: View {
     @State private var status = RossLocalModelSmokeStatusCopy.runningStatus
 
@@ -376,7 +418,11 @@ struct RossLocalModelSmokeView: View {
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE load_model_state")
             await model.loadIfNeeded()
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE loaded_model_state")
-            activePack = model.activePack
+            activePack = alphaInstalledModelSmokePack(
+                installedPacks: model.persisted.installedPacks,
+                fallbackPack: model.activePack,
+                environment: runtimeEnvironment
+            )
         }
 
         guard let activePack else {

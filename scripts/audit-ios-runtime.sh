@@ -1159,6 +1159,13 @@ if ! grep -Fq 'draft_status=\(providerHealth.draftAccelerationStatus' ios/Ross/A
     FAIL=1
 fi
 
+if ! grep -q "alphaInstalledModelSmokePack" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackPrefersRequestedRuntimeOverActiveFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackPrefersRequestedRuntimeOverActiveFallback" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+    echo "❌ FAIL: app smoke can still ignore installed packs matching an explicit runtime override."
+    FAIL=1
+fi
+
 if [ ! -f docs/IOS_RUNTIME.md ]; then
     echo "❌ FAIL: docs/IOS_RUNTIME.md missing."
     FAIL=1
