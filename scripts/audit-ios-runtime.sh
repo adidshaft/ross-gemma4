@@ -103,6 +103,7 @@ fi
 if ! grep -q '"checksum_verified"' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q '"checksum_verified": summary_value(identity, "checksum_verified")' scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "checksum_verified=unknown" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "checksum_verified=false" scripts/test-ross-smoke-summary.py 2>/dev/null ||
    ! grep -q "checksum_verified" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
    ! grep -q "checksum_verified" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
     echo "❌ FAIL: runtime identity does not preserve checksum verification status for benchmark evidence."
@@ -245,10 +246,11 @@ if ! grep -q "benchmark_runtime_artifact_mismatch" scripts/ross_smoke_summary.py
     FAIL=1
 fi
 
-if ! grep -q "benchmark_runtime_identity_missing" scripts/ross_smoke_summary.py 2>/dev/null ||
+if ! grep -q 'identity.get("checksum_verified") != "true"' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "benchmark_runtime_identity_missing" scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "runtime_identity_resource_error" scripts/ross_smoke_summary.py 2>/dev/null ||
    ! grep -q "test_benchmark_summary_rejects_missing_runtime_resource_identity" scripts/test-ross-smoke-summary.py 2>/dev/null ||
-   ! grep -q "checksum_verified=true|false" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "checksum_verified=true" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not require provider/checksum/context/offload identity evidence."
     FAIL=1
 fi
@@ -1104,8 +1106,8 @@ if ! grep -q "benchmark_runtime_identity_missing" docs/REAL_MODEL_QA_REPORT_TEMP
     FAIL=1
 fi
 
-if ! grep -q "checksum_verified.*positive .*context_tokens.*gpu_offload.*evidence" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
-   ! grep -q "checksum_verified.*context_tokens.*positive.*gpu_offload.*evidence" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then
+if ! grep -q "checksum_verified=true.*positive .*context_tokens.*gpu_offload.*evidence" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
+   ! grep -q "checksum_verified=true.*context_tokens.*positive.*gpu_offload.*evidence" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: runtime benchmark docs do not require provider/checksum/context/offload evidence for accepted summaries."
     FAIL=1
 fi

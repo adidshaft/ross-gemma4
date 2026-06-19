@@ -975,6 +975,15 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
             benchmark_summary_line(invalid_checksum, pass_fields, matrix)
 
+        unverified_checksum = self.valid_identity()
+        unverified_checksum["checksum_verified"] = "false"
+        self.assertEqual(
+            runtime_identity_resource_error(unverified_checksum),
+            "checksum_verified=false",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(unverified_checksum, pass_fields, matrix)
+
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
         active_mtp = {
             "acceleration": "draftModelSpeculative",

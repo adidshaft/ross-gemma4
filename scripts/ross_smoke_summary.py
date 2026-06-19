@@ -181,7 +181,7 @@ def runtime_identity_resource_error(identity):
     if identity.get("gpu_offload") in (None, "", "nil"):
         return f"gpu_offload={summary_value(identity, 'gpu_offload')}"
 
-    if identity.get("checksum_verified") not in ("true", "false"):
+    if identity.get("checksum_verified") != "true":
         return f"checksum_verified={summary_value(identity, 'checksum_verified')}"
 
     return None
