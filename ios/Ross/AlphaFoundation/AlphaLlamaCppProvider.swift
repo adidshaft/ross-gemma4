@@ -894,6 +894,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         )
     }
 
+    private func stagedDraftLooksLikeGGUFFile(_ draftPath: String) -> Bool {
+        guard draftPath.lowercased().hasSuffix(".gguf") else { return false }
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: draftPath, isDirectory: &isDirectory) &&
+            isDirectory.boolValue == false
+    }
+
     private func surfacedDraftMetadata(
         for accelerationMode: AlphaLocalRuntimeAccelerationMode
     ) -> (tokens: Int?, label: String?)? {
@@ -966,6 +973,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         guard let metadata = stagedDraftMetadata() else {
             return ("draft_file_unavailable", draftPath, nil)
         }
+        guard stagedDraftLooksLikeGGUFFile(draftPath) else {
+            return ("draft_format_unsupported", draftPath, metadata)
+        }
         guard AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
             forModelPath: modelPath,
             physicalMemory: Self.physicalMemoryBytesProvider(),
@@ -1014,6 +1024,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "draft_file_unavailable"
         case "draft_token_policy_blocked":
             return "draft_token_policy_blocked"
+        case "draft_format_unsupported":
+            return "draft_format_unsupported"
         case "validator_rejected":
             return "draft_validator_rejected"
         case "validator_failed":

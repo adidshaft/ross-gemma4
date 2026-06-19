@@ -491,6 +491,11 @@ if ! grep -q "draft_validator_rejected" ios/Ross/AlphaFoundation/AlphaLlamaCppPr
     FAIL=1
 fi
 
+if ! grep -q "draft_format_unsupported" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP health does not reject non-GGUF draft candidates before validation."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: simulator MTP guard does not validate draft artifact path shape."
     FAIL=1
