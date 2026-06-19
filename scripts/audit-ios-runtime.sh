@@ -114,8 +114,10 @@ if ! grep -q "testRuntimeHealthRejectsMLXRequestAgainstGGUFPackBeforeFallback" i
 fi
 
 if ! grep -q "getOrContext(path: modelPath, includeDraft: false)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
-   ! grep -q "testRuntimeHealthKeepsBaselineAvailableWhenDraftArtifactIsInvalid" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
-    echo "❌ FAIL: GGUF runtime availability can still be poisoned by invalid MTP draft artifacts."
+   ! grep -q "stagedDraftLooksLikeGGUFFile(draftPath)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthKeepsBaselineAvailableWhenDraftArtifactIsInvalid" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderDoesNotPassInvalidDraftArtifactToGenerationContext" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF runtime availability or generation can still be poisoned by invalid MTP draft artifacts."
     FAIL=1
 fi
 

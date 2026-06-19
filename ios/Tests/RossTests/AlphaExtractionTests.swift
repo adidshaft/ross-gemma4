@@ -7196,6 +7196,101 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "draft_format_unsupported")
     }
 
+    func testExperimentalGGUFProviderDoesNotPassInvalidDraftArtifactToGenerationContext() async throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            private var emitted = false
+
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {
+                emitted = false
+            }
+            func completionLoop() -> String {
+                guard !emitted else { return "" }
+                emitted = true
+                return "Standard answer"
+            }
+            func isDone() -> Bool { emitted }
+            func promptTokenCount() -> Int { 128 }
+            func generatedTokenCount() -> Int { 16 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-invalid-draft-run-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-invalid-run-\(UUID().uuidString)")
+            .appendingPathExtension("bin")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("not-a-gguf-draft".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        AlphaLlamaCppProvider.contextFactory = { _, draftPath, _ in
+            XCTAssertNil(draftPath, "Invalid GGUF/MTP draft artifacts must be excluded from normal generation contexts.")
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in
+            XCTFail("Invalid draft candidates should fail before llama draft validation.")
+            return true
+        }
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+        }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true,
+            draftModelPath: draftURL.path,
+            draftModelTokens: 2
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 64,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        XCTAssertEqual(output.rawText, "Standard answer")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNil(output.accelerationDraftTokens)
+        XCTAssertNil(output.accelerationDraftModelLabel)
+    }
+
     func testRuntimeHealthReportsGGUFDraftValidatorFailureWithoutDisablingBaselineRuntime() throws {
         actor StubLlamaContext: AlphaLlamaCompletionContext {
             func clear() {}

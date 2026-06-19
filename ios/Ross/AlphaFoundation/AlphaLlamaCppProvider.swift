@@ -1232,6 +1232,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         let degenerateDraftKey = modelPath.flatMap { activeDraftHealthKey(path: $0) }
         guard
             let draftPath = stagedDraftModelPath(),
+            stagedDraftMetadata() != nil,
+            stagedDraftLooksLikeGGUFFile(draftPath),
             AlphaLlamaRuntimeProfile.supportsDraftAcceleration(
                 forModelPath: modelPath,
                 physicalMemory: Self.physicalMemoryBytesProvider(),
