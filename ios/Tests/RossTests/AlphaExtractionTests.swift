@@ -20213,6 +20213,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
         XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
         XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
     }
 
@@ -20361,6 +20362,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, true)
         XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_artifact")
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)
@@ -20390,6 +20392,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
         XCTAssertEqual(health?.lastErrorCategory, "missing_mlx_artifact")
         XCTAssertEqual(health?.accelerationMode, .standard)
         XCTAssertNil(health?.accelerationDraftTokens)

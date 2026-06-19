@@ -1012,7 +1012,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
-            modelPathPresent: modelPath != nil,
+            modelPathPresent: mlxModelPathPresent(),
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: availability.available ? Array(supportedTasks()) : [],
@@ -1027,6 +1027,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
         )
+    }
+
+    private func mlxModelPathPresent() -> Bool {
+        guard let modelPath, !modelPath.isEmpty else { return false }
+        let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: directoryURL.path, isDirectory: &isDirectory) &&
+            isDirectory.boolValue
     }
 
     func contextWindowEstimate() -> Int? {
