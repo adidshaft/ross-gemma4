@@ -9,17 +9,21 @@
 - Main model artifact used: `/Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf`
 - Draft model artifact used: `/Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf`
 - Smoke command:
-  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration --tier caseAssociate --smoke-profile mtp_quick --stage-timeout 90 --launch-timeout 240`
-- Result: failed by helper launch guard before a terminal smoke marker; no benchmark claimed.
+  - `scripts/ios-simulator-local-model-smoke.sh --runtime gguf --model /Users/amanpandey/model-artifacts/gemma-4-12b-it-UD-Q4_K_XL.gguf --draft-model /Users/amanpandey/model-artifacts/mtp-gemma-4-12b-it.gguf --draft-tokens 2 --require-draft-acceleration --simulator E36AB177-2287-4112-8225-339048142D11 --bundle-id com.ross.ios --tier caseAssociate --smoke-profile mtp_quick --stage-timeout 180 --launch-timeout 900`
+- Result: failed source-grounding quality gate; no benchmark pass claimed.
 - Runtime identity marker:
   - `ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true error=nil`
+- Failure summary:
+  - `ROSS_SMOKE_FAILURE_SUMMARY provider=AlphaLlamaCppProvider runtime=gemma_local_runtime requested_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=gemma-4-12b-it-UD-Q4_K_XL.gguf acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp-gemma-4-12b-it.gguf draft_model_path_type=file draft_status=active context_tokens=4096 gpu_offload=n_gpu_layers:99,offload_kqv:true,op_offload:true fallback=none available=true identity_error=nil fail_runtime=gemma_local_runtime profile=mtp_quick matrix_profile=mtp_quick matrix_cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token matrix_stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24 matrix_shape_error=nil stage=nil error=nil elapsed=158.76s source_error=nil general_error=nil source_grounded=false source_refs_kept=true source_native_model=true general_native_model=true source_warning_count=0 general_warning_count=0 source_input_tokens=198 source_output_tokens=24 source_token_speed=1.64 source_first_token_ms=73323 source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp-gemma-4-12b-it.gguf general_input_tokens=170 general_output_tokens=24 general_token_speed=2.06 general_first_token_ms=62499 general_measured_tokens=false general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp-gemma-4-12b-it.gguf`
 - Observed behavior:
-  - the current simulator build honors the `mtp_quick` cap: the source stage logged `max_new_tokens=8`
-  - the source-bound document QA stage completed under active MTP draft acceleration with `duration_ms=92021`, but the helper expired at `ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout=240` before a terminal pass/fail marker
-  - the open-query stage began with `max_new_tokens=8`, but no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
+  - the current simulator build honors the `mtp_quick` cap: source and general stages both used `max_new_tokens=24`
+  - source-bound document QA completed under active MTP draft acceleration with `source_token_speed=1.64`, `source_first_token_ms=73323`, and `source_output_tokens=24`
+  - the open-query stage completed under active MTP draft acceleration with `general_token_speed=2.06`, `general_first_token_ms=62499`, and `general_output_tokens=24`
+  - the helper now preserves compact post-failure output lines; the failed source excerpt was `<|channel>11111111111111111111111` and the general excerpt was `Check11111111111111111111111`
+  - peak simulator memory footprint during generation was about `9071 MB`
 - Current interpretation:
-  - MTP routing, draft artifact loading, active draft identity, and low-token cap behavior are proven on the current simulator build
-  - this is still not benchmark evidence because the helper did not emit a guarded terminal summary with per-stage token metrics
+  - MTP routing, draft artifact loading, active draft identity, matrix shape, and per-stage diagnostic speed fields are proven on the current simulator build
+  - this is still not benchmark-pass evidence because the generated text failed source grounding and no `ROSS_SMOKE_BENCHMARK_SUMMARY` was emitted
   - physical-device morning validation is still required before claiming MTP performance
 
 ## 2026-06-19 iOS simulator MTP draft checkpoint

@@ -16924,8 +16924,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixStages,
             [
-                "source:document_qa:en:source_refs_required:max_tokens=8",
-                "general:open_query:en:no_source_refs:max_tokens=8"
+                "source:document_qa:en:source_refs_required:max_tokens=24",
+                "general:open_query:en:no_source_refs:max_tokens=24"
             ]
         )
         XCTAssertEqual(
@@ -22499,6 +22499,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(
             RossLocalModelSmokeView.mentionsSmokeSourceFact(
                 #"{"headline":"Article 417","sections":["Article 417 requires the advocate to verify citations before filing."],"statusNote":"Source-bound."}"#
+            )
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsSmokeSourceFact(
+                RossLocalModelSmokeView.combinedOutputText(
+                    AlphaLocalModelOutput(
+                        rawText: "Article 417: verify citation.",
+                        parsedJson: #"{"headline":"Source answer","sections":["Short answer."],"statusNote":"Done"}"#,
+                        schemaValid: true,
+                        warnings: [],
+                        sourceRefs: []
+                    )
+                )
             )
         )
         XCTAssertFalse(

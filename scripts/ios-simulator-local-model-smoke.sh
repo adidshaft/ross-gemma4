@@ -497,6 +497,7 @@ pass_fields = None
 fail_fields = None
 completed_stage_fields = {}
 outcome = None
+fail_tail_lines_remaining = None
 deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
     command,
@@ -512,6 +513,15 @@ try:
     for raw_line in process.stdout:
         line = raw_line.rstrip("\n")
         print(line, flush=True)
+        if outcome == "fail" and fail_tail_lines_remaining is not None:
+            fail_tail_lines_remaining -= 1
+            if fail_tail_lines_remaining <= 0:
+                try:
+                    process.send_signal(signal.SIGINT)
+                except ProcessLookupError:
+                    pass
+                break
+            continue
         if identity_re.search(line):
             identity = parse_fields(line)
         if matrix_re.search(line):
@@ -534,11 +544,8 @@ try:
         if fail_re.search(line):
             outcome = "fail"
             fail_fields = parse_fields(line)
-            try:
-                process.send_signal(signal.SIGINT)
-            except ProcessLookupError:
-                pass
-            break
+            fail_tail_lines_remaining = 2
+            continue
         if time.time() > deadline:
             outcome = "timeout"
             print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)

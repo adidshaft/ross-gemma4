@@ -186,8 +186,12 @@ enum RossLocalModelSmokeProfile: String {
         }
     }
 
+    var shortProfileMaxOutputTokens: Int {
+        self == .mtpQuick ? 24 : 192
+    }
+
     var benchmarkMatrixStages: [String] {
-        let shortMaxTokens = self == .mtpQuick ? 8 : 192
+        let shortMaxTokens = shortProfileMaxOutputTokens
         let shortStages = [
             "source:document_qa:en:source_refs_required:max_tokens=\(shortMaxTokens)",
             "general:open_query:en:no_source_refs:max_tokens=\(shortMaxTokens)"
@@ -496,7 +500,9 @@ struct RossLocalModelSmokeView: View {
         )
         let sourceBoundInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
-            instruction: "Answer from the supplied source. What does Article 417 require? Return JSON with headline, sections, and statusNote.",
+            instruction: smokeProfile == .mtpQuick
+                ? "Answer with exactly this short source phrase: Article 417: verify citation."
+                : "Answer from the supplied source. What does Article 417 require? Return JSON with headline, sections, and statusNote.",
             sourcePack: [
                 AlphaSourceTextBlock(
                     sourceRef: sourceRef,
@@ -507,7 +513,7 @@ struct RossLocalModelSmokeView: View {
                 )
             ],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: smokeProfile == .mtpQuick ? 8 : 192,
+            maxOutputTokens: smokeProfile.shortProfileMaxOutputTokens,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -679,10 +685,12 @@ struct RossLocalModelSmokeView: View {
         )
         let generalInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
-            instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
+            instruction: smokeProfile == .mtpQuick
+                ? "No matter document is supplied. Answer with exactly this short phrase: Check sources first."
+                : "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
             sourcePack: [],
             expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
-            maxOutputTokens: smokeProfile == .mtpQuick ? 8 : 192,
+            maxOutputTokens: smokeProfile.shortProfileMaxOutputTokens,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: .fromInstalledPack(activePack),
@@ -722,8 +730,8 @@ struct RossLocalModelSmokeView: View {
         let sourceRawLength = sourceBoundOutput.rawText.count
         let sourceParsedLength = sourceBoundOutput.parsedJson?.count ?? 0
         let generalOutputLength = (generalOutput.parsedJson ?? generalOutput.rawText).count
-        let sourceBoundText = sourceBoundOutput.parsedJson ?? sourceBoundOutput.rawText
-        let generalText = generalOutput.parsedJson ?? generalOutput.rawText
+        let sourceBoundText = RossLocalModelSmokeView.combinedOutputText(sourceBoundOutput)
+        let generalText = RossLocalModelSmokeView.combinedOutputText(generalOutput)
         let sourceUsedFileFact = RossLocalModelSmokeView.mentionsSmokeSourceFact(sourceBoundText)
         let sourceKeptRefs = RossLocalModelSmokeView.outputKeepsSourceRefs(sourceBoundOutput, for: sourceBoundInput)
         let sourceUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(sourceBoundOutput)
@@ -783,10 +791,10 @@ struct RossLocalModelSmokeView: View {
         let hindiOutputLength = (hindiOutput.parsedJson ?? hindiOutput.rawText).count
         let tamilOutputLength = (tamilOutput.parsedJson ?? tamilOutput.rawText).count
         let teluguOutputLength = (teluguOutput.parsedJson ?? teluguOutput.rawText).count
-        let bengaliText = bengaliOutput.parsedJson ?? bengaliOutput.rawText
-        let hindiText = hindiOutput.parsedJson ?? hindiOutput.rawText
-        let tamilText = tamilOutput.parsedJson ?? tamilOutput.rawText
-        let teluguText = teluguOutput.parsedJson ?? teluguOutput.rawText
+        let bengaliText = RossLocalModelSmokeView.combinedOutputText(bengaliOutput)
+        let hindiText = RossLocalModelSmokeView.combinedOutputText(hindiOutput)
+        let tamilText = RossLocalModelSmokeView.combinedOutputText(tamilOutput)
+        let teluguText = RossLocalModelSmokeView.combinedOutputText(teluguOutput)
         let bengaliUsedFileFact = RossLocalModelSmokeView.mentionsBengaliSmokeSourceFact(bengaliText)
         let hindiUsedFileFact = RossLocalModelSmokeView.mentionsHindiSmokeSourceFact(hindiText)
         let tamilUsedFileFact = RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(tamilText)
@@ -1072,6 +1080,15 @@ struct RossLocalModelSmokeView: View {
             warning.localizedCaseInsensitiveContains(AlphaLocalModelWarningCopy.sourceLanguageFallback) ||
                 warning.localizedCaseInsensitiveContains("Language-preserving source fallback used")
         }
+    }
+
+    nonisolated static func combinedOutputText(_ output: AlphaLocalModelOutput) -> String {
+        [output.parsedJson, output.rawText]
+            .compactMap { text in
+                let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed?.isEmpty == false ? trimmed : nil
+            }
+            .joined(separator: "\n")
     }
 
     nonisolated static func outputKeepsSourceRefs(_ output: AlphaLocalModelOutput, for input: AlphaLocalModelInput) -> Bool {
