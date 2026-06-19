@@ -1103,6 +1103,21 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             sourceExcerptChars: taskInput.sourceExcerptCharsOverride
         ).build(input: taskInput)
 
+        let availability = runtimeAvailability()
+        guard availability.available else {
+            return AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: [AlphaLocalModelWarningCopy.assistantSetupMissing],
+                sourceRefs: pack.includedSourceRefs,
+                packedSourceCount: pack.includedSourceRefs.count,
+                omittedSourceCount: pack.omittedSourceRefs.count,
+                omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+                errorCategory: availability.errorCategory ?? "missing_mlx_artifact"
+            )
+        }
+
         guard let modelPath = self.modelPath, !modelPath.isEmpty else {
             return AlphaLocalModelOutput(
                 rawText: "",
@@ -1113,7 +1128,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: pack.includedSourceRefs.count,
                 omittedSourceCount: pack.omittedSourceRefs.count,
                 omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
-                errorCategory: "model_path_missing"
+                errorCategory: "missing_mlx_artifact"
             )
         }
 

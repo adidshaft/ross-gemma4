@@ -19864,6 +19864,72 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "missing_mlx_artifact")
     }
 
+    func testMLXRunReturnsMissingArtifactCategoryBeforeGeneration() async {
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, _ in
+            XCTFail("Missing MLX artifact should fail before generation.")
+            return AlphaMLXGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: nil,
+            modelPath: nil,
+            checksumVerified: false
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "missing_mlx_artifact")
+    }
+
+    func testMLXRunReturnsInvalidArtifactCategoryBeforeGeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-invalid-mlx-run-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, _ in
+            XCTFail("Invalid MLX artifact should fail before generation.")
+            return AlphaMLXGenerationSnapshot(text: "")
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "invalid_mlx_artifact")
+    }
+
     func testRuntimeHealthKeepsMLXAvailableWithInvalidDraftArtifactWithoutClaimingAcceleration() throws {
         let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-\(UUID().uuidString)")
         let draftDirectory = FileManager.default.temporaryDirectory
