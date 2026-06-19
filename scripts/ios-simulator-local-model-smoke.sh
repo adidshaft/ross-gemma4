@@ -824,7 +824,10 @@ try:
                         completed_stage_fields[key] = stage_fields[key]
         if pass_re.search(line):
             outcome = "pass"
-            pass_fields = parse_fields(line)
+            pass_fields = {
+                **completed_stage_fields,
+                **parse_fields(line),
+            }
             try:
                 process.send_signal(signal.SIGINT)
             except ProcessLookupError:
@@ -832,7 +835,10 @@ try:
             break
         if fail_re.search(line):
             outcome = "fail"
-            fail_fields = parse_fields(line)
+            fail_fields = {
+                **completed_stage_fields,
+                **parse_fields(line),
+            }
             fail_tail_lines_remaining = 2
             continue
         if time.time() > deadline:

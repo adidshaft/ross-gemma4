@@ -282,6 +282,48 @@ run_process_guard_expect_exit_1() {
   fi
 }
 
+run_process_guard_expect_exit_0() {
+  local description="$1"
+  local expected="$2"
+  local process_log="$3"
+  shift 3
+  set +e
+  PATH="$fake_bin:$PATH" \
+    FAKE_SIMCTL_PROCESS_LOG="$process_log" \
+    "$@" >/tmp/ross-runtime-preflight.out 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    echo "❌ FAIL: $description expected exit 0, got $rc" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+  if ! grep -q "$expected" /tmp/ross-runtime-preflight.out; then
+    echo "❌ FAIL: $description did not emit expected message: $expected" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+}
+
+cat >"$tmpdir/simulator-sparse-pass-stage-done.log" <<EOF
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=$(basename "$main_gguf") acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil general_input_tokens=80 general_output_tokens=24 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_acceleration=standard general_draft_tokens=nil general_draft_model=nil general_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s source_refs=1 source_native_model=true general_native_model=true
+EOF
+run_process_guard_expect_exit_0 \
+  "simulator sparse pass uses stage-done benchmark metrics" \
+  "ROSS_SMOKE_BENCHMARK_SUMMARY" \
+  "$tmpdir/simulator-sparse-pass-stage-done.log" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --smoke-profile quick --launch-timeout 5
+if ! grep -q "source_token_speed=11.0" /tmp/ross-runtime-preflight.out ||
+   ! grep -q "general_token_speed=10.5" /tmp/ross-runtime-preflight.out; then
+  echo "❌ FAIL: simulator sparse pass summary did not preserve stage-done token metrics." >&2
+  cat /tmp/ross-runtime-preflight.out >&2 || true
+  exit 1
+fi
+
 cat >"$tmpdir/simulator-mlx-wrong-artifact.log" <<'EOF'
 ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=other-mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil
 ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
