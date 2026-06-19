@@ -207,6 +207,12 @@ if ! grep -q "benchmark_runtime_unavailable" scripts/ross_smoke_summary.py 2>/de
     FAIL=1
 fi
 
+if ! grep -q "test_benchmark_summary_rejects_unavailable_runtime_identity" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_fallback_runtime_identity" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not cover unavailable/fallback identity benchmark rejection."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_runtime_unsupported" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not reject unsupported runtime identities."
     FAIL=1
