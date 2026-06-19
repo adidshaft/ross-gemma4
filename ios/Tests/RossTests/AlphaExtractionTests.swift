@@ -7917,6 +7917,112 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.executionPathLabel, "Gemma GGUF with draft acceleration")
     }
 
+    func testExperimentalGGUFProviderBlocksConstrainedE4BDraftBeforeMemoryRiskyValidation() async throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "Standard quick start answer" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 256 }
+            func generatedTokenCount() -> Int { 16 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("google_gemma-4-E4B-it-UD-Q4_K_XL-large-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mtp-gemma-4-E4B-it-large-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        FileManager.default.createFile(atPath: mainURL.path, contents: Data("GGUF".utf8))
+        FileManager.default.createFile(atPath: draftURL.path, contents: Data("GGUF".utf8))
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+        try FileHandle(forWritingTo: mainURL).truncate(atOffset: 5_130_000_000)
+        try FileHandle(forWritingTo: draftURL).truncate(atOffset: 79_000_000)
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        let previousPhysicalMemoryProvider = AlphaLlamaCppProvider.physicalMemoryBytesProvider
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+            AlphaLlamaCppProvider.physicalMemoryBytesProvider = previousPhysicalMemoryProvider
+        }
+
+        AlphaLlamaCppProvider.contextFactory = { _, draftPath, draftTokens in
+            XCTAssertNil(draftPath)
+            XCTAssertNil(draftTokens)
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in
+            XCTFail("Constrained E4B draft should be memory-policy blocked before validator setup")
+            return false
+        }
+        AlphaLlamaCppProvider.physicalMemoryBytesProvider = { 7_200_000_000 }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true,
+            draftModelPath: draftURL.path,
+            draftModelTokens: 2
+        )
+
+        let health = provider.runtimeHealth()
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertEqual(health.available, true)
+        XCTAssertEqual(health.accelerationMode, .standard)
+        XCTAssertNil(health.accelerationDraftTokens)
+        XCTAssertNil(health.draftModelPathLabel)
+        XCTAssertEqual(health.draftModelPathType, "file")
+        XCTAssertEqual(health.draftAccelerationStatus, "draft_memory_policy_blocked")
+        XCTAssertEqual(
+            health.draftAccelerationDetail,
+            "main_bytes=5130000000,draft_bytes=79000000,max_combined_bytes=5184000000"
+        )
+        XCTAssertEqual(health.lastErrorCategory, "draft_memory_policy_blocked")
+        XCTAssertEqual(output.accelerationMode, .standard)
+        XCTAssertNil(output.accelerationDraftTokens)
+        XCTAssertNil(output.accelerationDraftModelLabel)
+        XCTAssertEqual(output.executionPathLabel, "Gemma GGUF via llama.cpp")
+    }
+
     func testExperimentalGGUFProviderUsesStrictDraftContextWhenSmokeRequiresDraftAcceleration() async throws {
         final class DraftCapture: @unchecked Sendable {
             private let lock = NSLock()

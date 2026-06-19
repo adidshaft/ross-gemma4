@@ -11,6 +11,7 @@ enum AlphaLlamaRuntimeProfile {
     }
 
     private static let constrainedE4BProfileMemoryCeilingBytes: UInt64 = 8_500_000_000
+    private static let constrainedE4BDraftArtifactBudgetRatio = 0.72
     private static let constrainedE4BDraftTokenCeiling = 2
 
     private static func containsAny(_ value: String, fragments: [String]) -> Bool {
@@ -398,6 +399,40 @@ enum AlphaLlamaRuntimeProfile {
         usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)
             ? constrainedE4BDraftTokenCeiling
             : 8
+    }
+
+    static func draftArtifactMemoryPolicy(
+        forModelPath path: String?,
+        draftPath: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> (allowed: Bool, mainBytes: UInt64?, draftBytes: UInt64?, maxCombinedBytes: UInt64?) {
+        guard usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) else {
+            return (true, nil, nil, nil)
+        }
+        guard let path, let draftPath else {
+            return (true, nil, nil, nil)
+        }
+        guard
+            let mainBytes = fileSizeBytes(atPath: path),
+            let draftBytes = fileSizeBytes(atPath: draftPath)
+        else {
+            return (true, nil, nil, nil)
+        }
+
+        let maxCombinedBytes = UInt64(Double(physicalMemory) * constrainedE4BDraftArtifactBudgetRatio)
+        return (
+            mainBytes <= UInt64.max - draftBytes && mainBytes + draftBytes <= maxCombinedBytes,
+            mainBytes,
+            draftBytes,
+            maxCombinedBytes
+        )
+    }
+
+    private static func fileSizeBytes(atPath path: String) -> UInt64? {
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? NSNumber)?.uint64Value else {
+            return nil
+        }
+        return size > 0 ? size : nil
     }
 
 }
@@ -1127,6 +1162,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 physicalMemory: Self.physicalMemoryBytesProvider(),
                 draftTokens: effectiveDraftTokenCount()
             ),
+            draftMemoryPolicyAllows(draftPath: draftPath),
             !Self.draftOutputPreviouslyDegenerated(degenerateDraftKey)
         else {
             return nil
@@ -1156,6 +1192,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         ) else {
             return ("draft_token_policy_blocked", draftPath, metadata)
         }
+        guard draftMemoryPolicyAllows(draftPath: draftPath) else {
+            return ("draft_memory_policy_blocked", draftPath, metadata)
+        }
         if Self.draftOutputPreviouslyDegenerated(
             modelPath.map { draftHealthKey(path: $0, draftPath: draftPath, draftTokens: metadata.tokens) }
         ) {
@@ -1174,9 +1213,14 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let draftPath = draftStatus.draftPath,
             let stagedDraft = draftStatus.metadata
         else {
-            let detail = draftStatus.status == "draft_token_policy_blocked"
-                ? draftTokenPolicyBlockedDetail(tokens: draftStatus.metadata?.tokens)
-                : draftStatus.status
+            let detail: String
+            if draftStatus.status == "draft_token_policy_blocked" {
+                detail = draftTokenPolicyBlockedDetail(tokens: draftStatus.metadata?.tokens)
+            } else if draftStatus.status == "draft_memory_policy_blocked" {
+                detail = draftMemoryPolicyBlockedDetail(draftPath: draftStatus.draftPath)
+            } else {
+                detail = draftStatus.status
+            }
             return (draftStatus.metadata, draftStatus.status, detail)
         }
 
@@ -1217,6 +1261,26 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return "requested_draft_tokens=\(requestedTokens),max_supported_draft_tokens=\(maximumTokens)"
     }
 
+    private func draftMemoryPolicyAllows(draftPath: String) -> Bool {
+        AlphaLlamaRuntimeProfile.draftArtifactMemoryPolicy(
+            forModelPath: modelPath,
+            draftPath: draftPath,
+            physicalMemory: Self.physicalMemoryBytesProvider()
+        ).allowed
+    }
+
+    private func draftMemoryPolicyBlockedDetail(draftPath: String?) -> String {
+        let policy = AlphaLlamaRuntimeProfile.draftArtifactMemoryPolicy(
+            forModelPath: modelPath,
+            draftPath: draftPath,
+            physicalMemory: Self.physicalMemoryBytesProvider()
+        )
+        let mainBytes = policy.mainBytes.map(String.init) ?? "nil"
+        let draftBytes = policy.draftBytes.map(String.init) ?? "nil"
+        let maxCombinedBytes = policy.maxCombinedBytes.map(String.init) ?? "nil"
+        return "main_bytes=\(mainBytes),draft_bytes=\(draftBytes),max_combined_bytes=\(maxCombinedBytes)"
+    }
+
     private static func redactedDraftValidationDetail(_ value: String) -> String {
         let redacted = value
             .replacingOccurrences(
@@ -1238,6 +1302,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "draft_file_unavailable"
         case "draft_token_policy_blocked":
             return "draft_token_policy_blocked"
+        case "draft_memory_policy_blocked":
+            return "draft_memory_policy_blocked"
         case "draft_format_unsupported":
             return "draft_format_unsupported"
         case "validator_rejected":

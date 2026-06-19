@@ -886,6 +886,13 @@ if ! grep -q "requested_draft_tokens" ios/Ross/AlphaFoundation/AlphaLlamaCppProv
     FAIL=1
 fi
 
+if ! grep -q "draft_memory_policy_blocked" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderBlocksConstrainedE4BDraftBeforeMemoryRiskyValidation" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draft_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: constrained GGUF/MTP draft memory-policy blocks are not documented and tested."
+    FAIL=1
+fi
+
 if ! grep -q "draft_output_degenerate" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: GGUF/MTP health does not quarantine degenerate draft output."
     FAIL=1
