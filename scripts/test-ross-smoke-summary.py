@@ -538,6 +538,17 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "artifact_path_type=file",
         )
+        self.assertEqual(
+            runtime_identity_artifact_error(
+                {
+                    "model_format": "mlx_directory",
+                    "artifact_path_type": "directory",
+                    "artifact_path": "gemma-4-12b-it.gguf",
+                },
+                "mlx_swift_lm",
+            ),
+            "mlx_directory_path=gemma-4-12b-it.gguf",
+        )
         self.assertIsNone(
             runtime_identity_artifact_error(
                 {
@@ -641,6 +652,13 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "gemma_local_runtime",
             ),
             "draft_model_format=mtp.bin",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**active_mlx, "draft_model": "mlx-draft.gguf"},
+                "mlx_swift_lm",
+            ),
+            "draft_model_format=mlx-draft.gguf",
         )
         self.assertEqual(
             runtime_identity_draft_artifact_error(

@@ -171,6 +171,11 @@ if ! grep -q "system_model_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     FAIL=1
 fi
 
+if ! grep -q "mlx_directory_path" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not reject file-like MLX directory labels."
+    FAIL=1
+fi
+
 if ! grep -q "failure_summary_line" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared smoke parser omits failure summaries."
     FAIL=1
