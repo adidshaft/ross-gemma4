@@ -584,6 +584,8 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "identity_artifact_error": runtime_identity_artifact_error(identity, artifact_runtime) or "nil",
         "identity_draft_artifact_error": runtime_identity_draft_artifact_error(identity, artifact_runtime) or "nil",
         "fail_runtime": summary_value(fail_fields, "runtime"),
+        "fail_runtime_error_detail": summary_value(fail_fields, "runtime_error_detail"),
+        "fail_draft_error_detail": summary_value(fail_fields, "draft_error_detail"),
         "profile": summary_value(fail_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields or {}, "profile"),
         "matrix_cases": summary_value(matrix_fields or {}, "cases"),

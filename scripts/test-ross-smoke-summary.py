@@ -1235,6 +1235,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         fail_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime profile=full elapsed=66.49s "
+            "runtime_error_detail=stage_runtime_failed draft_error_detail=stage_draft_inactive "
             "source_error=nil tamil_error=nil source_grounded=true tamil_grounded=false "
             "source_refs_kept=true tamil_refs_kept=true source_native_model=true tamil_native_model=true "
             "source_refs=1 tamil_source_refs=1 source_raw_chars=480 tamil_output_chars=96 "
@@ -1260,6 +1261,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("identity_resource_error=context_tokens=nil", summary)
         self.assertIn("identity_artifact_error=gguf_file_path=nil", summary)
         self.assertIn("identity_draft_artifact_error=nil", summary)
+        self.assertIn("fail_runtime_error_detail=stage_runtime_failed", summary)
+        self.assertIn("fail_draft_error_detail=stage_draft_inactive", summary)
         self.assertIn("matrix_profile=full", summary)
         self.assertIn("matrix_cases=nil", summary)
         self.assertIn("matrix_shape_error=cases=0", summary)
@@ -1280,7 +1283,9 @@ class RossSmokeSummaryTests(unittest.TestCase):
     def test_failure_summary_survives_missing_runtime_identity(self):
         fail_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm profile=quick "
-            "stage=runtime_health error=missing_runtime_identity elapsed=2.4s"
+            "stage=runtime_health error=missing_runtime_identity "
+            "runtime_error_detail=missing_runtime_identity draft_error_detail=missing_runtime_identity "
+            "elapsed=2.4s"
         )
 
         summary = failure_summary_line(None, fail_fields, None)
@@ -1294,6 +1299,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("identity_resource_error=provider=nil", summary)
         self.assertIn("identity_artifact_error=model_format=nil", summary)
         self.assertIn("profile=quick", summary)
+        self.assertIn("fail_runtime_error_detail=missing_runtime_identity", summary)
+        self.assertIn("fail_draft_error_detail=missing_runtime_identity", summary)
         self.assertIn("stage=runtime_health", summary)
         self.assertIn("error=missing_runtime_identity", summary)
 
@@ -1307,7 +1314,9 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         fail_fields = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm "
-            "profile=quick stage=active_pack error=missing_mlx_artifact elapsed=2.4s"
+            "profile=quick stage=active_pack error=missing_mlx_artifact "
+            "runtime_error_detail=missing_mlx_artifact draft_error_detail=no_draft_configured "
+            "elapsed=2.4s"
         )
 
         summary = failure_summary_line(identity, fail_fields, None)
@@ -1317,6 +1326,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("available=false", summary)
         self.assertIn("identity_availability_error=available=false", summary)
         self.assertIn("identity_artifact_error=nil", summary)
+        self.assertIn("fail_runtime_error_detail=missing_mlx_artifact", summary)
+        self.assertIn("fail_draft_error_detail=no_draft_configured", summary)
 
     def test_failure_summary_preserves_matrix_shape_error(self):
         matrix = parse_fields(

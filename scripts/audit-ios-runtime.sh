@@ -340,6 +340,14 @@ if ! grep -q '"fail_runtime"' scripts/ross_smoke_summary.py 2>/dev/null; then
     FAIL=1
 fi
 
+if ! grep -q '"fail_runtime_error_detail"' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q '"fail_draft_error_detail"' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "fail_runtime_error_detail" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "fail_draft_error_detail" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: failure summaries do not preserve raw failure-marker runtime/draft diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q 'fail_fields.get("requested_runtime")' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: failure summaries do not preserve requested runtime from failure markers."
     FAIL=1
