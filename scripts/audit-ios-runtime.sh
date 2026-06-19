@@ -1437,8 +1437,10 @@ fi
 
 if ! grep -q "draft_acceleration_inactive" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "testExperimentalGGUFProviderFailsStrictDraftProofWhenContextRunsStandard" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q 'runtimeErrorDetail: "draft_acceleration_inactive"' ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q 'output.runtimeErrorDetail, "draft_acceleration_inactive"' ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "draft_acceleration_inactive" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: GGUF/MTP required-draft smoke can still publish a standard-generation context as proof."
+    echo "❌ FAIL: GGUF/MTP required-draft smoke can still publish or under-report a standard-generation context as proof."
     FAIL=1
 fi
 

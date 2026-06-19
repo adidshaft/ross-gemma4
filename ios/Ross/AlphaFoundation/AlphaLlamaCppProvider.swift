@@ -975,7 +975,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             inputChars: pack.inputChars,
             inputTokenCount: promptTokenCount,
             outputTokenCount: outputTokenCount,
-            errorCategory: "draft_acceleration_inactive"
+            errorCategory: "draft_acceleration_inactive",
+            runtimeErrorDetail: "draft_acceleration_inactive"
         )
     }
     

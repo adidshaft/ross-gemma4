@@ -8516,6 +8516,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(capture.standardContextCalls, standardContextCallsBeforeRun)
         XCTAssertEqual(capture.strictDraftPath, draftURL.path)
         XCTAssertEqual(output.errorCategory, "draft_acceleration_inactive")
+        XCTAssertEqual(output.runtimeErrorDetail, "draft_acceleration_inactive")
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.rawText, "")
         XCTAssertEqual(output.accelerationMode, .standard)
