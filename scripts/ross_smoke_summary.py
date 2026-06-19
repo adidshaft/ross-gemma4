@@ -66,12 +66,10 @@ def runtime_identity_artifact_error(identity, expected_runtime):
 
 
 def runtime_identity_availability_error(identity):
-    available = identity.get("available")
-    if available not in ("true", "nil", None):
+    if identity.get("available") != "true":
         return f"available={summary_value(identity, 'available')}"
 
-    fallback = identity.get("fallback")
-    if fallback not in ("none", "nil", None):
+    if identity.get("fallback") != "none":
         return f"fallback={summary_value(identity, 'fallback')}"
 
     return None

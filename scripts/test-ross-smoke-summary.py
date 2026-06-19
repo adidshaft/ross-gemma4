@@ -169,6 +169,14 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "fallback=deterministic_dev",
         )
+        self.assertEqual(
+            runtime_identity_availability_error({"fallback": "none"}),
+            "available=nil",
+        )
+        self.assertEqual(
+            runtime_identity_availability_error({"available": "true"}),
+            "fallback=nil",
+        )
 
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
         active_mtp = {
