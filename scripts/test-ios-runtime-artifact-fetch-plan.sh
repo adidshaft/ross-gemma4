@@ -158,6 +158,8 @@ ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=blocked action=await_compatible_archive .*reason=catalog_primary_not_release_ready .*local_unsupported_path=$unsupported_mlx_primary .*local_unsupported_reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx_draft status=blocked action=waiting_for_primary .*reason=missing_compatible_mlx_primary .*local_unsupported_primary_path=$unsupported_mlx_primary .*local_unsupported_primary_reason=unsupported_gemma4_multimodal .*local_unsupported_draft_path=$unsupported_mlx_draft .*local_unsupported_draft_reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx status=blocked action=await_compatible_archive .*local_catalog_status=size_mismatch .*local_catalog_path=$unsupported_mlx_primary .*local_catalog_bytes=.*local_catalog_checksum=" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=blocked action=waiting_for_primary .*primary_local_catalog_status=size_mismatch .*primary_local_catalog_path=$unsupported_mlx_primary .*draft_local_catalog_status=size_mismatch .*draft_local_catalog_path=$unsupported_mlx_draft" /tmp/ross-runtime-fetch-plan.out
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
   "$FETCH_PLAN" --tier caseAssociate --target-root "$tmpdir/downloads" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=blocked action=await_compatible_archive .*repo=mlx-community/gemma-4-12B-it-qat-4bit .*reason=catalog_primary_not_release_ready" /tmp/ross-runtime-fetch-plan.out

@@ -229,6 +229,23 @@ def unsupported_local_row(lane: str, expected_file_name: str | None = None) -> d
         None,
     )
 
+def mlx_catalog_local_fields(row: dict[str, str] | None) -> dict[str, str]:
+    if not row:
+        return {}
+    fields: dict[str, str] = {}
+    local_status = row.get("local_status", "")
+    if local_status and local_status != "missing":
+        fields["local_catalog_status"] = local_status
+    for source, target in (
+        ("local_path", "local_catalog_path"),
+        ("local_bytes", "local_catalog_bytes"),
+        ("local_checksum", "local_catalog_checksum"),
+    ):
+        value = row.get(source, "")
+        if value and value != "nil":
+            fields[target] = value
+    return fields
+
 print(
     f"ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier={q(tier)} "
     f"target_root={q(target_root)} downloader_status={q(downloader_status)} "
@@ -502,6 +519,7 @@ else:
                 compatibility_hint="runtime_requires_supported_text_mlx_archive",
                 local_unsupported_path=unsupported_mlx.get("path") if unsupported_mlx else None,
                 local_unsupported_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
+                **mlx_catalog_local_fields(row),
             )
             continue
         if lane == "mlx_draft" and present_mlx_draft:
@@ -529,6 +547,14 @@ else:
                     local_unsupported_primary_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
                     local_unsupported_draft_path=unsupported_mlx_draft.get("path") if unsupported_mlx_draft else None,
                     local_unsupported_draft_reason=unsupported_mlx_draft.get("reason") if unsupported_mlx_draft else None,
+                    **{
+                        f"primary_{key}": value
+                        for key, value in mlx_catalog_local_fields(catalog_mlx_primary).items()
+                    },
+                    **{
+                        f"draft_{key}": value
+                        for key, value in mlx_catalog_local_fields(row).items()
+                    },
                 )
                 continue
             emit(
