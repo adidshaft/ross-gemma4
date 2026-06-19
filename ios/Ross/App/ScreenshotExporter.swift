@@ -468,7 +468,7 @@ struct RossLocalModelSmokeView: View {
             providerHealth.draftAccelerationStatus != "active" {
             status = RossLocalModelSmokeStatusCopy.failedStatus
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=draft_acceleration_required acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil") draft_status=\(providerHealth.draftAccelerationStatus ?? "nil")"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=runtime_identity error=draft_acceleration_required acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil") draft_model_path_type=\(providerHealth.draftModelPathType ?? "nil") draft_status=\(providerHealth.draftAccelerationStatus ?? "nil")"
             )
             return
         }

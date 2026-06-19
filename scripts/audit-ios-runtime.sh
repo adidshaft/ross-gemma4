@@ -76,6 +76,11 @@ if ! grep -q "draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
+if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
+    FAIL=1
+fi
+
 if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: smoke benchmark matrix marker missing."
     FAIL=1
