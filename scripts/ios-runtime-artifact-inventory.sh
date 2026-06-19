@@ -357,6 +357,29 @@ def sha256_file(path: str) -> str | None:
     except OSError:
         return None
 
+def sha256_directory_manifest(path: str) -> tuple[str, int] | None:
+    rows: list[str] = []
+    total_bytes = 0
+    try:
+        for current_root, _, file_names in os.walk(path):
+            for file_name in file_names:
+                file_path = os.path.join(current_root, file_name)
+                if os.path.islink(file_path) or not os.path.isfile(file_path):
+                    return None
+                relative_path = os.path.relpath(file_path, path)
+                size = file_size(file_path)
+                checksum = sha256_file(file_path)
+                if checksum is None:
+                    return None
+                rows.append(f"{relative_path}\t{size}\t{checksum}")
+                total_bytes += size
+    except OSError:
+        return None
+    if not rows:
+        return None
+    manifest_payload = "\n".join(sorted(rows)).encode("utf-8")
+    return hashlib.sha256(manifest_payload).hexdigest(), total_bytes
+
 def find_named_file(file_name: str) -> str | None:
     if not file_name or file_name == "unknown":
         return None
@@ -369,6 +392,20 @@ def find_named_file(file_name: str) -> str | None:
                 directory_names[:] = []
             if file_name in file_names:
                 return os.path.join(current_root, file_name)
+    return None
+
+def find_named_directory(directory_name: str) -> str | None:
+    if not directory_name or directory_name == "unknown":
+        return None
+    for root in search_roots:
+        if not os.path.exists(root):
+            continue
+        for current_root, directory_names, _ in os.walk(root):
+            depth = os.path.relpath(current_root, root).count(os.sep)
+            if directory_name in directory_names:
+                return os.path.join(current_root, directory_name)
+            if depth >= 5:
+                directory_names[:] = []
     return None
 
 def catalog_file_local_fields(file_name: str, expected_bytes: str, expected_checksum: str) -> str:
@@ -388,6 +425,83 @@ def catalog_file_local_fields(file_name: str, expected_bytes: str, expected_chec
     actual_checksum = sha256_file(path)
     if actual_checksum:
         fields.append(f"local_checksum={q(actual_checksum)}")
+    if expected_checksum != "nil" and actual_checksum != expected_checksum:
+        fields[0] = "local_status=checksum_mismatch"
+        return " ".join(fields)
+    fields[0] = "local_status=present"
+    return " ".join(fields)
+
+def mlx_directory_looks_usable(path: str) -> bool:
+    if not os.path.isdir(path) or not os.path.isfile(os.path.join(path, "config.json")):
+        return False
+    if not any(os.path.isfile(os.path.join(path, name)) for name in ("tokenizer.json", "tokenizer.model", "tokenizer_config.json")):
+        return False
+    for current_root, _, file_names in os.walk(path):
+        for file_name in file_names:
+            if file_name.endswith(".safetensors") or file_name.endswith(".safetensors.index.json"):
+                try:
+                    if os.path.getsize(os.path.join(current_root, file_name)) > 0:
+                        return True
+                except OSError:
+                    return False
+    return False
+
+def mlx_archive_unsupported_reason(path: str, mode: str) -> str:
+    try:
+        with open(os.path.join(path, "config.json"), encoding="utf-8") as handle:
+            config = json.load(handle)
+    except Exception:
+        return ""
+
+    model_type = str(config.get("model_type") or "").lower()
+    architectures = [str(value).lower() for value in config.get("architectures") or []]
+    name_hints = " ".join(
+        str(value or "").lower()
+        for value in (os.path.basename(path), config.get("_name_or_path"), config.get("name_or_path"))
+    )
+
+    is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
+    is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+    is_moe = any(
+        key in config
+        for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
+    ) or "26b-a4b" in name_hints
+    is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b", "31b-it"))
+
+    if is_assistant and mode != "draft":
+        return "unsupported_gemma4_assistant"
+    if is_multimodal:
+        return "unsupported_gemma4_multimodal"
+    if is_moe:
+        return "unsupported_gemma4_moe"
+    if is_dense_31b:
+        return "unsupported_gemma4_dense_31b"
+    return ""
+
+def catalog_mlx_local_fields(directory_name: str, expected_bytes: str, expected_checksum: str, mode: str) -> str:
+    path = find_named_directory(directory_name)
+    if not path:
+        return "local_status=missing"
+    fields = [
+        "local_status=candidate",
+        f"local_path={q(path)}",
+    ]
+    if not mlx_directory_looks_usable(path):
+        fields[0] = "local_status=invalid_mlx_directory"
+        return " ".join(fields)
+    compatibility = mlx_archive_unsupported_reason(path, mode)
+    if compatibility:
+        fields.append(f"local_compatibility={q(compatibility)}")
+    verification = sha256_directory_manifest(path)
+    if verification is None:
+        fields[0] = "local_status=verification_failed"
+        return " ".join(fields)
+    actual_checksum, actual_bytes = verification
+    fields.append(f"local_bytes={actual_bytes}")
+    fields.append(f"local_checksum={q(actual_checksum)}")
+    if expected_bytes != "nil" and str(actual_bytes) != str(expected_bytes):
+        fields[0] = "local_status=size_mismatch"
+        return " ".join(fields)
     if expected_checksum != "nil" and actual_checksum != expected_checksum:
         fields[0] = "local_status=checksum_mismatch"
         return " ".join(fields)
@@ -465,13 +579,19 @@ for descriptor_match in download_descriptor_pattern.finditer(private_ai_source):
     reason = "configured_catalog_mlx_draft" if lane == "catalog_mlx_draft" else "configured_catalog_mlx"
     repo_id = hf_repo_id(url)
     target_dir = f"~/model-artifacts/{file_name}"
+    local_fields = catalog_mlx_local_fields(
+        file_name,
+        bytes_value,
+        checksum,
+        "draft" if lane == "catalog_mlx_draft" else "primary",
+    )
     print(
         "ROSS_RUNTIME_ARTIFACT_INVENTORY "
         f"lane={lane} status=expected path={q(url)} "
         f"reason={reason} "
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
         f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} release_ready={q(release_ready)} "
-        f"repo={q(repo_id)} target_dir={q(target_dir)} acquisition_hint=hf_download_mlx_directory "
+        f"repo={q(repo_id)} target_dir={q(target_dir)} {local_fields} acquisition_hint=hf_download_mlx_directory "
         "preflight_hint=simulator_mlx_directory_preflight"
     )
 PY

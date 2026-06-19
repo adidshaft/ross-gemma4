@@ -40,7 +40,9 @@ grep -q "lane=catalog_mlx status=expected .*tier=caseAssociate .*pack=gemma-4-12
 grep -q "lane=catalog_mlx_draft status=expected .*tier=caseAssociate .*pack=gemma-4-12b-mlx-assistant .*file=gemma-4-12B-it-qat-assistant-4bit" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx status=expected .*tier=quickStart .*checksum=2da1fd6bb6401c3ef116ac921dca88f73e4901a80ab10a4e8b21563412dbe23c" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx status=expected .*repo=mlx-community/gemma-4-E4B-it-qat-4bit .*target_dir='~/model-artifacts/gemma-4-E4B-it-qat-4bit' .*acquisition_hint=hf_download_mlx_directory .*preflight_hint=simulator_mlx_directory_preflight" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx status=expected .*file=gemma-4-E4B-it-qat-4bit .*local_status=missing .*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx_draft status=expected .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit .*target_dir='~/model-artifacts/gemma-4-E4B-it-qat-assistant-6bit' .*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx_draft status=expected .*file=gemma-4-E4B-it-qat-assistant-6bit .*local_status=missing .*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
 python3 - "$tmpdir/main.gguf" "$tmpdir/gemma-draft.gguf" <<'PY'
 import pathlib
@@ -83,6 +85,7 @@ printf 'weights' > "$mlx_draft_dir/model.safetensors"
 "$INVENTORY" --search-root "$mlx_draft_only_root" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing .*reason=no_directory_with_config_tokenizer_and_safetensors" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx_draft status=present .*path=.*gemma-4-E4B-it-qat-assistant-6bit .*reason=draft_like_mlx_directory" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx_draft status=expected .*file=gemma-4-E4B-it-qat-assistant-6bit .*local_status=size_mismatch .*local_path=.*gemma-4-E4B-it-qat-assistant-6bit .*local_bytes=.* .*local_checksum=.*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
 unsupported_mlx_root="$tmpdir/unsupported-mlx"
 unsupported_mlx_primary="$unsupported_mlx_root/gemma-4-E4B-it-qat-4bit"
@@ -113,6 +116,7 @@ PY
 "$INVENTORY" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing .*path=.*gemma-4-E4B-it-qat-4bit .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx_draft status=missing .*path=.*gemma-4-E4B-it-qat-draft-vision .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx status=expected .*file=gemma-4-E4B-it-qat-4bit .*local_status=size_mismatch .*local_path=.*gemma-4-E4B-it-qat-4bit .*local_bytes=.* .*local_checksum=.*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
 printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 
