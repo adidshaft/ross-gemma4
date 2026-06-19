@@ -326,6 +326,11 @@ if ! grep -q "testExplicitCoreMLRuntimeRequestDoesNotFallBackToGGUFProvider" ios
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeIdentityLineIncludesMissingCoreAIArtifactForExplicitCoreMLWithoutSentinel" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not prove explicit CoreAI/CoreML requests without a sentinel fail as missing_coreai_artifact."
+    FAIL=1
+fi
+
 if ! grep -q "PassingLlamaContext" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: fallback tests do not stub GGUF context creation for placeholder fixtures."
     FAIL=1

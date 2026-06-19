@@ -3168,11 +3168,11 @@ enum AlphaLocalModelRuntime {
     }
 
     private static func artifactCompatibilityError(
-        activePack: AlphaInstalledModelPack?,
+        artifactKind rawArtifactKind: String?,
         requestedRuntimeMode: AlphaPackRuntimeMode
     ) -> String? {
-        guard let activePack else { return nil }
-        let artifactKind = activePack.artifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let rawArtifactKind else { return nil }
+        let artifactKind = rawArtifactKind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch requestedRuntimeMode {
         case .llamaCppGguf:
             let allowedKinds: Set<String> = ["local_model_artifact", "gguf", "gguf_model"]
@@ -3256,15 +3256,18 @@ enum AlphaLocalModelRuntime {
                 explicitOptInEnabled: false
             )
         }
+        let compatibilityArtifactKind = debug.enableRealInference
+            ? (debug.modelKind ?? activePack?.artifactKind)
+            : activePack?.artifactKind
         if let artifactError = artifactCompatibilityError(
-            activePack: activePack,
+            artifactKind: compatibilityArtifactKind,
             requestedRuntimeMode: runtimeMode
         ) {
             return incompatibleArtifactProvider(
                 runtimeMode: runtimeMode,
                 tier: tier,
                 checksumVerified: checksumVerified,
-                modelPathLabel: modelPathLabel,
+                modelPathLabel: nil,
                 errorCategory: artifactError,
                 explicitOptInEnabled: debug.enableRealInference || productionRuntimeAllowed,
                 draftModelPath: debug.draftModelPath
@@ -3318,10 +3321,23 @@ enum AlphaLocalModelRuntime {
                 draftModelTokens: debug.draftModelTokens
             )
         case .appleFoundationModels:
+            let usesSystemModel = modelPath == "system-model" ||
+                modelPath?.hasPrefix("system://") == true ||
+                activePack.map { alphaPackUsesSystemFoundationModel($0) } == true
+            guard usesSystemModel || modelPath != nil else {
+                return AlphaUnavailableRealLocalModelProvider(
+                    capabilityTier: tier,
+                    runtimeMode: .appleFoundationModels,
+                    modelPathLabel: nil,
+                    checksumVerified: checksumVerified,
+                    statusMessage: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
+                    plannedTasks: alphaFoundationModelPlannedTasks,
+                    errorCategory: "missing_coreai_artifact",
+                    explicitOptInEnabled: debug.enableRealInference
+                )
+            }
             #if canImport(FoundationModels)
             if #available(iOS 26.0, macOS 26.0, *) {
-                let usesSystemModel = modelPath == "system-model" ||
-                    activePack.map { alphaPackUsesSystemFoundationModel($0) } == true
                 return AlphaFoundationModelsLocalProvider(
                     capabilityTier: tier,
                     modelPathLabel: usesSystemModel ? "system-model" : (modelPathLabel ?? "system-model"),

@@ -20834,8 +20834,58 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
         XCTAssertNotEqual(provider?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertNil(health?.modelPathLabel)
         XCTAssertNotEqual(health?.modelPathLabel, "active-gguf.gguf")
-        XCTAssertNotEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
+        XCTAssertEqual(health?.draftAccelerationStatus, "not_supported")
+    }
+
+    func testRuntimeIdentityLineIncludesMissingCoreAIArtifactForExplicitCoreMLWithoutSentinel() throws {
+        let pack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            installPath: "/tmp/private/device/debug/active-gguf.gguf",
+            artifactKind: "local_model_artifact"
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: AlphaPackRuntimeMode(runtimeAlias: "coreml"),
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+        let resolvedProvider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+        let provider = try XCTUnwrap(resolvedProvider)
+        let health = provider.runtimeHealth()
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: pack,
+            provider: provider,
+            providerHealth: health,
+            requestedRuntime: .appleFoundationModels
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaUnavailableRealLocalModelProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("actual_runtime=apple_foundation_models"))
+        XCTAssertTrue(line.contains("pack_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("model_format=local_model_artifact"))
+        XCTAssertTrue(line.contains("artifact_path_type=missing"))
+        XCTAssertTrue(line.contains("artifact_path=active-gguf.gguf"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_status=not_supported"))
+        XCTAssertTrue(line.contains("runtime_error_detail=missing_coreai_artifact"))
+        XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("error=missing_coreai_artifact"))
     }
 
     func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() {
