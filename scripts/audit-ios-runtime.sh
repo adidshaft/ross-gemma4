@@ -702,6 +702,11 @@ if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present"
     FAIL=1
 fi
 
+if ! grep -q "current repo proof lane is now tighter at .*context_tokens=1024.*prompt batch .*128.*physical batch .*64" docs/REAL_MODEL_QA_RESULTS.md 2>/dev/null; then
+    echo "❌ FAIL: real-model QA results do not distinguish historical 2k MTP logs from the current 1024-token proof lane."
+    FAIL=1
+fi
+
 if grep -q -- "--allow-device-proof-pack" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan should not allow seeded proof packs for MTP proof."
     FAIL=1
