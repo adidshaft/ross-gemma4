@@ -17210,6 +17210,33 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 
+    func testRuntimeIdentityPreflightProviderNamesStayRuntimeSpecific() {
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .llamaCppGguf),
+            "AlphaLlamaCppProvider"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .mlxSwiftLm),
+            "AlphaMLXLocalProvider"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .appleFoundationModels),
+            "AlphaFoundationModelsLocalProvider"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .deterministicDev),
+            "DeterministicDevLocalModelProvider"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .mediapipeLlm),
+            "AlphaUnavailableRealLocalModelProvider"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.preflightProviderName(for: .unavailable),
+            "AlphaUnavailableRealLocalModelProvider"
+        )
+    }
+
     func testRuntimeIdentityLineMarksDeterministicProviderAsFallback() throws {
         let activePack = installedPack(
             .quickStart,

@@ -232,6 +232,11 @@ if ! grep -q "testCanRunRealLocalAskFallsBackFromUnavailableSystemAssistantToRec
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeIdentityPreflightProviderNamesStayRuntimeSpecific" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not pin runtime-specific preflight provider names."
+    FAIL=1
+fi
+
 if ! grep -q "testRuntimeIdentityLineMarksDeterministicProviderAsFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: Swift tests do not prove deterministic fallback identity is marked as fallback."
     FAIL=1
