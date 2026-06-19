@@ -69,6 +69,17 @@ rm -f "$tmpdir/gemma-draft.gguf"
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=missing" /tmp/ross-runtime-inventory.out
 
+draft_only_root="$tmpdir/draft-only"
+mkdir -p "$draft_only_root"
+python3 - "$draft_only_root/mtp-gemma-4-12b-it.gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
+"$INVENTORY" --search-root "$draft_only_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=gguf status=missing .*reason=no_primary_gguf_file_with_header_and_size_over_1mb" /tmp/ross-runtime-inventory.out
+grep -q "lane=mtp_draft status=present .*path=.*mtp-gemma-4-12b-it.gguf" /tmp/ross-runtime-inventory.out
+
 support_root="$tmpdir/RossAlpha"
 packs_root="$support_root/model-packs"
 mkdir -p "$packs_root/quickStart" "$packs_root/caseAssociate" "$packs_root/mlx" "$packs_root/coreai"

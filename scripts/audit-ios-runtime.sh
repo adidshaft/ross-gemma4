@@ -687,6 +687,14 @@ if ! grep -q '"mtp_draft"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null
     FAIL=1
 fi
 
+if ! grep -q "gguf_path_is_draft_like" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "usable_primary_gguf_file" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "draft-only" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "no_primary_gguf_file_with_header_and_size_over_1mb" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: local runtime artifact inventory can still treat an MTP draft GGUF as a primary GGUF."
+    FAIL=1
+fi
+
 if ! grep -q -- "--installed-root" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null; then
     echo "❌ FAIL: local runtime artifact inventory cannot inspect installed-pack manifests."
     FAIL=1

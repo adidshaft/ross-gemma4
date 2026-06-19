@@ -74,6 +74,18 @@ gguf_file_looks_usable() {
   [[ "$(LC_ALL=C dd if="$file" bs=4 count=1 2>/dev/null)" == "GGUF" ]]
 }
 
+gguf_path_is_draft_like() {
+  local path="$1"
+  local lower_path
+  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_path" in
+    *mtp*|*draft*|*assistant*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 mlx_directory_looks_usable() {
   local directory="$1"
   [[ -d "$directory" ]] || return 1
@@ -121,13 +133,11 @@ for root in "${search_roots[@]}"; do
 
   while IFS= read -r gguf_path; do
     if gguf_file_looks_usable "$gguf_path"; then
-      [[ -n "$first_usable_gguf" ]] || first_usable_gguf="$gguf_path"
-      lower_path="$(printf '%s' "$gguf_path" | tr '[:upper:]' '[:lower:]')"
-      case "$lower_path" in
-        *mtp*|*draft*|*assistant*)
-          [[ -n "$first_draft_like_gguf" ]] || first_draft_like_gguf="$gguf_path"
-          ;;
-      esac
+      if gguf_path_is_draft_like "$gguf_path"; then
+        [[ -n "$first_draft_like_gguf" ]] || first_draft_like_gguf="$gguf_path"
+      else
+        [[ -n "$first_usable_gguf" ]] || first_usable_gguf="$gguf_path"
+      fi
     fi
   done < <(find "$root" -maxdepth 5 -type f -name '*.gguf' -print 2>/dev/null)
 
@@ -161,8 +171,8 @@ print_present_or_missing() {
 print_present_or_missing \
   "gguf" \
   "$first_usable_gguf" \
-  "usable_gguf_file" \
-  "no_gguf_file_with_header_and_size_over_1mb"
+  "usable_primary_gguf_file" \
+  "no_primary_gguf_file_with_header_and_size_over_1mb"
 
 print_present_or_missing \
   "mtp_draft" \
