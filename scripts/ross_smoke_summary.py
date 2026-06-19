@@ -8,6 +8,9 @@ METRICS = [
     "token_speed",
     "first_token_ms",
     "measured_tokens",
+    "acceleration",
+    "draft_tokens",
+    "draft_model",
 ]
 
 RUNTIME_ARTIFACT_RULES = {
@@ -101,6 +104,39 @@ def runtime_identity_draft_artifact_error(identity, expected_runtime):
     return None
 
 
+def benchmark_matrix_stage_names(matrix_fields):
+    stages = matrix_fields.get("stages") or ""
+    names = []
+    for stage in stages.split(","):
+        name = stage.split(":", 1)[0].strip()
+        if name:
+            names.append(name)
+    return names
+
+
+def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
+    if identity.get("acceleration") != "draftModelSpeculative":
+        return None
+
+    identity_draft_tokens = identity.get("draft_tokens")
+    identity_draft_model = identity.get("draft_model")
+    for stage in benchmark_matrix_stage_names(matrix_fields):
+        stage_acceleration = pass_fields.get(f"{stage}_acceleration")
+        if stage_acceleration != "draftModelSpeculative":
+            return f"{stage}_acceleration={summary_value(pass_fields, f'{stage}_acceleration')}"
+        stage_draft_tokens = pass_fields.get(f"{stage}_draft_tokens")
+        if stage_draft_tokens in (None, "nil"):
+            return f"{stage}_draft_tokens={summary_value(pass_fields, f'{stage}_draft_tokens')}"
+        if identity_draft_tokens not in (None, "nil") and stage_draft_tokens != identity_draft_tokens:
+            return f"{stage}_draft_tokens={stage_draft_tokens}"
+        stage_draft_model = pass_fields.get(f"{stage}_draft_model")
+        if stage_draft_model in (None, "nil"):
+            return f"{stage}_draft_model={summary_value(pass_fields, f'{stage}_draft_model')}"
+        if identity_draft_model not in (None, "nil") and stage_draft_model != identity_draft_model:
+            return f"{stage}_draft_model={stage_draft_model}"
+    return None
+
+
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")
@@ -114,6 +150,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"benchmark_profile_mismatch pass_profile={summary_value(pass_fields, 'profile')} "
             f"matrix_profile={summary_value(matrix_fields, 'profile')}"
         )
+    draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
+    if draft_stage_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")
 
     summary = {
         "provider": summary_value(identity, "provider"),

@@ -9,6 +9,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
+    benchmark_stage_draft_error,
 )
 
 
@@ -216,6 +217,69 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "draft_status=validator_rejected",
         )
+
+    def test_benchmark_summary_rejects_active_draft_identity_when_stage_runs_standard(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
+            "draft_model_path_type=file draft_status=active context_tokens=4096 "
+            "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64,"
+            "general:open_query:en:no_source_refs:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "general_input_tokens=80 general_output_tokens=16 general_token_speed=10.5 "
+            "general_first_token_ms=850 general_measured_tokens=true "
+            "general_acceleration=standard general_draft_tokens=nil general_draft_model=nil"
+        )
+
+        self.assertEqual(
+            benchmark_stage_draft_error(identity, pass_fields, matrix),
+            "general_acceleration=standard",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_draft_stage_mismatch"):
+            benchmark_summary_line(identity, pass_fields, matrix)
+
+    def test_benchmark_summary_accepts_active_draft_identity_when_all_stages_match(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
+            "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
+            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
+            "draft_model_path_type=file draft_status=active context_tokens=4096 "
+            "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64,"
+            "general:open_query:en:no_source_refs:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=true "
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "general_input_tokens=80 general_output_tokens=16 general_token_speed=10.5 "
+            "general_first_token_ms=850 general_measured_tokens=true "
+            "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf"
+        )
+
+        summary = benchmark_summary_line(identity, pass_fields, matrix)
+
+        self.assertIn("acceleration=draftModelSpeculative", summary)
+        self.assertIn("source_acceleration=draftModelSpeculative", summary)
+        self.assertIn("general_draft_model=mtp.gguf", summary)
 
     def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
         identity = parse_fields(

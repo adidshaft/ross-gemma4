@@ -16904,6 +16904,9 @@ final class AlphaExtractionTests: XCTestCase {
             schemaValid: true,
             warnings: [],
             sourceRefs: [],
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            accelerationDraftModelLabel: "mtp draft.gguf",
             inputTokenCount: 410,
             outputTokenCount: 28,
             outputTokensPerSecond: 19.375,
@@ -16920,11 +16923,11 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "source stage", output: measuredOutput),
-            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true"
+            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf"
         )
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
-            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false"
+            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil"
         )
     }
 

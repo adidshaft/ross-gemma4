@@ -949,6 +949,9 @@ struct RossLocalModelSmokeView: View {
             ("\(prefix)_token_speed", tokenSpeed),
             ("\(prefix)_first_token_ms", output.timeToFirstTokenMs.map(String.init) ?? "nil"),
             ("\(prefix)_measured_tokens", String(output.usesMeasuredTokenCounts)),
+            ("\(prefix)_acceleration", output.accelerationMode?.rawValue ?? "nil"),
+            ("\(prefix)_draft_tokens", output.accelerationDraftTokens.map(String.init) ?? "nil"),
+            ("\(prefix)_draft_model", output.accelerationDraftModelLabel.map(stableSmokeValue) ?? "nil"),
         ]
         return fields
             .map { "\($0.0)=\($0.1)" }
