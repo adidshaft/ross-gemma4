@@ -107,6 +107,27 @@ printf '{}' >"$usable_mlx/config.json"
 printf '{}' >"$usable_mlx/tokenizer.json"
 printf 'weights' >"$usable_mlx/model.safetensors"
 
+unsupported_mlx="$tmpdir/gemma-4-E4B-it-qat-4bit"
+mkdir -p "$unsupported_mlx"
+python3 - "$unsupported_mlx" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+(directory / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(directory / "tokenizer.json").write_text("{}")
+(directory / "model.safetensors").write_text("weights")
+PY
+run_expect_exit_2 \
+  "unsupported multimodal MLX primary archive" \
+  "$SIM_SMOKE" --runtime mlx --model "$unsupported_mlx"
+grep -q "unsupported_gemma4_multimodal" /tmp/ross-runtime-preflight.out
+
 main_gguf="$tmpdir/main.gguf"
 python3 - "$main_gguf" <<'PY'
 import pathlib
@@ -251,6 +272,28 @@ mkdir -p "$usable_mlx_draft"
 printf '{}' >"$usable_mlx_draft/config.json"
 printf '{}' >"$usable_mlx_draft/tokenizer.json"
 printf 'weights' >"$usable_mlx_draft/model.safetensors"
+
+unsupported_mlx_draft="$tmpdir/gemma-4-E4B-it-qat-assistant-vision"
+mkdir -p "$unsupported_mlx_draft"
+python3 - "$unsupported_mlx_draft" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+(directory / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+(directory / "tokenizer.json").write_text("{}")
+(directory / "model.safetensors").write_text("weights")
+PY
+run_expect_exit_2 \
+  "unsupported multimodal MLX draft archive" \
+  "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --draft-model "$unsupported_mlx_draft" --draft-tokens 2 --require-draft-acceleration --smoke-profile mtp_quick
+grep -q "unsupported_gemma4_multimodal" /tmp/ross-runtime-preflight.out
+
 preflight_expect_ok \
   "MLX draft directory" \
   "draft_model_path_type=directory draft_model=usable-mlx-draft draft_tokens=2" \

@@ -272,6 +272,48 @@ mlx_directory_looks_usable() {
   find "$directory" -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit | grep -q .
 }
 
+mlx_archive_unsupported_reason() {
+  local directory="$1"
+  local mode="${2:-primary}"
+  python3 - "$directory" "$mode" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+mode = sys.argv[2]
+
+try:
+    config = json.loads((directory / "config.json").read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+
+model_type = str(config.get("model_type") or "").lower()
+architectures = [str(value).lower() for value in config.get("architectures") or []]
+name_hints = " ".join(
+    str(value or "").lower()
+    for value in (directory.name, config.get("_name_or_path"), config.get("name_or_path"))
+)
+
+is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
+is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+is_moe = any(
+    key in config
+    for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
+) or "26b-a4b" in name_hints
+is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b", "31b-it"))
+
+if is_assistant and mode != "draft":
+    print("unsupported_gemma4_assistant")
+elif is_multimodal:
+    print("unsupported_gemma4_multimodal")
+elif is_moe:
+    print("unsupported_gemma4_moe")
+elif is_dense_31b:
+    print("unsupported_gemma4_dense_31b")
+PY
+}
+
 file_size_bytes() {
   stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0
 }
@@ -410,6 +452,11 @@ case "$normalized_runtime" in
       echo "MLX simulator smoke requires a directory with config.json, tokenizer metadata, and safetensors weights or index: $model_path" >&2
       exit 2
     fi
+    mlx_unsupported_reason="$(mlx_archive_unsupported_reason "$model_path" "primary")"
+    if [[ -n "$mlx_unsupported_reason" ]]; then
+      echo "MLX simulator smoke requires a supported MLX text-generation archive, got: $mlx_unsupported_reason path=$model_path" >&2
+      exit 2
+    fi
     ;;
   apple_foundation_models)
     case "$artifact_kind" in
@@ -489,6 +536,11 @@ if [[ -n "$draft_model_path" ]]; then
       fi
       if ! mlx_directory_looks_usable "$draft_model_path"; then
         echo "MLX simulator draft proof requires a usable MLX draft directory with config.json, tokenizer metadata, and safetensors weights or index: $draft_model_path" >&2
+        exit 2
+      fi
+      mlx_draft_unsupported_reason="$(mlx_archive_unsupported_reason "$draft_model_path" "draft")"
+      if [[ -n "$mlx_draft_unsupported_reason" ]]; then
+        echo "MLX simulator draft proof requires a supported MLX draft archive, got: $mlx_draft_unsupported_reason path=$draft_model_path" >&2
         exit 2
       fi
       ;;
