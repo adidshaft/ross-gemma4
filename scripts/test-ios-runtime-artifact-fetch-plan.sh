@@ -22,6 +22,10 @@ ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=missing \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/empty" > /tmp/ross-runtime-fetch-plan.out
 grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier=quickStart .*downloader_status=missing" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=downloader status=missing action=install .*command='python3 -m venv $tmpdir/downloads/.hf-venv && $tmpdir/downloads/.hf-venv/bin/python -m pip install --upgrade pip huggingface_hub'" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=missing action=download .*repo=unsloth/gemma-4-E4B-it-GGUF .*target_file=$tmpdir/downloads/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*checksum=30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=missing action=preflight_after_download .*--runtime gguf .*--model $tmpdir/downloads/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*--smoke-profile quick_low_context .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=missing action=download .*repo=unsloth/gemma-4-E4B-it-GGUF .*target_file=$tmpdir/downloads/mtp-gemma-4-E4B-it.gguf .*checksum=b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=missing action=preflight_pair_after_download .*--draft-model $tmpdir/downloads/mtp-gemma-4-E4B-it.gguf .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=blocked action=await_compatible_archive .*repo=mlx-community/gemma-4-E4B-it-qat-4bit .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-4bit .*reason=catalog_primary_not_release_ready .*compatibility_hint=runtime_requires_supported_text_mlx_archive" /tmp/ross-runtime-fetch-plan.out
 if grep -q "lane=mlx status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-4bit" /tmp/ross-runtime-fetch-plan.out; then
   echo "Did not expect download command for non-release-ready bundled MLX primary." >&2
@@ -46,6 +50,37 @@ chmod +x "$tmpdir/downloads/.hf-venv/bin/hf"
 "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/empty" > /tmp/ross-runtime-fetch-plan.out
 grep -q "ROSS_RUNTIME_ARTIFACT_FETCH_PLAN dry_run=true tier=quickStart .*downloader_status=target_root_venv" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=blocked action=await_compatible_archive .*repo=mlx-community/gemma-4-E4B-it-qat-4bit" /tmp/ross-runtime-fetch-plan.out
+
+wrong_tier_root="$tmpdir/wrong-tier"
+mkdir -p "$wrong_tier_root"
+python3 - "$wrong_tier_root/gemma-4-12b-it-UD-Q4_K_XL.gguf" "$wrong_tier_root/mtp-gemma-4-12b-it.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$wrong_tier_root" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=missing action=download .*target_file=$tmpdir/downloads/gemma-4-E4B-it-UD-Q4_K_XL.gguf" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=missing action=download .*target_file=$tmpdir/downloads/mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$wrong_tier_root/mtp-gemma-4-12b-it.gguf" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect wrong-tier 12B draft to satisfy Quick Start E4B MTP plan." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+
+quick_gguf_root="$tmpdir/quick-gguf"
+mkdir -p "$quick_gguf_root"
+python3 - "$quick_gguf_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf" "$quick_gguf_root/mtp-gemma-4-E4B-it.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 1000000))
+PY
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$quick_gguf_root" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=present action=preflight .*path=$quick_gguf_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf .*--smoke-profile quick_low_context .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$quick_gguf_root/mtp-gemma-4-E4B-it.gguf .*--draft-tokens 2 .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 
 mlx_draft_dir="$tmpdir/draft-only/gemma-4-E4B-it-qat-assistant-6bit"
 mkdir -p "$mlx_draft_dir"

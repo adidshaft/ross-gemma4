@@ -805,14 +805,18 @@ if ! grep -q "installed_mtp_draft" scripts/test-ios-runtime-artifact-inventory.s
     FAIL=1
 fi
 
-if ! grep -q "catalog_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
-    echo "❌ FAIL: local runtime artifact inventory tests do not cover catalog MTP draft expectations."
+if ! grep -q "catalog_gguf" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "catalog_mtp_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: local runtime artifact inventory tests do not cover catalog GGUF/MTP expectations."
     FAIL=1
 fi
 
 if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "catalog_gguf" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "preflight_pair_after_download" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "wrong-tier 12B draft" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "download {shlex.quote(repo)} --local-dir" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "downloader_status" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "lane=downloader status=missing" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
@@ -821,7 +825,7 @@ if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inven
    ! grep -q "catalog_primary_not_release_ready" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "catalog_primary_not_release_ready" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "catalog_mlx status=expected" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: local runtime artifact inventory tests/docs do not cover catalog MLX primary and draft expectations."
+    echo "❌ FAIL: local runtime artifact inventory tests/docs do not cover tier-exact GGUF/MTP and MLX catalog expectations."
     FAIL=1
 fi
 

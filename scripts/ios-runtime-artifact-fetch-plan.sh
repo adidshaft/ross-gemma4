@@ -15,7 +15,8 @@ Options:
   --search-root <path>   Additional local artifact root to inspect before printing downloads.
 
 Dry-run only. Prints artifact acquisition and simulator preflight commands for
-MLX/CoreAI readiness without launching Simulator, devicectl, or the app.
+GGUF/MTP, MLX, and CoreAI readiness without launching Simulator, devicectl,
+or the app.
 EOF
 }
 
@@ -172,6 +173,135 @@ if downloader_status == "missing":
         command=f"python3 -m venv {shlex.quote(str(target_root / '.hf-venv'))} && "
         f"{shlex.quote(str(target_root / '.hf-venv/bin/python'))} -m pip install --upgrade pip huggingface_hub",
     )
+
+present_gguf_candidates = [row for row in rows if row.get("lane") == "gguf" and row.get("status") == "present"]
+present_mtp_draft_candidates = [row for row in rows if row.get("lane") == "mtp_draft" and row.get("status") == "present"]
+catalog_gguf = next(
+    (
+        row for row in rows
+        if row.get("lane") == "catalog_gguf"
+        and row.get("status") == "expected"
+        and row_tier_matches(row)
+    ),
+    None,
+)
+catalog_mtp_draft = next(
+    (
+        row for row in rows
+        if row.get("lane") == "catalog_mtp_draft"
+        and row.get("status") == "expected"
+        and row_tier_matches(row)
+    ),
+    None,
+)
+
+if catalog_gguf:
+    primary_file = catalog_gguf.get("file") or pathlib.PurePosixPath(catalog_gguf.get("path", "model.gguf")).name
+    expected_primary_path = target_root / primary_file
+    present_gguf = next(
+        (
+            row for row in present_gguf_candidates
+            if pathlib.PurePath(row.get("path", "")).name == primary_file
+        ),
+        None,
+    )
+    primary_path = present_gguf.get("path", "") if present_gguf else str(expected_primary_path)
+    if present_gguf:
+        emit(
+            "gguf",
+            "present",
+            "preflight",
+            path=primary_path,
+            command=command(
+                root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                "--runtime", "gguf",
+                "--model", primary_path,
+                "--smoke-profile", "quick_low_context",
+                "--preflight-only",
+            ),
+        )
+    else:
+        repo = catalog_gguf.get("repo", "unknown")
+        emit(
+            "gguf",
+            "missing",
+            "download",
+            repo=repo,
+            target_file=expected_primary_path,
+            bytes=catalog_gguf.get("bytes"),
+            checksum=catalog_gguf.get("checksum"),
+            command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} {shlex.quote(primary_file)} --local-dir {shlex.quote(str(target_root))}",
+        )
+        emit(
+            "gguf",
+            "missing",
+            "preflight_after_download",
+            target_file=expected_primary_path,
+            command=command(
+                root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                "--runtime", "gguf",
+                "--model", expected_primary_path,
+                "--smoke-profile", "quick_low_context",
+                "--preflight-only",
+            ),
+        )
+
+    if catalog_mtp_draft:
+        draft_file = catalog_mtp_draft.get("file") or pathlib.PurePosixPath(catalog_mtp_draft.get("path", "draft.gguf")).name
+        expected_draft_path = target_root / draft_file
+        present_mtp_draft = next(
+            (
+                row for row in present_mtp_draft_candidates
+                if pathlib.PurePath(row.get("path", "")).name == draft_file
+            ),
+            None,
+        )
+        draft_path = present_mtp_draft.get("path", "") if present_mtp_draft else str(expected_draft_path)
+        if present_mtp_draft:
+            emit(
+                "mtp_draft",
+                "present",
+                "waiting_for_primary" if not present_gguf else "preflight_pair",
+                path=draft_path,
+                command=command(
+                    root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                    "--runtime", "gguf",
+                    "--model", primary_path,
+                    "--draft-model", draft_path,
+                    "--draft-tokens", 2,
+                    "--require-draft-acceleration",
+                    "--smoke-profile", "mtp_quick",
+                    "--preflight-only",
+                ) if present_gguf else None,
+            )
+        else:
+            repo = catalog_mtp_draft.get("repo", "unknown")
+            emit(
+                "mtp_draft",
+                "missing",
+                "download",
+                repo=repo,
+                target_file=expected_draft_path,
+                bytes=catalog_mtp_draft.get("bytes"),
+                checksum=catalog_mtp_draft.get("checksum"),
+                command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} {shlex.quote(draft_file)} --local-dir {shlex.quote(str(target_root))}",
+            )
+            emit(
+                "mtp_draft",
+                "missing",
+                "preflight_pair_after_download",
+                target_file=expected_draft_path,
+                command=command(
+                    root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                    "--runtime", "gguf",
+                    "--model", primary_path,
+                    "--draft-model", expected_draft_path,
+                    "--draft-tokens", 2,
+                    "--require-draft-acceleration",
+                    "--smoke-profile", "mtp_quick",
+                    "--preflight-only",
+                ),
+            )
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
 present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)

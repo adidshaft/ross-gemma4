@@ -326,24 +326,44 @@ def hf_repo_id(url: str) -> str:
 
 for artifact_match in artifact_pattern.finditer(source):
     body = artifact_match.group("body")
+    tier = enum_field(body, "tier") or artifact_match.group("tier").lstrip(".")
+    pack = field(body, "packId") or "unknown"
+    runtime = enum_field(body, "runtimeMode") or "llamaCppGguf"
+    file_name = field(body, "fileName") or "unknown"
+    url = field(body, "downloadURLString") or "nil"
+    bytes_value = int_field(body, "sizeBytes") or "nil"
+    checksum = field(body, "sha256") or "nil"
+    artifact_kind = field(body, "artifactKind") or "nil"
+    release_ready = bool_field(body, "releaseReady") or "nil"
+    repo_id = hf_repo_id(url)
+    print(
+        "ROSS_RUNTIME_ARTIFACT_INVENTORY "
+        f"lane=catalog_gguf status=expected path={q(url)} "
+        "reason=configured_catalog_primary "
+        f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(file_name)} "
+        f"artifact_kind={q(artifact_kind)} bytes={q(bytes_value)} checksum={q(checksum)} "
+        f"release_ready={q(release_ready)} repo={q(repo_id)} target_file={q(f'~/model-artifacts/{file_name}')} "
+        "acquisition_hint=hf_download_gguf_file preflight_hint=simulator_gguf_file_preflight"
+    )
+
     draft_index = body.find("draftArtifact: AlphaAssistantDraftArtifactDescriptor(")
     if draft_index < 0:
         continue
     draft_body = body[draft_index:]
-    tier = enum_field(body, "tier") or artifact_match.group("tier").lstrip(".")
-    pack = field(body, "packId") or "unknown"
-    runtime = enum_field(body, "runtimeMode") or "llamaCppGguf"
     draft_file = field(draft_body, "fileName") or "unknown"
     draft_url = field(draft_body, "downloadURLString") or "nil"
     draft_bytes = int_field(draft_body, "sizeBytes") or "nil"
     draft_checksum = field(draft_body, "checksumSha256") or "nil"
     draft_kind = field(draft_body, "artifactKind") or "nil"
+    draft_repo_id = hf_repo_id(draft_url)
     print(
         "ROSS_RUNTIME_ARTIFACT_INVENTORY "
         f"lane=catalog_mtp_draft status=expected path={q(draft_url)} "
         "reason=configured_catalog_draft "
         f"tier={q(tier)} pack={q(pack)} runtime={q(runtime)} file={q(draft_file)} "
-        f"artifact_kind={q(draft_kind)} bytes={q(draft_bytes)} checksum={q(draft_checksum)}"
+        f"artifact_kind={q(draft_kind)} bytes={q(draft_bytes)} checksum={q(draft_checksum)} "
+        f"repo={q(draft_repo_id)} target_file={q(f'~/model-artifacts/{draft_file}')} "
+        "acquisition_hint=hf_download_gguf_file preflight_hint=simulator_mtp_draft_preflight"
     )
 
 try:
