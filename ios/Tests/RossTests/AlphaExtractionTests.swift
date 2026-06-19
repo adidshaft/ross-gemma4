@@ -17475,6 +17475,7 @@ final class AlphaExtractionTests: XCTestCase {
             accelerationMode: .standard,
             accelerationDraftTokens: nil,
             draftModelPathLabel: nil,
+            runtimeErrorDetail: "invalid_mlx_artifact",
             lastErrorCategory: "invalid_mlx_artifact",
             userFacingStatus: "Needs repair",
             explicitOptInEnabled: true
@@ -17502,6 +17503,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("gpu_offload=mlx_default"))
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("runtime_error_detail=invalid_mlx_artifact"))
         XCTAssertTrue(line.contains("error=invalid_mlx_artifact"))
     }
 
@@ -17556,6 +17558,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("draft_status=insufficient_device_memory"))
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("runtime_error_detail=insufficient_device_memory"))
         XCTAssertTrue(line.contains("error=insufficient_device_memory"))
     }
 
@@ -17582,6 +17585,7 @@ final class AlphaExtractionTests: XCTestCase {
             accelerationDraftTokens: nil,
             draftModelPathLabel: nil,
             draftAccelerationStatus: "not_supported",
+            runtimeErrorDetail: "unsupported_runtime_on_platform",
             lastErrorCategory: "unsupported_runtime_on_platform",
             userFacingStatus: "Unavailable",
             explicitOptInEnabled: true
@@ -17611,6 +17615,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("gpu_offload=system_managed"))
         XCTAssertTrue(line.contains("fallback=none"))
         XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("runtime_error_detail=unsupported_runtime_on_platform"))
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 
@@ -17649,6 +17654,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("acceleration=standard"))
         XCTAssertTrue(line.contains("draft_status=not_supported"))
         XCTAssertTrue(line.contains("available=false"))
+        XCTAssertTrue(line.contains("runtime_error_detail=unsupported_runtime_on_platform"))
         XCTAssertTrue(line.contains("error=unsupported_runtime_on_platform"))
     }
 

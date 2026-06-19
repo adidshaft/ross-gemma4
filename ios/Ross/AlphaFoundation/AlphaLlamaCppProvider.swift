@@ -531,6 +531,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftValidation.status,
             draftAccelerationDetail: draftValidation.detail,
+            runtimeErrorDetail: availability.errorCategory,
             lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true

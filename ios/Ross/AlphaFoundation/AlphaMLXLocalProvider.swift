@@ -1023,6 +1023,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: draftStatus.label,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftStatus.status,
+            runtimeErrorDetail: availability.errorCategory,
             lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -1813,6 +1814,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: nil,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: "runtime_dependency_unavailable",
+            runtimeErrorDetail: "runtime_dependency_unavailable",
             lastErrorCategory: "runtime_dependency_unavailable",
             userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
             explicitOptInEnabled: true

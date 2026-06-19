@@ -82,6 +82,13 @@ if ! grep -q "draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/n
     FAIL=1
 fi
 
+if ! grep -q "runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "runtimeErrorDetail" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q '"runtime_error_detail": summary_value(identity, "runtime_error_detail")' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: runtime identity does not preserve provider runtime error diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
     FAIL=1

@@ -213,6 +213,7 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var draftModelPathType: String? = nil
     var draftAccelerationStatus: String? = nil
     var draftAccelerationDetail: String? = nil
+    var runtimeErrorDetail: String? = nil
     var lastErrorCategory: String?
     var userFacingStatus: String
     var explicitOptInEnabled: Bool = false
@@ -2486,6 +2487,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: draftModelPathLabel(),
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: unavailableDraftAccelerationStatus(),
+            runtimeErrorDetail: errorCategory,
             lastErrorCategory: errorCategory,
             userFacingStatus: statusMessage,
             explicitOptInEnabled: explicitOptInEnabled
@@ -2740,6 +2742,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: .standard,
             draftAccelerationStatus: "not_supported",
+            runtimeErrorDetail: status.lastErrorCategory,
             lastErrorCategory: status.lastErrorCategory,
             userFacingStatus: status.userFacingStatus,
             explicitOptInEnabled: true
