@@ -94,6 +94,14 @@ if ! grep -q "runtimeIdentityUsesSimulatorCPUOffload" ios/Ross/App/ScreenshotExp
     FAIL=1
 fi
 
+if ! grep -q "ROSS_LOCAL_PHYSICAL_MEMORY_BYTES" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "SIMCTL_CHILD_ROSS_LOCAL_PHYSICAL_MEMORY_BYTES" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "physical_memory_bytes" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testRuntimeEnvironmentParsesPhysicalMemoryOverrideForSimulatorSmoke" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator smoke target memory is not propagated into runtime memory-fit decisions."
+    FAIL=1
+fi
+
 if ! grep -q "draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "draftAccelerationDetail" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
     echo "❌ FAIL: MTP runtime identity does not preserve safe draft validator diagnostics."

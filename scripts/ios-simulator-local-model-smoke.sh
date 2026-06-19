@@ -527,7 +527,7 @@ if [[ "$preflight_only" == "1" ]]; then
   exit 0
 fi
 
-python3 - "$simulator" "$bundle_id" "$normalized_runtime" "$model_path" "$checksum" "$artifact_kind" "$tier" "$pack_id" "$draft_model_path" "$draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$launch_timeout" "$SCRIPT_DIR" <<'PY'
+python3 - "$simulator" "$bundle_id" "$normalized_runtime" "$model_path" "$checksum" "$artifact_kind" "$tier" "$pack_id" "$draft_model_path" "$draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$launch_timeout" "$physical_memory_bytes" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
@@ -565,6 +565,7 @@ from ross_smoke_summary import (
     disable_draft,
     require_draft_acceleration,
     launch_timeout,
+    physical_memory_bytes,
 ) = sys.argv[1:-1]
 
 env = os.environ.copy()
@@ -589,6 +590,8 @@ if disable_draft == "1":
     env["SIMCTL_CHILD_ROSS_LOCAL_DISABLE_DRAFT_ACCELERATION"] = "1"
 if require_draft_acceleration == "1":
     env["SIMCTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"] = "1"
+if physical_memory_bytes:
+    env["SIMCTL_CHILD_ROSS_LOCAL_PHYSICAL_MEMORY_BYTES"] = physical_memory_bytes
 
 command = [
     "xcrun",

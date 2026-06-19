@@ -18165,6 +18165,28 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:0,offload_kqv:false,op_offload:false"))
     }
 
+    func testRuntimeEnvironmentParsesPhysicalMemoryOverrideForSimulatorSmoke() {
+        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "1",
+            "ROSS_LOCAL_RUNTIME": "gguf",
+            "ROSS_LOCAL_PHYSICAL_MEMORY_BYTES": "7200000000",
+            "ROSS_LOCAL_DRAFT_MODEL_TOKENS": "2",
+        ])
+
+        XCTAssertEqual(environment.physicalMemoryBytes, 7_200_000_000)
+        XCTAssertEqual(environment.withoutDraftAcceleration().physicalMemoryBytes, 7_200_000_000)
+
+        let invalidEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_LOCAL_PHYSICAL_MEMORY_BYTES": "nope",
+        ])
+        XCTAssertNil(invalidEnvironment.physicalMemoryBytes)
+
+        let emptyEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_LOCAL_PHYSICAL_MEMORY_BYTES": "0",
+        ])
+        XCTAssertNil(emptyEnvironment.physicalMemoryBytes)
+    }
+
     func testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutClaimingAcceleration() throws {
         let modelURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross identity rejected gguf \(UUID().uuidString)")

@@ -3083,6 +3083,7 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     let modelKind: String?
     let draftModelPath: String?
     let draftModelTokens: Int?
+    let physicalMemoryBytes: UInt64?
 
     init(
         enableRealInference: Bool,
@@ -3094,7 +3095,8 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
         modelChecksum: String?,
         modelKind: String?,
         draftModelPath: String? = nil,
-        draftModelTokens: Int? = nil
+        draftModelTokens: Int? = nil,
+        physicalMemoryBytes: UInt64? = nil
     ) {
         self.enableRealInference = enableRealInference
         self.runtimeModeOverride = runtimeModeOverride
@@ -3106,6 +3108,7 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
         self.modelKind = modelKind
         self.draftModelPath = draftModelPath
         self.draftModelTokens = draftModelTokens
+        self.physicalMemoryBytes = physicalMemoryBytes
     }
 
     static func fromEnvironment(_ environment: [String: String]) -> AlphaLocalRuntimeEnvironment {
@@ -3127,7 +3130,8 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
             modelChecksum: trimmedValue("ROSS_LOCAL_MODEL_CHECKSUM"),
             modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND"),
             draftModelPath: disableDraftAcceleration ? nil : trimmedValue("ROSS_LOCAL_DRAFT_MODEL_PATH"),
-            draftModelTokens: disableDraftAcceleration ? nil : parsePositiveInt(trimmedValue("ROSS_LOCAL_DRAFT_MODEL_TOKENS"))
+            draftModelTokens: disableDraftAcceleration ? nil : parsePositiveInt(trimmedValue("ROSS_LOCAL_DRAFT_MODEL_TOKENS")),
+            physicalMemoryBytes: parsePositiveUInt64(trimmedValue("ROSS_LOCAL_PHYSICAL_MEMORY_BYTES"))
         )
     }
 
@@ -3155,6 +3159,11 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
         guard let raw, let value = Int(raw), value > 0 else { return nil }
         return value
     }
+
+    private static func parsePositiveUInt64(_ raw: String?) -> UInt64? {
+        guard let raw, let value = UInt64(raw), value > 0 else { return nil }
+        return value
+    }
 }
 
 extension AlphaLocalRuntimeEnvironment {
@@ -3169,7 +3178,8 @@ extension AlphaLocalRuntimeEnvironment {
             modelChecksum: modelChecksum,
             modelKind: modelKind,
             draftModelPath: nil,
-            draftModelTokens: nil
+            draftModelTokens: nil,
+            physicalMemoryBytes: physicalMemoryBytes
         )
     }
 }
@@ -3183,6 +3193,7 @@ private struct AlphaRuntimeDebugConfig {
     let modelKind: String?
     let draftModelPath: String?
     let draftModelTokens: Int?
+    let physicalMemoryBytes: UInt64?
 }
 
 enum AlphaLocalModelRuntime {
@@ -3197,7 +3208,8 @@ enum AlphaLocalModelRuntime {
             modelChecksum: runtimeEnvironment.modelChecksum,
             modelKind: runtimeEnvironment.modelKind,
             draftModelPath: runtimeEnvironment.disableDraftAcceleration ? nil : runtimeEnvironment.draftModelPath,
-            draftModelTokens: runtimeEnvironment.disableDraftAcceleration ? nil : runtimeEnvironment.draftModelTokens
+            draftModelTokens: runtimeEnvironment.disableDraftAcceleration ? nil : runtimeEnvironment.draftModelTokens,
+            physicalMemoryBytes: runtimeEnvironment.physicalMemoryBytes
         )
     }
 

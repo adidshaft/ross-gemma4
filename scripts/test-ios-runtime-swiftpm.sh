@@ -7,6 +7,7 @@ SCRATCH_PATH="${ROSS_SWIFTPM_SCRATCH_PATH:-$ROOT_DIR/ios/build-test/swiftpm}"
 REQUIRED_TESTS=(
   testRuntimeIdentityLineIncludesGGUFDraftBenchmarkFields
   testRuntimeIdentityLineReportsSimulatorGGUFCPUOffload
+  testRuntimeEnvironmentParsesPhysicalMemoryOverrideForSimulatorSmoke
   testRuntimeIdentityLineIncludesRejectedGGUFDraftCandidateWithoutClaimingAcceleration
   testRuntimeIdentityLineIncludesMLXDirectoryFields
   testRuntimeIdentityLineIncludesUnavailableMLXDraftCandidate
