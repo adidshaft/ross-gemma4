@@ -1001,6 +1001,7 @@ struct RossLocalModelSmokeView: View {
             ("actual_runtime", actualRuntime.rawValue),
             ("pack_runtime", activePack.runtimeMode.rawValue),
             ("model_format", activePack.artifactKind),
+            ("checksum_verified", String(providerHealth.checksumVerified)),
             ("artifact_path_type", artifactPathType),
             ("artifact_path", artifactPathLabel),
             ("acceleration", providerHealth.accelerationMode?.rawValue ?? "nil"),

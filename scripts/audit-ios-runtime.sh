@@ -100,6 +100,14 @@ if ! grep -q "runtime_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev
     FAIL=1
 fi
 
+if ! grep -q '"checksum_verified"' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q '"checksum_verified": summary_value(identity, "checksum_verified")' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "checksum_verified" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
+   ! grep -q "checksum_verified" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: runtime identity does not preserve checksum verification status for benchmark evidence."
+    FAIL=1
+fi
+
 if ! grep -q "artifactCompatibilityError" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then

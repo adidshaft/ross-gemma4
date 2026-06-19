@@ -60,6 +60,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "actual_runtime": runtime,
             "pack_runtime": runtime,
             "model_format": model_format,
+            "checksum_verified": "true",
             "artifact_path_type": artifact_path_type,
             "artifact_path": artifact_path,
             "acceleration": "standard",
@@ -80,7 +81,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "pack_runtime=gemma_local_runtime "
-            "model_format=gguf artifact_path_type=file artifact_path=gemma-2b.gguf "
+            "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-2b.gguf "
             "acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil "
             "draft_status=no_draft_configured draft_error_detail=no_draft_configured "
             "runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 "
@@ -111,6 +112,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("provider=AlphaLlamaCppProvider", summary)
         self.assertIn("pack_runtime=gemma_local_runtime", summary)
+        self.assertIn("checksum_verified=true", summary)
         self.assertIn("artifact_path=gemma-2b.gguf", summary)
         self.assertIn("fallback=none", summary)
         self.assertIn("available=true", summary)
