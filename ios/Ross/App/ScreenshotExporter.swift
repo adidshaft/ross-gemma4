@@ -959,6 +959,7 @@ struct RossLocalModelSmokeView: View {
             ("draft_model", providerHealth.draftModelPathLabel ?? "nil"),
             ("draft_model_path_type", providerHealth.draftModelPathType ?? "nil"),
             ("draft_status", providerHealth.draftAccelerationStatus ?? "nil"),
+            ("draft_error_detail", providerHealth.draftAccelerationDetail ?? "nil"),
             ("context_tokens", providerHealth.estimatedContextTokens.map(String.init) ?? "nil"),
             ("gpu_offload", gpuOffloadInfo),
             ("fallback", actualRuntime == .deterministicDev ? "deterministic_dev" : "none"),

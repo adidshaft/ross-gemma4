@@ -76,6 +76,12 @@ if ! grep -q "draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
+if ! grep -q "draft_error_detail" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "draftAccelerationDetail" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: MTP runtime identity does not preserve safe draft validator diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "error=draft_acceleration_required.*draft_model_path_type" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: MTP-required smoke failures do not preserve draft artifact path type."
     FAIL=1

@@ -530,6 +530,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             draftModelPathLabel: draftValidation.metadata?.label,
             draftModelPathType: draftModelPathType(),
             draftAccelerationStatus: draftValidation.status,
+            draftAccelerationDetail: draftValidation.detail,
             lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -1130,7 +1131,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func validatedDraftMetadata(
         runtimeAvailable: Bool
-    ) -> (metadata: (tokens: Int?, label: String?)?, status: String) {
+    ) -> (metadata: (tokens: Int?, label: String?)?, status: String, detail: String?) {
         let draftStatus = draftAccelerationStatus(runtimeAvailable: runtimeAvailable)
         guard
             draftStatus.status == "candidate",
@@ -1138,7 +1139,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let draftPath = draftStatus.draftPath,
             let stagedDraft = draftStatus.metadata
         else {
-            return (draftStatus.metadata, draftStatus.status)
+            return (draftStatus.metadata, draftStatus.status, draftStatus.status)
         }
 
         do {
@@ -1149,11 +1150,35 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 draftTokens
             )
             return supportsDraftAcceleration
-                ? (stagedDraft, "active")
-                : (stagedDraft, "validator_rejected")
+                ? (stagedDraft, "active", "configured_acceleration=draftModelSpeculative")
+                : (stagedDraft, "validator_rejected", "configured_acceleration=standard")
         } catch {
-            return (stagedDraft, "validator_failed")
+            return (stagedDraft, "validator_failed", Self.safeDraftValidationErrorDetail(error))
         }
+    }
+
+    private static func safeDraftValidationErrorDetail(_ error: Error) -> String {
+        let rawDescription = String(describing: error)
+        if rawDescription.isEmpty == false,
+           !rawDescription.contains("Error Domain=") {
+            return "validator_error=\(redactedDraftValidationDetail(rawDescription))"
+        }
+        let nsError = error as NSError
+        if nsError.domain.isEmpty == false {
+            return "validator_error=\(nsError.domain):\(nsError.code)"
+        }
+        return "validator_error=\(String(describing: type(of: error)))"
+    }
+
+    private static func redactedDraftValidationDetail(_ value: String) -> String {
+        let redacted = value
+            .replacingOccurrences(
+                of: #"/[^\s]+"#,
+                with: "<path>",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return redacted.isEmpty ? "unknown" : redacted
     }
 
     private static func draftAccelerationErrorCategory(

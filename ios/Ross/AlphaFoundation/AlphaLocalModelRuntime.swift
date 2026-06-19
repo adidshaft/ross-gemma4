@@ -212,6 +212,7 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var draftModelPathLabel: String? = nil
     var draftModelPathType: String? = nil
     var draftAccelerationStatus: String? = nil
+    var draftAccelerationDetail: String? = nil
     var lastErrorCategory: String?
     var userFacingStatus: String
     var explicitOptInEnabled: Bool = false

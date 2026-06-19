@@ -7045,6 +7045,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
         XCTAssertEqual(health?.accelerationDraftTokens, 6)
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_rejected")
+        XCTAssertEqual(health?.draftAccelerationDetail, "configured_acceleration=standard")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_rejected")
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
@@ -7185,6 +7186,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
         XCTAssertEqual(health?.accelerationDraftTokens, 6)
         XCTAssertEqual(health?.draftAccelerationStatus, "validator_failed")
+        XCTAssertEqual(health?.draftAccelerationDetail, "validator_error=couldNotInitializeContext")
         XCTAssertEqual(health?.lastErrorCategory, "draft_validator_failed")
     }
 
@@ -17198,6 +17200,7 @@ final class AlphaExtractionTests: XCTestCase {
             draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
             draftModelPathType: "file",
             draftAccelerationStatus: "active",
+            draftAccelerationDetail: "configured_acceleration=draftModelSpeculative",
             lastErrorCategory: nil,
             userFacingStatus: "Ready",
             explicitOptInEnabled: true
@@ -17222,6 +17225,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
         XCTAssertTrue(line.contains("draft_model_path_type=file"))
         XCTAssertTrue(line.contains("draft_status=active"))
+        XCTAssertTrue(line.contains("draft_error_detail=configured_acceleration=draftModelSpeculative"))
         XCTAssertTrue(line.contains("context_tokens=4096"))
         XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:"))
         XCTAssertTrue(line.contains("fallback=none"))
@@ -17265,6 +17269,7 @@ final class AlphaExtractionTests: XCTestCase {
             draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
             draftModelPathType: "file",
             draftAccelerationStatus: "validator_rejected",
+            draftAccelerationDetail: "configured_acceleration=standard",
             lastErrorCategory: "draft_validator_rejected",
             userFacingStatus: "Ready",
             explicitOptInEnabled: true
@@ -17282,6 +17287,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
         XCTAssertTrue(line.contains("draft_model_path_type=file"))
         XCTAssertTrue(line.contains("draft_status=validator_rejected"))
+        XCTAssertTrue(line.contains("draft_error_detail=configured_acceleration=standard"))
         XCTAssertTrue(line.contains("error=draft_validator_rejected"))
     }
 

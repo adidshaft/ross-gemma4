@@ -49,7 +49,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "pack_runtime=gemma_local_runtime "
             "model_format=gguf artifact_path_type=file artifact_path=gemma-2b.gguf "
             "acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil "
-            "draft_status=no_draft_configured context_tokens=4096 gpu_offload=n_gpu_layers:0 "
+            "draft_status=no_draft_configured draft_error_detail=no_draft_configured "
+            "context_tokens=4096 gpu_offload=n_gpu_layers:0 "
             "fallback=none available=true error=nil"
         )
         matrix = parse_fields(
@@ -83,6 +84,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             summary,
         )
         self.assertIn("draft_model_path_type=nil", summary)
+        self.assertIn("draft_error_detail=no_draft_configured", summary)
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
         self.assertIn("source_case=english_source_bound_document_qa", summary)
         self.assertIn("source_task=document_qa", summary)
@@ -896,7 +898,8 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "pack_runtime=gemma_local_runtime "
             "model_format=local_model_artifact artifact_path_type=file acceleration=standard "
-            "draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured"
+            "draft_tokens=nil draft_model=nil draft_model_path_type=nil "
+            "draft_status=no_draft_configured draft_error_detail=no_draft_configured"
         )
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=full "
@@ -922,6 +925,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("fail_runtime=gemma_local_runtime", summary)
         self.assertIn("pack_runtime=gemma_local_runtime", summary)
         self.assertIn("draft_status=no_draft_configured", summary)
+        self.assertIn("draft_error_detail=no_draft_configured", summary)
         self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_profile=full", summary)
         self.assertIn("matrix_cases=nil", summary)
