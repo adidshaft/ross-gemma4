@@ -24,8 +24,9 @@ The legacy Flash pack remains in the registry only for compatibility and recover
 
 ## Remaining Proof Steps
 
-1. Re-run the morning physical-device checkpoint with guarded short smokes for GGUF baseline, MTP low-token proof, MLX identity/generation if an artifact exists, and CoreAI/CoreML identity/generation if available.
-2. Confirm pause/resume, checksum/provider digest handling, runtime validation, repair, and re-download.
-3. Import real PDF/image/text files from Files/iCloud/Downloads and ask source-grounded English, Hindi, and Bengali questions.
-4. Record device performance, storage, privacy-ledger, and fallback status in the QA report.
-5. Implement and prove the separate Matter Search embedding download/install/retrieval lifecycle.
+1. Run no-launch artifact preflights with `scripts/ios-simulator-local-model-smoke.sh --preflight-only` for any local GGUF, MLX, CoreAI/CoreML adapter, or `system://...` sentinel that will be referenced during validation.
+2. Re-run the morning physical-device checkpoint with guarded short smokes for GGUF baseline, MTP low-token proof, MLX identity/generation if an artifact exists, and CoreAI/CoreML identity/generation if available.
+3. Confirm pause/resume, checksum/provider digest handling, runtime validation, repair, and re-download.
+4. Import real PDF/image/text files from Files/iCloud/Downloads and ask source-grounded English, Hindi, and Bengali questions.
+5. Record device performance, storage, privacy-ledger, and fallback status in the QA report.
+6. Implement and prove the separate Matter Search embedding download/install/retrieval lifecycle.

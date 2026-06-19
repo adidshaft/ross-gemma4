@@ -623,7 +623,8 @@ fi
 
 if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "without launching Simulator or touching the cabled iPhone" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
-   ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+   ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "Run no-launch artifact preflights" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not remind operators to use no-launch artifact preflights before device work."
     FAIL=1
 fi
