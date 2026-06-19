@@ -140,6 +140,10 @@ case "$smoke_profile" in
 esac
 
 if [[ "$require_draft_acceleration" == "1" ]]; then
+  if [[ "$disable_draft" == "1" ]]; then
+    echo "Draft acceleration proof cannot be combined with --disable-draft." >&2
+    exit 2
+  fi
   case "$smoke_profile" in
     mtp|mtp-quick|mtp_quick)
       ;;

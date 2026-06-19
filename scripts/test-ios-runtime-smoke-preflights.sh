@@ -88,6 +88,10 @@ run_expect_exit_2 \
   "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$main_gguf" --require-draft-acceleration --smoke-profile quick
 
 run_expect_exit_2 \
+  "simulator draft proof with draft disabled" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$main_gguf" --require-draft-acceleration --disable-draft --smoke-profile mtp_quick
+
+run_expect_exit_2 \
   "MLX directory passed as GGUF draft proof" \
   "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --draft-model "$usable_mlx" --require-draft-acceleration
 

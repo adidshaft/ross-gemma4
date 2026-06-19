@@ -866,9 +866,13 @@ fi
 
 if ! grep -q "Draft acceleration proof requires --smoke-profile mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "Draft acceleration proof requires --smoke-profile mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "Draft acceleration proof cannot be combined with --disable-draft" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "Draft acceleration proof cannot be combined with --disable-draft" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "installed-pack draft proof without MTP profile" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
    ! grep -q "simulator draft proof without MTP profile" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
-   ! grep -q "fail before launch if .*--require-draft-acceleration.*full.*quick.*source-only" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "installed-pack draft proof with draft disabled" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "simulator draft proof with draft disabled" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "fail before launch if .*--require-draft-acceleration.*full.*quick.*source-only.*--disable-draft" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: required MTP proof can still run outside the low-token MTP smoke profile."
     FAIL=1
 fi

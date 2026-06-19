@@ -208,6 +208,11 @@ run_expect_exit_2 \
   "Draft acceleration proof requires --smoke-profile mtp_quick" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile quick
 
+run_expect_exit_2 \
+  "installed-pack draft proof with draft disabled" \
+  "Draft acceleration proof cannot be combined with --disable-draft" \
+  "${base_command[@]}" --runtime gguf --require-draft-acceleration --disable-draft --smoke-profile mtp_quick
+
 write_manifest '{
   "packId": "tiny-gguf",
   "tier": "quick_start",
