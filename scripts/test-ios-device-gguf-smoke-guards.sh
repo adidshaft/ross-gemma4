@@ -175,6 +175,34 @@ if ! grep -q "ROSS_SMOKE_BENCHMARK_SUMMARY" "$tmpdir/gguf.out"; then
   exit 1
 fi
 
+rm -f "$copy_log" "$env_log"
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --tier quickStart \
+    --pack-id unit-pack-low-context \
+    --smoke-profile quick_low_context \
+    --stage-timeout 5 \
+    >"$tmpdir/gguf-quick-low-context.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]]; then
+  echo "FAIL: fake GGUF quick_low_context smoke should exit 0, got $rc" >&2
+  cat "$tmpdir/gguf-quick-low-context.out" >&2 || true
+  exit 1
+fi
+if ! grep -q '^SMOKE_PROFILE=quick_low_context$' "$env_log"; then
+  echo "FAIL: GGUF helper did not pass quick_low_context launch environment." >&2
+  cat "$env_log" >&2 || true
+  exit 1
+fi
+
 device_model_path="$(sed -n 's/^DEVICE_MODEL_PATH=//p' "$env_log" | head -n 1)"
 device_model_name="$(basename "$device_model_path")"
 if [[ "$device_model_name" == "model.gguf" ]]; then

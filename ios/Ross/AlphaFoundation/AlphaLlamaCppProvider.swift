@@ -49,7 +49,7 @@ enum AlphaLlamaRuntimeProfile {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         switch rawProfile {
-        case "mtp", "mtp-quick", "mtp_quick":
+        case "mtp", "mtp-quick", "mtp_quick", "quick-low-context", "quick_low_context":
             return 1_024
         default:
             return nil

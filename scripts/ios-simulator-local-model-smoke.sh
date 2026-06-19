@@ -16,7 +16,7 @@ Options:
   --artifact-kind <kind>  Override smoke artifact kind.
   --tier <tier>           quickStart | caseAssociate | seniorDraftingSupport. Default: quickStart
   --pack-id <id>          Logical pack id for the debug smoke pack.
-  --smoke-profile <mode>  quick | full | mtp | mtp-quick | mtp_quick | source-only. Default: quick
+  --smoke-profile <mode>  quick | quick-low-context | quick_low_context | full | mtp | mtp-quick | mtp_quick | source-only. Default: quick
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 60
   --launch-timeout <sec>  Overall helper timeout. Default: auto-sized from smoke profile and stage timeout.
   --physical-memory-bytes <bytes>
@@ -137,7 +137,7 @@ if [[ -z "$runtime" ]]; then
 fi
 
 case "$smoke_profile" in
-  quick|full|mtp|mtp-quick|mtp_quick|source|source-only)
+  quick|quick-low-context|quick_low_context|full|mtp|mtp-quick|mtp_quick|source|source-only)
     ;;
   *)
     echo "Unsupported smoke profile: $smoke_profile" >&2

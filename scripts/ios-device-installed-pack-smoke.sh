@@ -18,7 +18,7 @@ Options:
   --launch-timeout <sec>  Overall helper timeout while waiting for a smoke marker. Default: 300
   --physical-memory-bytes <bytes>
                           Optional device memory used for pre-launch MTP memory-fit gating.
-  --smoke-profile <mode>  full | quick | mtp | mtp-quick | mtp_quick. Default: full
+  --smoke-profile <mode>  full | quick | quick-low-context | quick_low_context | mtp | mtp-quick | mtp_quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
                           has a usable draft companion.
   --require-draft-acceleration
@@ -123,7 +123,7 @@ if [[ -z "$device_id" ]]; then
 fi
 
 case "$smoke_profile" in
-  full|quick|mtp|mtp-quick|mtp_quick)
+  full|quick|quick-low-context|quick_low_context|mtp|mtp-quick|mtp_quick)
     ;;
   *)
     echo "Unsupported smoke profile: $smoke_profile" >&2

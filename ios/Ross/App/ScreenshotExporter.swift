@@ -175,11 +175,12 @@ func rossAssistantDownloadSmokeInstalledPackMatches(
 enum RossLocalModelSmokeProfile: String {
     case full
     case quick
+    case quickLowContext = "quick_low_context"
     case mtpQuick = "mtp_quick"
 
     var isShortGenerationProfile: Bool {
         switch self {
-        case .quick, .mtpQuick:
+        case .quick, .quickLowContext, .mtpQuick:
             return true
         case .full:
             return false
@@ -217,7 +218,7 @@ enum RossLocalModelSmokeProfile: String {
 
     var benchmarkMatrixCases: [String] {
         switch self {
-        case .quick:
+        case .quick, .quickLowContext:
             return [
                 "english_source_bound_document_qa",
                 "english_open_no_document_query"
@@ -250,6 +251,8 @@ enum RossLocalModelSmokeProfile: String {
         switch rawValue {
         case "mtp", "mtp-quick", "mtp_quick":
             return .mtpQuick
+        case "quick-low-context", "quick_low_context":
+            return .quickLowContext
         case "quick", "source", "source-only":
             return .quick
         default:

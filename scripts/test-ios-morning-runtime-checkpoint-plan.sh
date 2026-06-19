@@ -367,6 +367,7 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
+grep -q -- "--smoke-profile quick_low_context" /tmp/ross-morning-plan.out
 if [[ "$(grep -c -- "--smoke-profile full" /tmp/ross-morning-plan.out)" -ne 2 ]]; then
   echo "Expected MLX and CoreAI ready lanes to request the full varied profile" >&2
   cat /tmp/ross-morning-plan.out >&2

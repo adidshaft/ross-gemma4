@@ -225,6 +225,11 @@ preflight_expect_ok \
   "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --preflight-only
 
 preflight_expect_ok \
+  "GGUF quick_low_context smoke profile" \
+  "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=gemma_local_runtime artifact_kind=local_model_artifact model_path_type=file" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --smoke-profile quick_low_context --preflight-only
+
+preflight_expect_ok \
   "MLX usable directory" \
   "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=mlx_swift_lm artifact_kind=mlx_directory model_path_type=directory" \
   "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --preflight-only

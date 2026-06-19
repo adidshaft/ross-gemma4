@@ -1111,19 +1111,23 @@ if ! grep -q "mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null ||
 fi
 
 if ! grep -q "return 1_024" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "quick_low_context" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "quick-low-context" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 128)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 256)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 64)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "1024-token context cap" docs/IOS_RUNTIME.md 2>/dev/null ||
-   ! grep -q "256-token prompt batch for non-constrained proof lanes" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "quick_low_context" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "256-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "Constrained 7GB-class E4B keeps the older 128-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: MTP smoke proof profile is not pinned to the low-context activation lane."
     FAIL=1
 fi
 
-if ! grep -q "full | quick | mtp | mtp-quick | mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
-   ! grep -q "quick | full | mtp | mtp-quick | mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+if ! grep -q "full | quick | quick-low-context | quick_low_context | mtp | mtp-quick | mtp_quick" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "quick | quick-low-context | quick_low_context | full | mtp | mtp-quick | mtp_quick" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "full | quick | quick-low-context | quick_low_context | mtp | mtp-quick | mtp_quick" scripts/ios-device-gguf-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: smoke helper usage text does not advertise all accepted MTP proof profile aliases."
     FAIL=1
 fi
@@ -1325,6 +1329,13 @@ fi
 
 if ! grep -q "installed MLX/CoreAI lanes with the full varied document/query matrix" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: iOS runtime docs do not match the morning varied MLX/CoreAI benchmark plan."
+    FAIL=1
+fi
+
+if ! grep -q -- "--smoke-profile quick_low_context" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "GGUF baseline.*quick_low_context.*smoke" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "GGUF baseline uses quick_low_context" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning checkpoint plan does not use the low-context GGUF baseline profile."
     FAIL=1
 fi
 

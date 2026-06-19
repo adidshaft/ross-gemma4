@@ -17997,7 +17997,20 @@ final class AlphaExtractionTests: XCTestCase {
             ]),
             .quick
         )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "quick-low-context"
+            ]),
+            .quickLowContext
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.fromEnvironment([
+                "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "quick_low_context"
+            ]),
+            .quickLowContext
+        )
         XCTAssertTrue(RossLocalModelSmokeProfile.quick.isShortGenerationProfile)
+        XCTAssertTrue(RossLocalModelSmokeProfile.quickLowContext.isShortGenerationProfile)
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([
                 "ROSS_LOCAL_MODEL_SMOKE_PROFILE": "mtp-quick"
@@ -18044,6 +18057,14 @@ final class AlphaExtractionTests: XCTestCase {
             ]
         )
         XCTAssertEqual(
+            RossLocalModelSmokeProfile.quickLowContext.benchmarkMatrixStages,
+            RossLocalModelSmokeProfile.quick.benchmarkMatrixStages
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.quickLowContext.benchmarkMatrixCases,
+            RossLocalModelSmokeProfile.quick.benchmarkMatrixCases
+        )
+        XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixStages,
             [
                 "source:document_qa:en:source_refs_required:max_tokens=12",
@@ -18054,6 +18075,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.quick.expectedAnswerSchema,
             #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeProfile.quickLowContext.expectedAnswerSchema,
+            RossLocalModelSmokeProfile.quick.expectedAnswerSchema
         )
         XCTAssertEqual(
             RossLocalModelSmokeProfile.mtpQuick.benchmarkMatrixCases,
@@ -21230,6 +21255,32 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: modelPath,
                 physicalMemory: memory,
                 environment: mtpQuickEnvironment
+            ),
+            64
+        )
+
+        let quickLowContextEnvironment = ["ROSS_LOCAL_MODEL_SMOKE_PROFILE": "quick_low_context"]
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectiveContextWindowTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: quickLowContextEnvironment
+            ),
+            1_024
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: quickLowContextEnvironment
+            ),
+            256
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(
+                forModelPath: modelPath,
+                physicalMemory: memory,
+                environment: quickLowContextEnvironment
             ),
             64
         )

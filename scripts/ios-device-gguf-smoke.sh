@@ -19,7 +19,7 @@ Options:
                           Default: quickStart
   --pack-id <id>          Logical pack id written into the seeded manifest.
                           Default: <model-basename>-device-proof
-  --smoke-profile <mode>  full | quick | mtp | mtp-quick | mtp_quick. Default: full
+  --smoke-profile <mode>  full | quick | quick-low-context | quick_low_context | mtp | mtp-quick | mtp_quick. Default: full
   --require-draft-acceleration
                           Fail unless the app reports active GGUF draft speculative
                           acceleration with draft_status=active and draft metadata.
@@ -125,7 +125,7 @@ if [[ -z "$draft_tokens" || "$draft_tokens" == *[!0-9]* || "$draft_tokens" -le 0
 fi
 
 case "$smoke_profile" in
-  full|quick|mtp|mtp-quick|mtp_quick)
+  full|quick|quick-low-context|quick_low_context|mtp|mtp-quick|mtp_quick)
     ;;
   *)
     echo "Unsupported smoke profile: $smoke_profile" >&2
