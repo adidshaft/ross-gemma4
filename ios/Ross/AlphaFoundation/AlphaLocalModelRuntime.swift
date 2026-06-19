@@ -2636,6 +2636,7 @@ func alphaFoundationModelOutput(
             omittedSourceCount: promptPack.omittedSourceRefs.count,
             omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
             executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
+            accelerationMode: .standard,
             inputChars: promptPack.inputChars
         )
     }
@@ -2651,6 +2652,7 @@ func alphaFoundationModelOutput(
         omittedSourceCount: promptPack.omittedSourceRefs.count,
         omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
         executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
+        accelerationMode: .standard,
         inputChars: promptPack.inputChars,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
     )
@@ -2675,6 +2677,7 @@ func alphaFoundationModelPartialOutput(
         omittedSourceCount: promptPack.omittedSourceRefs.count,
         omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
         executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
+        accelerationMode: .standard,
         inputChars: promptPack.inputChars
     )
 }

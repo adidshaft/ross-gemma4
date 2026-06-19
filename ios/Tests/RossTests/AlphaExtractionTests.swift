@@ -21014,6 +21014,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(output.schemaValid)
         XCTAssertNil(output.parsedJson)
         XCTAssertNil(output.errorCategory)
+        XCTAssertEqual(output.accelerationMode, .standard)
         XCTAssertTrue(output.rawText.contains("14 May 2026"))
     }
 
@@ -21056,9 +21057,11 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(invalid.schemaValid)
         XCTAssertEqual(invalid.errorCategory, "invalid_model_output")
+        XCTAssertEqual(invalid.accelerationMode, .standard)
         XCTAssertNotNil(valid.parsedJson)
         XCTAssertTrue(valid.schemaValid)
         XCTAssertNil(valid.errorCategory)
+        XCTAssertEqual(valid.accelerationMode, .standard)
     }
 
     @available(iOS 26.0, macOS 26.0, *)
@@ -21130,6 +21133,7 @@ final class AlphaExtractionTests: XCTestCase {
             "Selected order\n- The matter is listed on 14 May 2026. [Order p.1]"
         ])
         XCTAssertTrue(streamed.dropLast().allSatisfy { !$0.usesMeasuredTokenCounts })
+        XCTAssertTrue(streamed.allSatisfy { $0.accelerationMode == .standard })
         XCTAssertEqual(streamed.last?.inputTokenCount, 410)
         XCTAssertEqual(streamed.last?.outputTokenCount, 28)
         XCTAssertEqual(streamed.last?.timeToFirstTokenMs, 480)
