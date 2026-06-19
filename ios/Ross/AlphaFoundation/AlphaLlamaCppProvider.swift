@@ -1132,6 +1132,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         let stopSequences = [
             "<end_of_turn>",
             "<start_of_turn>",
+            "<|channel>",
             "<|endoftext|>",
             "\n\nQuestion:",
             "\nQuestion:",

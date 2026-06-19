@@ -7659,7 +7659,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.accelerationDraftTokens, 6)
         XCTAssertEqual(output.accelerationDraftModelLabel, draftURL.lastPathComponent)
         XCTAssertEqual(output.inputTokenCount, 192)
-        XCTAssertEqual(output.outputTokenCount, 24)
+        XCTAssertEqual(output.outputTokenCount, 12)
         XCTAssertNotNil(output.outputTokensPerSecond)
         XCTAssertTrue(output.warnings.contains { $0.contains("Draft acceleration produced degenerate output") })
 
