@@ -585,6 +585,7 @@ fi
 python3 - "$simulator" "$bundle_id" "$normalized_runtime" "$model_path" "$checksum" "$artifact_kind" "$tier" "$pack_id" "$draft_model_path" "$draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$launch_timeout" "$physical_memory_bytes" "$SCRIPT_DIR" <<'PY'
 import os
 import re
+import selectors
 import signal
 import subprocess
 import sys
@@ -799,7 +800,35 @@ process = subprocess.Popen(
 
 try:
     assert process.stdout is not None
-    for raw_line in process.stdout:
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ)
+    while True:
+        if time.time() > deadline:
+            outcome = "timeout"
+            print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)
+            fail_fields = {
+                "runtime": runtime,
+                "requested_runtime": runtime,
+                "profile": smoke_profile,
+                "stage": "helper_timeout",
+                "error": "helper_timeout",
+                **completed_stage_fields,
+            }
+            process.kill()
+            break
+
+        events = selector.select(timeout=0.25)
+        if not events:
+            if process.poll() is not None:
+                break
+            continue
+
+        raw_line = process.stdout.readline()
+        if raw_line == "":
+            if process.poll() is not None:
+                break
+            continue
+
         line = raw_line.rstrip("\n")
         print(line, flush=True)
         if outcome == "fail" and fail_tail_lines_remaining is not None:
@@ -841,19 +870,6 @@ try:
             }
             fail_tail_lines_remaining = 2
             continue
-        if time.time() > deadline:
-            outcome = "timeout"
-            print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)
-            fail_fields = {
-                "runtime": runtime,
-                "requested_runtime": runtime,
-                "profile": smoke_profile,
-                "stage": "helper_timeout",
-                "error": "helper_timeout",
-                **completed_stage_fields,
-            }
-            process.kill()
-            break
 finally:
     try:
         process.wait(timeout=15)

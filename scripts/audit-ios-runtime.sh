@@ -363,6 +363,12 @@ for timeout_helper in scripts/ios-simulator-local-model-smoke.sh scripts/ios-dev
     fi
 done
 
+if ! grep -q "selectors.DefaultSelector" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "simulator silent launch timeout" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator smoke timeout can still block forever while stdout is silent."
+    FAIL=1
+fi
+
 if ! grep -q '"fail_runtime"' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: failure summaries do not preserve the raw failure-marker runtime."
     FAIL=1

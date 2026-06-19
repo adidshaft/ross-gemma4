@@ -42,6 +42,10 @@ if [[ -z "${FAKE_SIMCTL_PROCESS_LOG:-}" ]]; then
   echo "missing FAKE_SIMCTL_PROCESS_LOG" >&2
   exit 2
 fi
+if [[ -n "${FAKE_SIMCTL_SLEEP:-}" ]]; then
+  sleep "$FAKE_SIMCTL_SLEEP"
+  exit 0
+fi
 cat "$FAKE_SIMCTL_PROCESS_LOG"
 SH
 chmod +x "$fake_bin/xcrun"
@@ -304,6 +308,37 @@ run_process_guard_expect_exit_0() {
     return 1
   fi
 }
+
+run_process_guard_expect_timeout() {
+  local description="$1"
+  local process_log="$2"
+  shift 2
+  set +e
+  PATH="$fake_bin:$PATH" \
+    FAKE_SIMCTL_PROCESS_LOG="$process_log" \
+    FAKE_SIMCTL_SLEEP=2 \
+    "$@" >/tmp/ross-runtime-preflight.out 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 1 ]]; then
+    echo "❌ FAIL: $description expected exit 1, got $rc" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+  if ! grep -q "reason=helper_timeout" /tmp/ross-runtime-preflight.out ||
+     ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" /tmp/ross-runtime-preflight.out; then
+    echo "❌ FAIL: $description did not emit timeout guard and failure summary." >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+}
+
+cat >"$tmpdir/simulator-silent-hang.log" <<'EOF'
+EOF
+run_process_guard_expect_timeout \
+  "simulator silent launch timeout" \
+  "$tmpdir/simulator-silent-hang.log" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --smoke-profile quick --launch-timeout 1
 
 cat >"$tmpdir/simulator-sparse-pass-stage-done.log" <<EOF
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=$(basename "$main_gguf") acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
