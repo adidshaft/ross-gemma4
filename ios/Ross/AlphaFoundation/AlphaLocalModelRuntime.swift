@@ -3477,6 +3477,9 @@ enum AlphaLocalModelRuntime {
         case .deterministicDev, .unavailable:
             return nil
         }
+        if activePack.installPath.hasPrefix("/") {
+            return activePack.installPath
+        }
         return alphaAbsoluteURL(for: activePack.installPath).path
     }
 

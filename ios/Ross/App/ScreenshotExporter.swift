@@ -279,7 +279,8 @@ func alphaDebugLocalModelSmokePack(
         runtimeMode: runtimeMode,
         modelPath: modelPath
     )
-    guard usesSystemFoundationModel || fileManager.fileExists(atPath: modelPath) else {
+    let resolvedModelURL = alphaDebugSmokeResolvedModelURL(for: modelPath)
+    guard usesSystemFoundationModel || fileManager.fileExists(atPath: resolvedModelURL.path) else {
         return nil
     }
     guard let artifactKind = alphaDebugSmokeArtifactKind(
@@ -302,6 +303,13 @@ func alphaDebugLocalModelSmokePack(
         minimumAppVersion: "0.1.0-alpha",
         isActive: true
     )
+}
+
+func alphaDebugSmokeResolvedModelURL(for modelPath: String) -> URL {
+    if modelPath.hasPrefix("/") {
+        return URL(fileURLWithPath: modelPath)
+    }
+    return alphaAbsoluteURL(for: modelPath)
 }
 
 func alphaDebugSmokeArtifactKind(
@@ -422,8 +430,11 @@ struct RossLocalModelSmokeView: View {
         }
         let requireDraftAcceleration = RossLocalModelSmokeView.requiresDraftAcceleration(environment)
         let debugModelPath = runtimeEnvironment.modelPath?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let debugModelPathExists = debugModelPath
+            .map { FileManager.default.fileExists(atPath: alphaDebugSmokeResolvedModelURL(for: $0).path) }
+            ?? false
         RossLocalModelSmokeView.log(
-            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false) physical_memory_bytes=\(runtimeEnvironment.physicalMemoryBytes.map(String.init) ?? "nil")"
+            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPathExists) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false) physical_memory_bytes=\(runtimeEnvironment.physicalMemoryBytes.map(String.init) ?? "nil")"
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "launch"))
         let activePack: AlphaInstalledModelPack?

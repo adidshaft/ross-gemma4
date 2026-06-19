@@ -220,7 +220,8 @@ if [[ -z "$probe_device_path" ]]; then
 fi
 
 container_root="${probe_device_path%/Library/Application Support/RossAlpha/.device-proof-probe}"
-device_model_path="$container_root/Library/Application Support/RossAlpha/model-packs/$canonical_tier/$seed_model_basename"
+relative_model_path="model-packs/$canonical_tier/$seed_model_basename"
+device_model_path="$container_root/Library/Application Support/RossAlpha/$relative_model_path"
 
 echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
@@ -242,7 +243,7 @@ run_devicectl_copy_with_timeout "manifest_copy" "$tmpdir/manifest-copy.txt" \
   --source "$seed_dir/$manifest_basename" \
   --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/"
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
+python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
