@@ -76,18 +76,40 @@ if [[ -n "$installed_root" ]]; then
   inventory_output="$(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")"
 fi
 
+inventory_tier_pattern() {
+  local requested_tier="$1"
+  case "$requested_tier" in
+    quickStart|quick_start)
+      printf '(quickStart|quick_start)'
+      ;;
+    caseAssociate|case_associate)
+      printf '(caseAssociate|case_associate)'
+      ;;
+    seniorDraftingSupport|senior_drafting_support)
+      printf '(seniorDraftingSupport|senior_drafting_support)'
+      ;;
+    *)
+      printf '%s' "$requested_tier"
+      ;;
+  esac
+}
+
 inventory_has_present_lane() {
   local lane="$1"
   local requested_tier="${2:-$tier}"
+  local tier_pattern
+  tier_pattern="$(inventory_tier_pattern "$requested_tier")"
   [[ -n "$inventory_output" ]] || return 0
-  grep -Eq "lane=${lane} status=present .*tier=${requested_tier}( |$)" <<<"$inventory_output"
+  grep -Eq "lane=${lane} status=present .*tier=${tier_pattern}( |$)" <<<"$inventory_output"
 }
 
 inventory_skip_reason() {
   local lane="$1"
   local requested_tier="${2:-$tier}"
+  local tier_pattern
+  tier_pattern="$(inventory_tier_pattern "$requested_tier")"
   [[ -n "$inventory_output" ]] || return 1
-  grep -E "lane=${lane} status=missing .*tier=${requested_tier}( |$)" <<<"$inventory_output" |
+  grep -E "lane=${lane} status=missing .*tier=${tier_pattern}( |$)" <<<"$inventory_output" |
     head -n 1 |
     sed -E 's/.* reason=([^ ]+).*/\1/'
 }

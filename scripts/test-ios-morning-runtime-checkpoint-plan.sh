@@ -31,7 +31,7 @@ packs = support / "model-packs"
 
 (packs / "quickStart" / "quick.manifest.json").write_text(json.dumps({
     "packId": "quick-no-draft",
-    "tier": "quickStart",
+    "tier": "quick_start",
     "fileName": "main.gguf",
     "relativePath": "model-packs/quickStart/main.gguf",
     "checksumSha256": "abc",
@@ -70,7 +70,7 @@ packs = support / "model-packs"
 
 (packs / "caseAssociate" / "case.manifest.json").write_text(json.dumps({
     "packId": "case-mtp",
-    "tier": "caseAssociate",
+    "tier": "case_associate",
     "fileName": "main.gguf",
     "relativePath": "model-packs/caseAssociate/main.gguf",
     "checksumSha256": "abc",
@@ -91,7 +91,7 @@ packs = support / "model-packs"
 
 (packs / "mlx" / "mlx.manifest.json").write_text(json.dumps({
     "packId": "case-mlx",
-    "tier": "caseAssociate",
+    "tier": "case_associate",
     "fileName": "gemma-mlx",
     "relativePath": "model-packs/mlx/gemma-mlx",
     "checksumSha256": "abc",
@@ -104,7 +104,7 @@ packs = support / "model-packs"
 
 (packs / "coreai" / "coreai.manifest.json").write_text(json.dumps({
     "packId": "case-coreai",
-    "tier": "caseAssociate",
+    "tier": "case_associate",
     "fileName": "system-model",
     "relativePath": "system-model",
     "checksumSha256": "system",
@@ -144,7 +144,7 @@ packs = support / "model-packs"
 
 (packs / "quickStart" / "quick.manifest.json").write_text(json.dumps({
     "packId": "quick-mtp",
-    "tier": "quickStart",
+    "tier": "quick_start",
     "fileName": "main.gguf",
     "relativePath": "model-packs/quickStart/main.gguf",
     "checksumSha256": "abc",
@@ -165,7 +165,7 @@ packs = support / "model-packs"
 
 (packs / "mlx" / "mlx.manifest.json").write_text(json.dumps({
     "packId": "mlx-pack",
-    "tier": "quickStart",
+    "tier": "quick_start",
     "fileName": "gemma-mlx",
     "relativePath": "model-packs/mlx/gemma-mlx",
     "checksumSha256": "abc",
@@ -179,7 +179,7 @@ packs = support / "model-packs"
 (packs / "coreai" / "coreai.manifest.json").parent.mkdir(parents=True, exist_ok=True)
 (packs / "coreai" / "coreai.manifest.json").write_text(json.dumps({
     "packId": "coreai-system",
-    "tier": "quickStart",
+    "tier": "quick_start",
     "fileName": "system-model",
     "relativePath": "system-model",
     "checksumSha256": "system",

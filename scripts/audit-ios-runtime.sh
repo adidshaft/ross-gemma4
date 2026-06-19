@@ -484,7 +484,8 @@ if ! grep -q "Full matrix cases: English source-bound document QA, Bengali sourc
     FAIL=1
 fi
 
-if ! grep -q "missing_installed_mlx_for_tier" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+if ! grep -q "inventory_tier_pattern" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "missing_installed_mlx_for_tier" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "wrong-tier inventory" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan does not gate installed lanes by requested tier."
     FAIL=1
