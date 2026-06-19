@@ -398,6 +398,14 @@ def benchmark_profile_draft_error(identity, pass_fields, matrix_fields):
     return None
 
 
+def is_mtp_profile(pass_fields=None, matrix_fields=None):
+    profiles = {
+        ((pass_fields or {}).get("profile") or "").replace("-", "_"),
+        ((matrix_fields or {}).get("profile") or "").replace("-", "_"),
+    }
+    return any(profile == "mtp" or profile.startswith("mtp_") for profile in profiles)
+
+
 def benchmark_stage_metric_error(pass_fields, matrix_fields):
     required_metrics = [
         "input_tokens",
@@ -625,6 +633,64 @@ def benchmark_summary_line(identity, pass_fields, matrix_fields):
     )
 
 
+def failure_runtime_proof_error(identity, requested_runtime, fail_runtime=None):
+    actual_runtime = identity.get("actual_runtime") if identity else None
+    if actual_runtime in (None, "", "nil"):
+        return "missing_runtime_identity"
+    if requested_runtime not in (None, "", "nil") and requested_runtime != actual_runtime:
+        return f"runtime_identity_mismatch requested_runtime={requested_runtime} identity_runtime={actual_runtime}"
+    if fail_runtime not in (None, "", "nil") and fail_runtime != actual_runtime:
+        return f"fail_runtime_mismatch fail_runtime={fail_runtime} identity_runtime={actual_runtime}"
+
+    identity_requested_runtime = identity.get("requested_runtime")
+    if identity_requested_runtime not in (None, "", "nil") and identity_requested_runtime != actual_runtime:
+        return (
+            f"requested_runtime_mismatch requested_runtime={identity_requested_runtime} "
+            f"identity_runtime={actual_runtime}"
+        )
+
+    identity_pack_runtime = identity.get("pack_runtime")
+    if identity_pack_runtime not in (None, "", "nil", actual_runtime):
+        return f"pack_runtime_mismatch pack_runtime={identity_pack_runtime} identity_runtime={actual_runtime}"
+
+    supported_runtime_error = runtime_identity_supported_runtime_error(identity)
+    if supported_runtime_error:
+        return f"runtime_unsupported {supported_runtime_error}"
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        return f"runtime_unavailable {availability_error}"
+    resource_error = runtime_identity_resource_error(identity)
+    if resource_error:
+        return f"runtime_identity_missing {resource_error}"
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        return f"runtime_diagnostic_error {diagnostic_error}"
+    artifact_error = runtime_identity_artifact_error(identity, actual_runtime)
+    if artifact_error:
+        return f"runtime_artifact_mismatch {artifact_error}"
+    draft_artifact_error = runtime_identity_draft_artifact_error(identity, actual_runtime)
+    if draft_artifact_error:
+        return f"draft_artifact_mismatch {draft_artifact_error}"
+    return None
+
+
+def failure_mtp_proof_fields(identity, fail_fields, matrix_fields, runtime_proof_error):
+    if not is_mtp_profile(fail_fields, matrix_fields):
+        return ("not_mtp_profile", "nil")
+    if runtime_proof_error:
+        return ("runtime_identity_invalid", runtime_proof_error)
+
+    draft_profile_error = benchmark_profile_draft_error(identity, fail_fields, matrix_fields or {})
+    if draft_profile_error:
+        return ("draft_identity_inactive", draft_profile_error)
+
+    draft_stage_error = benchmark_stage_draft_error(identity, fail_fields, matrix_fields or {})
+    if draft_stage_error:
+        return ("draft_stage_invalid", draft_stage_error)
+
+    return ("draft_identity_active", "nil")
+
+
 def failure_summary_fields(identity, fail_fields, matrix_fields=None):
     requested_runtime = first_non_nil_value(
         identity.get("requested_runtime"),
@@ -632,7 +698,23 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
     )
     identity_runtime = identity.get("actual_runtime")
     artifact_runtime = identity_runtime if identity_runtime in RUNTIME_ARTIFACT_RULES else requested_runtime
+    runtime_proof_error = failure_runtime_proof_error(
+        identity,
+        requested_runtime,
+        fail_fields.get("runtime"),
+    )
+    mtp_proof_status, mtp_proof_error = failure_mtp_proof_fields(
+        identity,
+        fail_fields,
+        matrix_fields,
+        runtime_proof_error,
+    )
     summary = {
+        "failure_benchmark_status": "invalid_failed_smoke",
+        "failure_runtime_proof_status": "runtime_identity_invalid" if runtime_proof_error else "runtime_identity_valid",
+        "failure_runtime_proof_error": runtime_proof_error or "nil",
+        "failure_mtp_proof_status": mtp_proof_status,
+        "failure_mtp_proof_error": mtp_proof_error,
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
         "requested_runtime": requested_runtime,

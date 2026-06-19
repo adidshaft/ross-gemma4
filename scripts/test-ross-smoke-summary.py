@@ -1623,6 +1623,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         summary = failure_summary_line(identity, fail_fields, matrix)
 
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_invalid", summary)
+        self.assertIn("failure_runtime_proof_error=runtime_unavailable", summary)
+        self.assertIn("failure_mtp_proof_status=not_mtp_profile", summary)
         self.assertIn("runtime=gemma_local_runtime", summary)
         self.assertIn("fail_runtime=gemma_local_runtime", summary)
         self.assertIn("pack_runtime=gemma_local_runtime", summary)
@@ -1652,6 +1656,61 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("tamil_acceleration=standard", summary)
         self.assertIn("tamil_draft_model=nil", summary)
         self.assertIn("tamil_runtime_error_detail=domain:MLX.Generator,code:-99", summary)
+
+    def test_failure_summary_marks_active_mtp_failure_as_not_benchmark_valid(self):
+        identity = self.valid_identity()
+        identity.update(
+            {
+                "acceleration": "draftModelSpeculative",
+                "draft_tokens": "2",
+                "draft_model": "mtp.gguf",
+                "draft_model_path_type": "file",
+                "draft_status": "active",
+                "draft_error_detail": "configured_acceleration=draftModelSpeculative",
+            }
+        )
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp_quick "
+            "cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=24,"
+            "general:open_query:en:no_source_refs:max_tokens=24"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime "
+            "profile=mtp_quick elapsed=24.00s "
+            "source_grounded=false source_error=source_grounding_failed general_error=nil "
+            "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
+            "source_draft_attempted=18 source_draft_accepted=5 "
+            "general_acceleration=draftModelSpeculative general_draft_tokens=2 general_draft_model=mtp.gguf "
+            "general_draft_attempted=14 general_draft_accepted=4"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, matrix)
+
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_valid", summary)
+        self.assertIn("failure_runtime_proof_error=nil", summary)
+        self.assertIn("failure_mtp_proof_status=draft_identity_active", summary)
+        self.assertIn("failure_mtp_proof_error=nil", summary)
+
+    def test_failure_summary_marks_inactive_mtp_failure_separately(self):
+        identity = self.valid_identity()
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp-quick "
+            "cases=english_source_bound_document_qa_low_token "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=24"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime "
+            "profile=mtp-quick stage=runtime_health error=draft_inactive elapsed=3.00s"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, matrix)
+
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_valid", summary)
+        self.assertIn("failure_mtp_proof_status=draft_identity_inactive", summary)
+        self.assertIn("failure_mtp_proof_error=acceleration=standard", summary)
 
     def test_failure_summary_preserves_full_matrix_stage_metadata(self):
         identity = self.valid_identity("apple_foundation_models")
@@ -1707,6 +1766,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
         summary = failure_summary_line(None, fail_fields, None)
 
         self.assertIn("ROSS_SMOKE_FAILURE_SUMMARY", summary)
+        self.assertIn("failure_benchmark_status=invalid_failed_smoke", summary)
+        self.assertIn("failure_runtime_proof_status=runtime_identity_invalid", summary)
+        self.assertIn("failure_runtime_proof_error=missing_runtime_identity", summary)
+        self.assertIn("failure_mtp_proof_status=not_mtp_profile", summary)
         self.assertIn("runtime=nil", summary)
         self.assertIn("fail_runtime=mlx_swift_lm", summary)
         self.assertIn("requested_runtime=mlx_swift_lm", summary)
