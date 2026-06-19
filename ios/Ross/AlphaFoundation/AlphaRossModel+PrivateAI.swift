@@ -1032,7 +1032,7 @@ func alphaAssistantResolvedModelDetails(
 ) -> AlphaAssistantResolvedModelDetails? {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
 
-    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+    if alphaPackUsesSystemFoundationModel(pack) {
         return AlphaAssistantResolvedModelDetails(
             modelLabel: "Built-in CoreAI",
             sourceLabel: rossLocalized("assistant_meta_built_in"),

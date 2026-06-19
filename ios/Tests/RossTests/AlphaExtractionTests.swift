@@ -12846,6 +12846,41 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens · MTP")
     }
 
+    func testAssistantVariantOptionsDistinguishCoreMLAdapterFromBuiltIn() {
+        let adapterPack = AlphaInstalledModelPack(
+            packId: "case-coreml-adapter",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "coreml_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [adapterPack],
+            activePack: nil,
+            systemAssistantAvailable: true,
+            preferredRuntimeMode: .appleFoundationModels,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
+        )
+
+        XCTAssertTrue(options.contains { option in
+            option.pack?.packId == adapterPack.packId &&
+                option.runtimeMode == .appleFoundationModels &&
+                option.isBuiltIn == false
+        })
+        XCTAssertTrue(options.contains { option in
+            option.pack == nil &&
+                option.runtimeMode == .appleFoundationModels &&
+                option.isBuiltIn == true
+        })
+    }
+
     func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
         let mlxPack = AlphaInstalledModelPack(
             packId: "case-mlx",
@@ -14517,6 +14552,24 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(details?.modelLabel, "Built-in CoreAI")
         XCTAssertEqual(details?.sourceLabel, rossLocalized("assistant_meta_built_in"))
         XCTAssertNil(details?.draftCompanionLabel)
+    }
+
+    func testAssistantResolvedModelDetailsDoesNotTreatCoreMLAdapterAsBuiltIn() {
+        let adapterPack = AlphaInstalledModelPack(
+            packId: "case-coreml-adapter",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/foundation-adapter.mlmodelc",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "coreml_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let details = alphaAssistantResolvedModelDetails(for: adapterPack)
+
+        XCTAssertNil(details)
     }
 
     func testSystemFoundationPredicateDistinguishesCoreMLAdapterArtifacts() {

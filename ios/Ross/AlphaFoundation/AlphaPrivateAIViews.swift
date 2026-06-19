@@ -2807,7 +2807,7 @@ func alphaAssistantVariantOptions(
                 pack: pack,
                 runtimeMode: pack.runtimeMode,
                 isActive: isActive,
-                isBuiltIn: pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model",
+                isBuiltIn: alphaPackUsesSystemFoundationModel(pack),
                 isSelected: isActive || (activePack == nil && preferredRuntimeMode == pack.runtimeMode),
                 detailLabel: alphaAssistantVariantDetailLabel(
                     runtimeMode: pack.runtimeMode,
@@ -2842,7 +2842,7 @@ func alphaAssistantVariantOptions(
         )
     }
 
-    let hasSystemOption = options.contains { $0.isBuiltIn || $0.runtimeMode == .appleFoundationModels }
+    let hasSystemOption = options.contains { $0.isBuiltIn }
     if systemAssistantAvailable && !hasSystemOption {
         options.append(
             AlphaAssistantVariantOption(
