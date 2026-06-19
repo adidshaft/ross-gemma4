@@ -2036,6 +2036,8 @@ private func alphaInstalledGGUFDraftArtifact(
           activePack.runtimeMode == .llamaCppGguf,
           let expectedArtifact = alphaExpectedDownloadedAssistantArtifact(for: activePack),
           let draftArtifact = expectedArtifact.draftArtifact,
+          draftArtifact.artifactKind == "local_model_artifact",
+          draftArtifact.fileName.lowercased().hasSuffix(".gguf"),
           alphaInstalledDraftArtifactIsUsable(draftArtifact) else {
         return nil
     }

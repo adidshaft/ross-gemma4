@@ -6457,6 +6457,61 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testLocalRuntimeEnvironmentRejectsNonGGUFDraftArtifactForGGUFActivePack() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-runtime".utf8)
+        let draftData = Data("not-a-gguf-draft-runtime".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "gemma-4-12b-it-mlx-draft",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "mlx_directory",
+            downloadURLString: "https://ross.example/gemma-4-12b-it-mlx-draft",
+            draftTokens: 6
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let environment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [activePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                modelChecksum: installed.checksum,
+                modelKind: "gguf"
+            )
+        )
+
+        XCTAssertNil(environment.draftModelPath)
+        XCTAssertNil(environment.draftModelTokens)
+    }
+
+    @MainActor
     func testLocalRuntimeEnvironmentWidensInstalledGGUFDraftTokensAfterFastRun() async throws {
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
