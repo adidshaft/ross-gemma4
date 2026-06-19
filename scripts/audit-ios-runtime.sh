@@ -805,6 +805,12 @@ if ! grep -q "benchmark_pass_requested_runtime_mismatch" scripts/ross_smoke_summ
     FAIL=1
 fi
 
+if ! grep -q "first_non_nil_value" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "test_failure_summary_uses_fail_requested_runtime_when_identity_is_nil" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: failure summaries can drop requested-runtime context when identity reports nil."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metrics_missing" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject missing per-stage token and speed metrics."
     FAIL=1

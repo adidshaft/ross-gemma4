@@ -112,6 +112,13 @@ def summary_value(fields, key):
     return value if value not in (None, "") else "nil"
 
 
+def first_non_nil_value(*values):
+    for value in values:
+        if value not in (None, "", "nil"):
+            return value
+    return "nil"
+
+
 def runtime_identity_supported_runtime_error(identity):
     actual_runtime = identity.get("actual_runtime")
     if actual_runtime not in RUNTIME_ARTIFACT_RULES:
@@ -501,11 +508,14 @@ def benchmark_summary_line(identity, pass_fields, matrix_fields):
 
 
 def failure_summary_fields(identity, fail_fields, matrix_fields=None):
-    requested_runtime = identity.get("requested_runtime") or fail_fields.get("requested_runtime")
+    requested_runtime = first_non_nil_value(
+        identity.get("requested_runtime"),
+        fail_fields.get("requested_runtime"),
+    )
     summary = {
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
-        "requested_runtime": requested_runtime if requested_runtime not in (None, "") else "nil",
+        "requested_runtime": requested_runtime,
         "pack_runtime": summary_value(identity, "pack_runtime"),
         "model_format": summary_value(identity, "model_format"),
         "artifact_path_type": summary_value(identity, "artifact_path_type"),

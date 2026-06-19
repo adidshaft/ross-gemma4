@@ -1036,6 +1036,25 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("stage=runtime_health", summary)
         self.assertIn("error=missing_runtime_identity", summary)
 
+    def test_failure_summary_uses_fail_requested_runtime_when_identity_is_nil(self):
+        identity = parse_fields(
+            "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider "
+            "requested_runtime=nil actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm "
+            "model_format=mlx_directory artifact_path_type=directory artifact_path=gemma-mlx "
+            "acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil "
+            "draft_status=no_draft_configured fallback=none available=false error=missing_mlx_artifact"
+        )
+        fail_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=mlx_swift_lm requested_runtime=mlx_swift_lm "
+            "profile=quick stage=active_pack error=missing_mlx_artifact elapsed=2.4s"
+        )
+
+        summary = failure_summary_line(identity, fail_fields, None)
+
+        self.assertIn("requested_runtime=mlx_swift_lm", summary)
+        self.assertIn("runtime=mlx_swift_lm", summary)
+        self.assertIn("available=false", summary)
+
     def test_failure_summary_preserves_matrix_shape_error(self):
         matrix = parse_fields(
             "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
