@@ -56,8 +56,11 @@ if ! grep -q "ROSS_RUNTIME_IDENTITY" ios/Ross/App/ScreenshotExporter.swift 2>/de
     FAIL=1
 fi
 
-if ! grep -q "error=no_active_pack" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
-    echo "❌ FAIL: smoke no-active-pack failures are not structured with an error field."
+if ! grep -q "missingActivePackError" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "missing_mlx_artifact" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "missing_coreai_artifact" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testMissingActivePackErrorsStayRuntimeSpecific" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke no-active-pack failures do not use runtime-specific error categories."
     FAIL=1
 fi
 

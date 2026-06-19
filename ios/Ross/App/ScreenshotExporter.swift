@@ -454,8 +454,11 @@ struct RossLocalModelSmokeView: View {
 
         guard let activePack else {
             status = RossLocalModelSmokeStatusCopy.missingAssistantStatus
+            let missingPackError = RossLocalModelSmokeView.missingActivePackError(
+                requestedRuntime: runtimeEnvironment.runtimeModeOverride
+            )
             RossLocalModelSmokeView.log(
-                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=unavailable requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") profile=\(smokeProfile.rawValue) stage=active_pack error=no_active_pack"
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "unavailable") requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") profile=\(smokeProfile.rawValue) stage=active_pack error=\(missingPackError) runtime_error_detail=\(missingPackError) draft_error_detail=nil"
             )
             return
         }
@@ -1075,6 +1078,17 @@ struct RossLocalModelSmokeView: View {
             return "DeterministicDevLocalModelProvider"
         case .mediapipeLlm, .unavailable:
             return "AlphaUnavailableRealLocalModelProvider"
+        }
+    }
+
+    nonisolated static func missingActivePackError(requestedRuntime: AlphaPackRuntimeMode?) -> String {
+        switch requestedRuntime {
+        case .mlxSwiftLm:
+            return "missing_mlx_artifact"
+        case .appleFoundationModels:
+            return "missing_coreai_artifact"
+        case .deterministicDev, .mediapipeLlm, .llamaCppGguf, .unavailable, .none:
+            return "no_active_pack"
         }
     }
 

@@ -18677,6 +18677,25 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testMissingActivePackErrorsStayRuntimeSpecific() {
+        XCTAssertEqual(
+            RossLocalModelSmokeView.missingActivePackError(requestedRuntime: .mlxSwiftLm),
+            "missing_mlx_artifact"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.missingActivePackError(requestedRuntime: .appleFoundationModels),
+            "missing_coreai_artifact"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.missingActivePackError(requestedRuntime: .llamaCppGguf),
+            "no_active_pack"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.missingActivePackError(requestedRuntime: nil),
+            "no_active_pack"
+        )
+    }
+
     func testRuntimeIdentityLineMarksDeterministicProviderAsFallback() throws {
         let activePack = installedPack(
             .quickStart,
