@@ -461,6 +461,14 @@ def validate_identity_guard(identity, *, require_identity):
         sys.exit(1)
 
     if require_identity:
+        if pack_runtime in (None, "nil", ""):
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                f"reason=pack_runtime_missing requested={runtime} actual={actual_runtime}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
         availability_error = runtime_identity_availability_error(identity)
         if availability_error:
             print(
