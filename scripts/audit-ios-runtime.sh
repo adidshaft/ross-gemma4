@@ -274,6 +274,11 @@ if ! grep -q -- "--require-draft-acceleration" scripts/ios-morning-runtime-check
     FAIL=1
 fi
 
+if ! grep -q "every benchmark matrix stage" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan does not explain stage-level MTP proof."
+    FAIL=1
+fi
+
 if grep -q -- "--allow-device-proof-pack" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan should not allow seeded proof packs for MTP proof."
     FAIL=1

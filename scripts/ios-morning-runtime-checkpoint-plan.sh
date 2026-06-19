@@ -130,4 +130,4 @@ print_command \
   --stage-timeout "$stage_timeout"
 
 echo
-echo "Evidence rule: record only ROSS_SMOKE_BENCHMARK_SUMMARY rows whose ROSS_RUNTIME_IDENTITY requested/actual runtime, artifact shape, matrix cases, and draft fields match the requested lane. For MTP, draft_status must be active and draft_model must be a .gguf label."
+echo "Evidence rule: record only ROSS_SMOKE_BENCHMARK_SUMMARY rows whose ROSS_RUNTIME_IDENTITY requested/actual runtime, artifact shape, matrix cases, and draft fields match the requested lane. For MTP, draft_status must be active, draft_model must be a .gguf label, and every benchmark matrix stage must report matching *_acceleration=draftModelSpeculative, *_draft_tokens, and *_draft_model fields."
