@@ -10,6 +10,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_draft_artifact_error,
+    runtime_identity_resource_error,
     runtime_identity_supported_runtime_error,
     benchmark_matrix_shape_error,
     benchmark_profile_draft_error,
@@ -33,6 +34,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "benchmark_matrix_shape_mismatch",
             "benchmark_runtime_unsupported",
             "benchmark_runtime_unavailable",
+            "benchmark_runtime_identity_missing",
             "benchmark_runtime_artifact_mismatch",
             "benchmark_stage_metrics_missing",
             "benchmark_stage_quality_missing",
@@ -67,6 +69,9 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "fallback": "none",
             "available": "true",
             "error": "nil",
+            "runtime_error_detail": "nil",
+            "context_tokens": "4096",
+            "gpu_offload": "test_default",
         }
 
     def test_benchmark_summary_includes_runtime_matrix_and_stage_metrics(self):
@@ -851,6 +856,60 @@ class RossSmokeSummaryTests(unittest.TestCase):
             runtime_identity_availability_error({"available": "true"}),
             "fallback=nil",
         )
+
+    def test_benchmark_summary_rejects_missing_runtime_resource_identity(self):
+        matrix = {
+            "profile": "quick",
+            "cases": "english_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "quick",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+            "source_refs": "1",
+            "source_native_model": "true",
+        }
+
+        missing_provider = self.valid_identity()
+        missing_provider.pop("provider")
+        self.assertEqual(
+            runtime_identity_resource_error(missing_provider),
+            "provider=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(missing_provider, pass_fields, matrix)
+
+        missing_context = self.valid_identity()
+        missing_context.pop("context_tokens")
+        self.assertEqual(
+            runtime_identity_resource_error(missing_context),
+            "context_tokens=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(missing_context, pass_fields, matrix)
+
+        invalid_context = self.valid_identity()
+        invalid_context["context_tokens"] = "0"
+        self.assertEqual(
+            runtime_identity_resource_error(invalid_context),
+            "context_tokens=0",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(invalid_context, pass_fields, matrix)
+
+        missing_gpu = self.valid_identity()
+        missing_gpu.pop("gpu_offload")
+        self.assertEqual(
+            runtime_identity_resource_error(missing_gpu),
+            "gpu_offload=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(missing_gpu, pass_fields, matrix)
 
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
         active_mtp = {

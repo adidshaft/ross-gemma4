@@ -167,6 +167,23 @@ def runtime_identity_availability_error(identity):
     return None
 
 
+def runtime_identity_resource_error(identity):
+    if identity.get("provider") in (None, "", "nil"):
+        return f"provider={summary_value(identity, 'provider')}"
+
+    context_tokens = identity.get("context_tokens")
+    try:
+        if int(context_tokens) <= 0:
+            return f"context_tokens={summary_value(identity, 'context_tokens')}"
+    except (TypeError, ValueError):
+        return f"context_tokens={summary_value(identity, 'context_tokens')}"
+
+    if identity.get("gpu_offload") in (None, "", "nil"):
+        return f"gpu_offload={summary_value(identity, 'gpu_offload')}"
+
+    return None
+
+
 def runtime_identity_draft_artifact_error(identity, expected_runtime):
     if identity.get("acceleration") != "draftModelSpeculative":
         return None
@@ -446,6 +463,9 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     availability_error = runtime_identity_availability_error(identity)
     if availability_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_unavailable {availability_error}")
+    resource_error = runtime_identity_resource_error(identity)
+    if resource_error:
+        raise MissingBenchmarkMatrixError(f"benchmark_runtime_identity_missing {resource_error}")
     artifact_error = runtime_identity_artifact_error(identity, actual_runtime)
     if artifact_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_artifact_mismatch {artifact_error}")
