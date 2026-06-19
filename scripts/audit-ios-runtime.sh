@@ -506,6 +506,13 @@ if ! grep -q "testRuntimeIdentityLineIncludesUnavailableMLXDraftCandidate" ios/T
     FAIL=1
 fi
 
+if ! grep -q "testRuntimeHealthKeepsMLXAvailableWithInvalidDraftArtifactWithoutClaimingAcceleration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draftCandidatePathLabel, draftDirectory.lastPathComponent" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "draftCandidateTokens, 4" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: Swift tests do not prove available MLX identity preserves inactive draft candidate diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "alphaDebugSmokeArtifactKind" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: debug smoke packs do not fail closed on missing or mismatched artifact kinds."

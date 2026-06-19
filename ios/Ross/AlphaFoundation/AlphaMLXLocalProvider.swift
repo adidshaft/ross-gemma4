@@ -1017,6 +1017,12 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             for: draftStatus.status,
             runtimeAvailable: availability.available
         )
+        let draftCandidateLabel = draftStatus.status == "active"
+            ? draftStatus.label
+            : configuredDraftCandidatePathLabel()
+        let draftCandidateTokens = draftStatus.status == "active"
+            ? draftStatus.tokens
+            : draftModelTokens
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -1030,8 +1036,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             accelerationDraftTokens: draftStatus.tokens,
             draftModelPathLabel: draftStatus.label,
             draftModelPathType: draftModelPathType(),
-            draftCandidateTokens: draftStatus.tokens,
-            draftCandidatePathLabel: draftStatus.label,
+            draftCandidateTokens: draftCandidateTokens,
+            draftCandidatePathLabel: draftCandidateLabel,
             draftAccelerationStatus: draftStatus.status,
             runtimeErrorDetail: availability.errorCategory,
             lastErrorCategory: availability.errorCategory ?? draftErrorCategory,
@@ -1439,6 +1445,13 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return nil
         }
         return draftDirectoryURL
+    }
+
+    private func configuredDraftCandidatePathLabel() -> String? {
+        guard let label = configuredDraftDirectoryURL()?.lastPathComponent, !label.isEmpty else {
+            return nil
+        }
+        return label
     }
 
     private func draftModelPathType() -> String? {
