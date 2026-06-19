@@ -86,6 +86,18 @@ gguf_path_is_draft_like() {
   return 1
 }
 
+mlx_path_is_draft_like() {
+  local path="$1"
+  local lower_path
+  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_path" in
+    *mtp*|*draft*|*assistant*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 mlx_directory_looks_usable() {
   local directory="$1"
   [[ -d "$directory" ]] || return 1
@@ -126,6 +138,7 @@ coreai_adapter_looks_usable() {
 first_usable_gguf=""
 first_draft_like_gguf=""
 first_usable_mlx=""
+first_draft_like_mlx=""
 first_coreai_adapter=""
 
 for root in "${search_roots[@]}"; do
@@ -144,7 +157,11 @@ for root in "${search_roots[@]}"; do
   while IFS= read -r config_path; do
     candidate_dir="$(dirname "$config_path")"
     if mlx_directory_looks_usable "$candidate_dir"; then
-      [[ -n "$first_usable_mlx" ]] || first_usable_mlx="$candidate_dir"
+      if mlx_path_is_draft_like "$candidate_dir"; then
+        [[ -n "$first_draft_like_mlx" ]] || first_draft_like_mlx="$candidate_dir"
+      else
+        [[ -n "$first_usable_mlx" ]] || first_usable_mlx="$candidate_dir"
+      fi
     fi
   done < <(find "$root" -maxdepth 5 -type f -name config.json -print 2>/dev/null)
 
@@ -185,6 +202,12 @@ print_present_or_missing \
   "$first_usable_mlx" \
   "usable_mlx_directory" \
   "no_directory_with_config_tokenizer_and_safetensors"
+
+print_present_or_missing \
+  "mlx_draft" \
+  "$first_draft_like_mlx" \
+  "draft_like_mlx_directory" \
+  "no_draft_like_mlx_directory_found"
 
 print_present_or_missing \
   "coreai_adapter" \

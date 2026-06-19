@@ -588,6 +588,13 @@ if ! grep -q "testMLXRunReturnsUnsupportedArchiveCategoryBeforeGeneration" ios/T
     FAIL=1
 fi
 
+if ! grep -q "unsupportedGemma4Multimodal" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthMarksUnsupportedGemma4MultimodalMLXArchiveUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "multimodal/conditional-generation Gemma 4" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: crash-prone Gemma 4 multimodal MLX archives are not fail-closed before generation."
+    FAIL=1
+fi
+
 if ! grep -q "testMLXRunReturnsInvalidArtifactForEmptyWeightsBeforeGeneration" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: Swift MLX run path can still reach generation for empty primary weights."
     FAIL=1
@@ -775,6 +782,16 @@ if ! grep -q -- "-size +0c" scripts/ios-simulator-local-model-smoke.sh 2>/dev/nu
     FAIL=1
 fi
 
+if ! grep -q "mlx_path_is_draft_like" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "lane=mlx_draft status=present" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "preflight_pair" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "preflight_pair" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "lane=mlx_draft status=present" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: local MLX inventory can still treat assistant/draft directories as primary MLX artifacts."
+    FAIL=1
+fi
+
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "bad-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=coreai_adapter status=missing" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
@@ -796,7 +813,7 @@ fi
 if ! grep -q "AlphaRossModel+PrivateAI.swift" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "catalog_mlx_draft" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
-   ! grep -q '"hf", "download"' scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "download {shlex.quote(repo)} --local-dir" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "downloader_status" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "lane=downloader status=missing" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "downloader_status" docs/IOS_RUNTIME.md 2>/dev/null ||

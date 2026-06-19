@@ -22249,7 +22249,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         let unsupportedConfigs = [
             #"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#,
-            #"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#
+            #"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#,
+            #"{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"],"vision_config":{"model_type":"gemma4_vision"}}"#
         ]
 
         for config in unsupportedConfigs {
@@ -22584,6 +22585,46 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+    }
+
+    func testRuntimeHealthMarksUnsupportedGemma4MultimodalMLXArchiveUnavailable() throws {
+        let originalPhysicalMemoryProvider = AlphaMLXLocalProvider.physicalMemoryBytesProvider
+        let originalPhoneFormFactorProvider = AlphaMLXLocalProvider.phoneFormFactorProvider
+        defer { AlphaMLXLocalProvider.physicalMemoryBytesProvider = originalPhysicalMemoryProvider }
+        defer { AlphaMLXLocalProvider.phoneFormFactorProvider = originalPhoneFormFactorProvider }
+        AlphaMLXLocalProvider.physicalMemoryBytesProvider = {
+            18 * 1_073_741_824
+        }
+        AlphaMLXLocalProvider.phoneFormFactorProvider = {
+            true
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-gemma4-multimodal-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"],"vision_config":{"model_type":"gemma4_vision"}}"#.utf8)
+            .write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "d", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+        XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_mlx_archive_unsupported"))
     }
 
     func testRuntimeHealthMarksQuickStartMLXUnavailableOnBelow12GBPhoneMemory() {

@@ -80,22 +80,32 @@ fi
 
 inventory_output="$("${inventory_args[@]}")"
 
+venv_hf="$target_root/.hf-venv/bin/hf"
+venv_python="$target_root/.hf-venv/bin/python"
 downloader_status="${ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS:-}"
+downloader_command="${ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND:-}"
 if [[ -z "$downloader_status" ]]; then
   if command -v hf >/dev/null 2>&1; then
     downloader_status="hf_cli"
-  elif python3 - <<'PY' >/dev/null 2>&1
-import huggingface_hub
-PY
-  then
-    downloader_status="python_module"
+    downloader_command="hf"
+  elif [[ -x "$venv_hf" ]]; then
+    downloader_status="target_root_venv"
+    downloader_command="$venv_hf"
   else
     downloader_status="missing"
   fi
 fi
+if [[ -z "$downloader_command" && "$downloader_status" == "hf_cli" ]]; then
+  downloader_command="hf"
+fi
+if [[ -z "$downloader_command" && "$downloader_status" == "target_root_venv" ]]; then
+  downloader_command="$venv_hf"
+fi
 
 ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT="$inventory_output" \
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS="$downloader_status" \
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND="$downloader_command" \
+ROSS_RUNTIME_ARTIFACT_FETCH_VENV_PYTHON="$venv_python" \
 python3 - "$tier" "$target_root" "$ROOT_DIR" <<'PY'
 import os
 import pathlib
@@ -107,6 +117,8 @@ target_root = pathlib.Path(sys.argv[2]).expanduser()
 root_dir = pathlib.Path(sys.argv[3])
 raw_inventory = os.environ.get("ROSS_RUNTIME_ARTIFACT_INVENTORY_OUTPUT", "").splitlines()
 downloader_status = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS", "missing")
+downloader_command = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND", "")
+venv_python = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_VENV_PYTHON", "")
 
 tier_aliases = {
     "quickStart": {"quickStart", "quick_start"},
@@ -157,10 +169,12 @@ if downloader_status == "missing":
         "downloader",
         "missing",
         "install",
-        command=command("python3", "-m", "pip", "install", "--user", "huggingface_hub"),
+        command=f"python3 -m venv {shlex.quote(str(target_root / '.hf-venv'))} && "
+        f"{shlex.quote(str(target_root / '.hf-venv/bin/python'))} -m pip install --upgrade pip huggingface_hub",
     )
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
+present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)
 if present_mlx:
     model_path = present_mlx.get("path", "")
     emit(
@@ -175,6 +189,23 @@ if present_mlx:
             "--preflight-only",
         ),
     )
+    if present_mlx_draft:
+        emit(
+            "mlx_draft",
+            "present",
+            "preflight_pair",
+            path=present_mlx_draft.get("path", ""),
+            command=command(
+                root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                "--runtime", "mlx",
+                "--model", model_path,
+                "--draft-model", present_mlx_draft.get("path", ""),
+                "--draft-tokens", 2,
+                "--require-draft-acceleration",
+                "--smoke-profile", "mtp_quick",
+                "--preflight-only",
+            ),
+        )
 else:
     catalog_rows = [
         row for row in rows
@@ -187,6 +218,14 @@ else:
         target_dir = target_root / file_name
         lane = "mlx_draft" if row.get("lane") == "catalog_mlx_draft" else "mlx"
         repo = row.get("repo", "unknown")
+        if lane == "mlx_draft" and present_mlx_draft:
+            emit(
+                lane,
+                "present",
+                "waiting_for_primary",
+                path=present_mlx_draft.get("path", ""),
+            )
+            continue
         emit(
             lane,
             "missing",
@@ -195,7 +234,7 @@ else:
             target_dir=target_dir,
             bytes=row.get("bytes"),
             checksum=row.get("checksum"),
-            command=command("hf", "download", repo, "--local-dir", target_dir),
+            command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} --local-dir {shlex.quote(str(target_dir))}",
         )
         emit(
             lane,

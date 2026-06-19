@@ -854,6 +854,7 @@ private struct AlphaMLXTokenizerBridge: MLXLMCommon.Tokenizer {
 private enum AlphaMLXArchiveCompatibility {
     case supported
     case unsupportedGemma4Assistant
+    case unsupportedGemma4Multimodal
     case unsupportedGemma4MoE
     case unsupportedGemma4Dense31B
 }
@@ -1385,7 +1386,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         switch Self.archiveCompatibility(for: directoryURL) {
         case .supported:
             break
-        case .unsupportedGemma4Assistant, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
+        case .unsupportedGemma4Assistant, .unsupportedGemma4Multimodal, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
             return (false, "unsupported_model_archive", alphaRuntimeHealthStatus(.mlxArchiveUnsupported))
         }
 
@@ -1734,6 +1735,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return .unsupportedGemma4Assistant
         }
 
+        if architectures.contains(where: { $0.contains("gemma4forconditionalgeneration") }) ||
+            json["vision_config"] != nil {
+            return .unsupportedGemma4Multimodal
+        }
+
         let hasMoEKeys =
             json["num_local_experts"] != nil ||
             json["num_experts"] != nil ||
@@ -1754,7 +1760,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         switch compatibility {
         case .supported, .unsupportedGemma4Assistant:
             return true
-        case .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
+        case .unsupportedGemma4Multimodal, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
             return false
         }
     }

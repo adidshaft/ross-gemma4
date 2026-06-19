@@ -22,6 +22,7 @@ grep -q "Physical memory bytes must be a positive integer" /tmp/ross-runtime-inv
 grep -q "lane=gguf status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mtp_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_system status=unknown path=system-model .*runtime=apple_foundation_models .*artifact_kind=system_model .*preflight_hint=simulator_system_model_preflight" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mtp_draft status=expected .*tier=quickStart .*file=mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-inventory.out
@@ -58,7 +59,18 @@ grep -q "lane=mlx status=missing" /tmp/ross-runtime-inventory.out
 printf 'weights' > "$mlx_dir/model.safetensors"
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=present" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=missing" /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=missing" /tmp/ross-runtime-inventory.out
+
+mlx_draft_only_root="$tmpdir/mlx-draft-only"
+mlx_draft_dir="$mlx_draft_only_root/gemma-4-E4B-it-qat-assistant-6bit"
+mkdir -p "$mlx_draft_dir"
+printf '{}' > "$mlx_draft_dir/config.json"
+printf '{}' > "$mlx_draft_dir/tokenizer.json"
+printf 'weights' > "$mlx_draft_dir/model.safetensors"
+"$INVENTORY" --search-root "$mlx_draft_only_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx status=missing .*reason=no_directory_with_config_tokenizer_and_safetensors" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=present .*path=.*gemma-4-E4B-it-qat-assistant-6bit .*reason=draft_like_mlx_directory" /tmp/ross-runtime-inventory.out
 
 printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 
