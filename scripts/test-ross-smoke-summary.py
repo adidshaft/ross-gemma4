@@ -178,6 +178,27 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
             )
 
+    def test_benchmark_summary_rejects_pass_requested_runtime_mismatch(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_pass_requested_runtime_mismatch"):
+            benchmark_summary_line(
+                {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
+                {
+                    "runtime": "gemma_local_runtime",
+                    "requested_runtime": "mlx_swift_lm",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
     def test_benchmark_summary_rejects_unsupported_runtime_identity(self):
         matrix = {
             "profile": "quick",

@@ -481,6 +481,16 @@ if ! grep -q "benchmark_requested_runtime_mismatch" scripts/ross_smoke_summary.p
     FAIL=1
 fi
 
+if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=.*requested_runtime" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: smoke pass markers do not preserve requested runtime context."
+    FAIL=1
+fi
+
+if ! grep -q "benchmark_pass_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject pass requested/runtime identity mismatches."
+    FAIL=1
+fi
+
 if ! grep -q "benchmark_stage_metrics_missing" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: benchmark summary guard does not reject missing per-stage token and speed metrics."
     FAIL=1

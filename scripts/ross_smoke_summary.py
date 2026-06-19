@@ -226,6 +226,21 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
             f"benchmark_requested_runtime_mismatch requested_runtime={identity_requested_runtime} "
             f"identity_runtime={actual_runtime}"
         )
+    pass_requested_runtime = pass_fields.get("requested_runtime") if pass_fields else None
+    if pass_requested_runtime not in (None, "nil", actual_runtime):
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_pass_requested_runtime_mismatch requested_runtime={pass_requested_runtime} "
+            f"identity_runtime={actual_runtime}"
+        )
+    if (
+        identity_requested_runtime not in (None, "nil")
+        and pass_requested_runtime not in (None, "nil")
+        and pass_requested_runtime != identity_requested_runtime
+    ):
+        raise MissingBenchmarkMatrixError(
+            f"benchmark_pass_requested_runtime_mismatch pass_requested_runtime={pass_requested_runtime} "
+            f"identity_requested_runtime={identity_requested_runtime}"
+        )
     supported_runtime_error = runtime_identity_supported_runtime_error(identity)
     if supported_runtime_error:
         raise MissingBenchmarkMatrixError(f"benchmark_runtime_unsupported {supported_runtime_error}")
