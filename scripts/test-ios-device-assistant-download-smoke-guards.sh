@@ -35,6 +35,10 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     echo "ROSS_RUNTIME_IDENTITY provider=nil requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=nil gpu_offload=nil fallback=none available=true error=nil"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=true"
     ;;
+  unverified_checksum_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=false artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=false"
+    ;;
   fail_missing_identity)
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
     ;;
@@ -44,6 +48,10 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     ;;
   fail_missing_resource_identity)
     echo "ROSS_RUNTIME_IDENTITY provider=nil requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=nil gpu_offload=nil fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
+    ;;
+  fail_unverified_checksum_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=false artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
     ;;
   valid)
@@ -115,6 +123,11 @@ run_expect_exit_1 \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=missing_resource_identity "${base_command[@]}"
 
 run_expect_exit_1 \
+  "assistant download pass with unverified checksum identity" \
+  "checksum_verified=false" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=unverified_checksum_identity "${base_command[@]}"
+
+run_expect_exit_1 \
   "assistant download failure without runtime identity" \
   "missing_runtime_identity_on_failure" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_missing_identity "${base_command[@]}"
@@ -128,6 +141,11 @@ run_expect_exit_1 \
   "assistant download failure with missing runtime resource identity" \
   "runtime_identity_resource_missing_on_failure" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_missing_resource_identity "${base_command[@]}"
+
+run_expect_exit_1 \
+  "assistant download failure with unverified checksum identity" \
+  "checksum_verified=false" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_unverified_checksum_identity "${base_command[@]}"
 
 run_expect_exit_0 \
   "assistant download pass with matching MLX identity" \
