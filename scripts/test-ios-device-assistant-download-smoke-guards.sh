@@ -31,11 +31,19 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=false error=missing_mlx_artifact"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=true"
     ;;
+  missing_resource_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=nil requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=nil gpu_offload=nil fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/mlx checksum=true"
+    ;;
   fail_missing_identity)
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
     ;;
   fail_gguf_identity)
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=mlx_swift_lm actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact artifact_path_type=file artifact_path=model.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
+    ;;
+  fail_missing_resource_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=nil requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=nil gpu_offload=nil fallback=none available=true error=nil"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_FAIL missing_job elapsed=1.00s"
     ;;
   valid)
@@ -102,6 +110,11 @@ run_expect_exit_1 \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=unavailable_identity "${base_command[@]}"
 
 run_expect_exit_1 \
+  "assistant download pass with missing runtime resource identity" \
+  "runtime_identity_resource_missing" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=missing_resource_identity "${base_command[@]}"
+
+run_expect_exit_1 \
   "assistant download failure without runtime identity" \
   "missing_runtime_identity_on_failure" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_missing_identity "${base_command[@]}"
@@ -110,6 +123,11 @@ run_expect_exit_1 \
   "assistant download failure with GGUF identity for MLX request" \
   "runtime_identity_mismatch_on_failure" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_gguf_identity "${base_command[@]}"
+
+run_expect_exit_1 \
+  "assistant download failure with missing runtime resource identity" \
+  "runtime_identity_resource_missing_on_failure" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=fail_missing_resource_identity "${base_command[@]}"
 
 run_expect_exit_0 \
   "assistant download pass with matching MLX identity" \
