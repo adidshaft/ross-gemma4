@@ -138,4 +138,26 @@ run_expect_exit_2 \
   "adapter artifact with system URL sentinel" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model system://apple-foundation-models
 
+preflight_expect_ok() {
+  local description="$1"
+  local expected="$2"
+  shift 2
+  "$@" >/tmp/ross-runtime-preflight.out 2>&1
+  if ! grep -q "$expected" /tmp/ross-runtime-preflight.out; then
+    echo "❌ FAIL: $description did not emit expected preflight marker: $expected" >&2
+    cat /tmp/ross-runtime-preflight.out >&2 || true
+    return 1
+  fi
+}
+
+preflight_expect_ok \
+  "CoreAI system URL sentinel" \
+  "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=apple_foundation_models artifact_kind=system_model model_path_type=system model_path=system://apple-foundation-models" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind system_model --model system://apple-foundation-models --preflight-only
+
+preflight_expect_ok \
+  "CoreAI non-empty adapter directory" \
+  "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=apple_foundation_models artifact_kind=foundation_adapter model_path_type=directory" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$coreml_file" --preflight-only
+
 echo "iOS runtime smoke preflight tests: PASS"

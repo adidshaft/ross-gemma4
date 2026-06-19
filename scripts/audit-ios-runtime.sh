@@ -800,6 +800,12 @@ if ! grep -q "Draft acceleration proof is only supported for GGUF/MLX simulator 
     FAIL=1
 fi
 
+if ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "CoreAI system URL sentinel" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator smoke helper cannot prove valid CoreAI system:// preflight without launching Simulator."
+    FAIL=1
+fi
+
 if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared MTP guard does not require active draft status."
     FAIL=1

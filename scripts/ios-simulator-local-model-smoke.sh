@@ -24,6 +24,7 @@ Options:
   --disable-draft         Force standard acceleration.
   --require-draft-acceleration
                           Fail unless identity reports draftModelSpeculative with active draft_status and draft metadata.
+  --preflight-only        Validate runtime/artifact inputs and exit before launching Simulator.
 
 This helper runs only on Simulator. It does not seed or use a physical iPhone.
 It exits 0 only when the app emits ROSS_LOCAL_MODEL_SMOKE_PASS and the
@@ -46,6 +47,7 @@ draft_model_path=""
 draft_tokens=""
 disable_draft="0"
 require_draft_acceleration="0"
+preflight_only="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -104,6 +106,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --require-draft-acceleration)
       require_draft_acceleration="1"
+      shift
+      ;;
+    --preflight-only)
+      preflight_only="1"
       shift
       ;;
     -h|--help)
@@ -419,6 +425,20 @@ if [[ -f "$model_path" ]]; then
   checksum="$(shasum -a 256 "$model_path" | awk '{print $1}')"
 else
   checksum="debug-local-model-unverified"
+fi
+
+if [[ "$preflight_only" == "1" ]]; then
+  if [[ "$model_path" == "system-model" || "$model_path" == system://* ]]; then
+    model_path_type="system"
+  elif [[ -d "$model_path" ]]; then
+    model_path_type="directory"
+  elif [[ -f "$model_path" ]]; then
+    model_path_type="file"
+  else
+    model_path_type="missing"
+  fi
+  echo "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK runtime=$normalized_runtime artifact_kind=$artifact_kind model_path_type=$model_path_type model_path=$model_path"
+  exit 0
 fi
 
 python3 - "$simulator" "$bundle_id" "$normalized_runtime" "$model_path" "$checksum" "$artifact_kind" "$tier" "$pack_id" "$draft_model_path" "$draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$launch_timeout" "$SCRIPT_DIR" <<'PY'
