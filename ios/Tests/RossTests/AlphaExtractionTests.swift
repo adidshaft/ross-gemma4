@@ -19185,7 +19185,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaFoundationModelPlannedTasks, expected)
     }
 
-    func testUnavailableFoundationRuntimeHealthUsesFoundationHeuristics() {
+    func testUnavailableFoundationRuntimeHealthUsesFoundationHeuristicsWithoutAdvertisingTasks() {
         let provider = AlphaUnavailableRealLocalModelProvider(
             capabilityTier: .seniorDraftingSupport,
             runtimeMode: .appleFoundationModels,
@@ -19200,7 +19200,8 @@ final class AlphaExtractionTests: XCTestCase {
         let health = provider.runtimeHealth()
 
         XCTAssertFalse(health.available)
-        XCTAssertEqual(Set(health.supportedTasks), alphaFoundationModelPlannedTasks)
+        XCTAssertTrue(health.supportedTasks.isEmpty)
+        XCTAssertTrue(provider.supportedTasks().isEmpty)
         XCTAssertEqual(health.estimatedContextTokens, AlphaFoundationRuntimeProfile.contextWindowTokens(for: .seniorDraftingSupport))
         XCTAssertEqual(health.maxInputChars, AlphaFoundationRuntimeProfile.maxInputChars(for: .seniorDraftingSupport))
     }

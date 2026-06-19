@@ -2477,7 +2477,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             modelPathPresent: modelPathLabel != nil,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            supportedTasks: Array(plannedTasks),
+            supportedTasks: [],
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: unavailableAccelerationMode(),
