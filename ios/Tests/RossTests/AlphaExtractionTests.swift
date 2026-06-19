@@ -20270,6 +20270,42 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
     }
 
+    func testRuntimeHealthRejectsFileLikeMLXDraftWithoutPoisoningPrimaryRuntime() throws {
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-file-draft-\(UUID().uuidString)")
+        let draftFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-wrong-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-not-mlx-draft".utf8).write(to: draftFile)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftFile)
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftFile.path,
+                draftModelTokens: 4
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.lastErrorCategory, "invalid_mlx_draft_artifact")
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftModelPathType, "file")
+        XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
+    }
+
     func testRuntimeHealthKeepsMLXAvailableWithMissingDraftArtifactWithoutClaimingAcceleration() throws {
         let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-missing-draft-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
