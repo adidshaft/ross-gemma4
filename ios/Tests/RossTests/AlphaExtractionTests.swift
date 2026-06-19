@@ -23476,6 +23476,58 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotNil(output.inputChars)
     }
 
+    @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderReportsForeignAdapterArtifactsBeforeGeneration() async throws {
+        let ggufURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foreign-foundation-adapter-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("GGUF-not-coreai".utf8).write(to: ggufURL)
+        let mlxDirectoryURL = try makeMLXDirectoryFixture(named: "foreign-coreai-run-mlx-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: ggufURL)
+            try? FileManager.default.removeItem(at: mlxDirectoryURL)
+        }
+
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            XCTFail("Foreign CoreAI/CoreML adapter artifacts should fail before generation.")
+            return AlphaFoundationModelsGenerationSnapshot(text: "")
+        }
+
+        for adapterURL in [ggufURL, mlxDirectoryURL] {
+            let provider = AlphaFoundationModelsLocalProvider(
+                capabilityTier: .caseAssociate,
+                modelPathLabel: adapterURL.lastPathComponent,
+                modelPath: adapterURL.path,
+                checksumVerified: true
+            )
+
+            let output = await provider.run(
+                AlphaLocalModelInput(
+                    task: .matterQuestionAnswer,
+                    instruction: "What happened in the selected order?",
+                    sourcePack: [],
+                    expectedSchema: "plain_text",
+                    maxOutputTokens: 128,
+                    extractionMode: .caseAssociate
+                )
+            )
+
+            XCTAssertFalse(output.schemaValid)
+            XCTAssertEqual(output.errorCategory, "missing_coreai_artifact")
+            XCTAssertEqual(output.executionPathLabel, alphaFoundationRuntimeExecutionPathLabel())
+            XCTAssertEqual(output.accelerationMode, .standard)
+            XCTAssertNotNil(output.inputChars)
+        }
+    }
+
     func testModelInvocationStorePreservesMeasuredTokenPrecisionFlag() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
