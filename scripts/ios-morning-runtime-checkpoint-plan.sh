@@ -10,6 +10,7 @@ Options:
   --device <udid>       Device UDID placeholder for printed commands. Default: DEVICE_UDID
   --bundle-id <id>      App bundle identifier. Default: com.ross.ios
   --gguf-model <path>   Local GGUF baseline artifact. Default: artifacts/gemma-2-2b-it-Q4_K_M.gguf
+  --installed-root <p>  Optional RossAlpha support root/model-packs root used for dry-run inventory gating
   --tier <tier>         Runtime tier for short smokes. Default: quickStart
   --stage-timeout <s>   Per-stage timeout for printed commands. Default: 45
 
@@ -22,6 +23,7 @@ bundle_id="com.ross.ios"
 gguf_model="artifacts/gemma-2-2b-it-Q4_K_M.gguf"
 tier="quickStart"
 stage_timeout="45"
+installed_root=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --gguf-model)
       gguf_model="${2:-}"
+      shift 2
+      ;;
+    --installed-root)
+      installed_root="${2:-}"
       shift 2
       ;;
     --tier)
@@ -65,6 +71,30 @@ quote_args() {
   printf '\n'
 }
 
+inventory_output=""
+if [[ -n "$installed_root" ]]; then
+  inventory_output="$(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")"
+fi
+
+inventory_has_present_lane() {
+  local lane="$1"
+  [[ -n "$inventory_output" ]] || return 0
+  grep -Eq "lane=${lane} status=present" <<<"$inventory_output"
+}
+
+inventory_skip_reason() {
+  local lane="$1"
+  [[ -n "$inventory_output" ]] || return 1
+  grep -E "lane=${lane} status=missing" <<<"$inventory_output" | head -n 1 | sed -E 's/.* reason=([^ ]+).*/\1/'
+}
+
+print_skip() {
+  local label="$1"
+  local reason="$2"
+  printf '%s:\n' "$label"
+  printf '   SKIP reason=%s\n' "$reason"
+}
+
 print_command() {
   local label="$1"
   shift
@@ -73,6 +103,9 @@ print_command() {
 }
 
 echo "ROSS_MORNING_RUNTIME_CHECKPOINT_PLAN dry_run=true device=${device_id} bundle_id=${bundle_id} tier=${tier}"
+if [[ -n "$installed_root" ]]; then
+  echo "Inventory gate: installed_root=${installed_root}"
+fi
 echo
 echo "Order: list installed packs first, then run only short smokes. Stop on memory pressure, thermal issues, instability, or fallback."
 echo
@@ -98,36 +131,54 @@ else
   echo "   SKIP reason=missing_local_gguf model=${gguf_model}"
 fi
 
-print_command \
-  "3. MTP low-token proof from installed GGUF pack" \
-  scripts/ios-device-installed-pack-smoke.sh \
-  --device "$device_id" \
-  --bundle-id "$bundle_id" \
-  --runtime gguf \
-  --tier "$tier" \
-  --smoke-profile mtp_quick \
-  --stage-timeout "$stage_timeout" \
-  --require-draft-acceleration
+if inventory_has_present_lane "installed_mtp_draft"; then
+  print_command \
+    "3. MTP low-token proof from installed GGUF pack" \
+    scripts/ios-device-installed-pack-smoke.sh \
+    --device "$device_id" \
+    --bundle-id "$bundle_id" \
+    --runtime gguf \
+    --tier "$tier" \
+    --smoke-profile mtp_quick \
+    --stage-timeout "$stage_timeout" \
+    --require-draft-acceleration
+else
+  print_skip \
+    "3. MTP low-token proof from installed GGUF pack" \
+    "$(inventory_skip_reason "installed_mtp_draft" || echo missing_installed_mtp_draft)"
+fi
 
-print_command \
-  "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
-  scripts/ios-device-installed-pack-smoke.sh \
-  --device "$device_id" \
-  --bundle-id "$bundle_id" \
-  --runtime mlx \
-  --tier "$tier" \
-  --smoke-profile quick \
-  --stage-timeout "$stage_timeout"
+if inventory_has_present_lane "installed_mlx"; then
+  print_command \
+    "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
+    scripts/ios-device-installed-pack-smoke.sh \
+    --device "$device_id" \
+    --bundle-id "$bundle_id" \
+    --runtime mlx \
+    --tier "$tier" \
+    --smoke-profile quick \
+    --stage-timeout "$stage_timeout"
+else
+  print_skip \
+    "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
+    "$(inventory_skip_reason "installed_mlx" || echo missing_installed_mlx)"
+fi
 
-print_command \
-  "5. CoreAI/CoreML/Foundation quick smoke if available" \
-  scripts/ios-device-installed-pack-smoke.sh \
-  --device "$device_id" \
-  --bundle-id "$bundle_id" \
-  --runtime coreai \
-  --tier "$tier" \
-  --smoke-profile quick \
-  --stage-timeout "$stage_timeout"
+if inventory_has_present_lane "installed_coreai"; then
+  print_command \
+    "5. CoreAI/CoreML/Foundation quick smoke if available" \
+    scripts/ios-device-installed-pack-smoke.sh \
+    --device "$device_id" \
+    --bundle-id "$bundle_id" \
+    --runtime coreai \
+    --tier "$tier" \
+    --smoke-profile quick \
+    --stage-timeout "$stage_timeout"
+else
+  print_skip \
+    "5. CoreAI/CoreML/Foundation quick smoke if available" \
+    "$(inventory_skip_reason "installed_coreai" || echo missing_installed_coreai)"
+fi
 
 echo
 echo "Evidence rule: record only ROSS_SMOKE_BENCHMARK_SUMMARY rows whose ROSS_RUNTIME_IDENTITY requested/actual runtime, artifact shape, matrix cases, and draft fields match the requested lane. For MTP, draft_status must be active, draft_model must be a .gguf label, and every benchmark matrix stage must report matching *_acceleration=draftModelSpeculative, *_draft_tokens, and *_draft_model fields."

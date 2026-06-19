@@ -376,6 +376,11 @@ if [ ! -x scripts/ios-morning-runtime-checkpoint-plan.sh ]; then
     FAIL=1
 fi
 
+if [ ! -x scripts/test-ios-morning-runtime-checkpoint-plan.sh ]; then
+    echo "❌ FAIL: executable morning runtime checkpoint planner test missing."
+    FAIL=1
+fi
+
 if [ ! -x scripts/ios-runtime-artifact-inventory.sh ]; then
     echo "❌ FAIL: executable local runtime artifact inventory missing."
     FAIL=1
@@ -619,6 +624,7 @@ if [ "$FAIL" -eq 1 ]; then
 else
     scripts/test-ios-runtime-smoke-preflights.sh
     scripts/test-ios-device-installed-pack-preflights.sh
+    scripts/test-ios-morning-runtime-checkpoint-plan.sh
     scripts/test-ross-smoke-summary.py
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
