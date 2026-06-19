@@ -102,6 +102,12 @@ if ! grep -q "testRuntimeHealthRejectsMLXRequestAgainstGGUFPackBeforeFallback" i
     FAIL=1
 fi
 
+if ! grep -q "getOrContext(path: modelPath, includeDraft: false)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthKeepsBaselineAvailableWhenDraftArtifactIsInvalid" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF runtime availability can still be poisoned by invalid MTP draft artifacts."
+    FAIL=1
+fi
+
 if ! grep -q "iOS GGUF/.*current proven real local inference lane" docs/RUNTIME_DECISION_MEMO.md 2>/dev/null ||
    ! grep -q "Do not claim MLX/CoreAI/MTP numbers from a GGUF identity marker" docs/RUNTIME_DECISION_MEMO.md 2>/dev/null ||
    ! grep -q "App-side provider resolution and smoke preflights both fail closed on incompatible artifact shapes" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null; then

@@ -457,7 +457,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             // Reuse the same prepared context across repeated runtime-health
             // probes and the first real run so constrained phones do not pay
             // for multiple full GGUF loads back to back.
-            _ = try getOrContext(path: modelPath)
+            _ = try getOrContext(path: modelPath, includeDraft: false)
             return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
         } catch {
             return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
@@ -582,26 +582,26 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         cacheLock.unlock()
     }
 
-    private func contextCacheKey(path: String) -> String {
-        let draftKey = effectiveDraftModelPath() ?? ""
+    private func contextCacheKey(path: String, includeDraft: Bool = true) -> String {
+        let draftKey = includeDraft ? (effectiveDraftModelPath() ?? "") : ""
         let tokenKey = draftKey.isEmpty ? "" : (effectiveDraftTokenCount().map(String.init) ?? "")
         let smokeContextKey = AlphaLlamaRuntimeProfile.smokeContextOverrideTokens()
             .map { "smoke_ctx:\($0)" } ?? "smoke_ctx:none"
         return [path, draftKey, tokenKey, smokeContextKey].joined(separator: "|")
     }
 
-    private func getOrContext(path: String) throws -> any AlphaLlamaCompletionContext {
+    private func getOrContext(path: String, includeDraft: Bool = true) throws -> any AlphaLlamaCompletionContext {
         AlphaLlamaCppProvider.cacheLock.lock()
         defer { AlphaLlamaCppProvider.cacheLock.unlock() }
 
-        let cacheKey = contextCacheKey(path: path)
+        let cacheKey = contextCacheKey(path: path, includeDraft: includeDraft)
         if let cached = AlphaLlamaCppProvider.cachedContext, AlphaLlamaCppProvider.cachedKey == cacheKey {
             return cached
         }
 
         AlphaLlamaCppProvider.cachedContext = nil
 
-        let draftPath = effectiveDraftModelPath()
+        let draftPath = includeDraft ? effectiveDraftModelPath() : nil
         let draftTokens = draftPath == nil ? nil : effectiveDraftTokenCount()
         let newContext = try AlphaLlamaCppProvider.contextFactory(
             path,
