@@ -393,7 +393,7 @@ func alphaInstalledModelSmokePack(
             return lhs.checksumVerified && !rhs.checksumVerified
         }
         return lhs.packId.localizedCaseInsensitiveCompare(rhs.packId) == .orderedAscending
-    }.first ?? fallbackPack
+    }.first
 }
 
 struct RossLocalModelSmokeView: View {

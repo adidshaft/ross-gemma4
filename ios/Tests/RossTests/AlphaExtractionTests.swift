@@ -17889,6 +17889,33 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(selected?.runtimeMode, .mlxSwiftLm)
     }
 
+    func testInstalledModelSmokePackFailsClosedForMissingRequestedRuntime() {
+        var activeGGUF = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUF.isActive = true
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [activeGGUF],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertNil(selected)
+    }
+
     func testInstalledModelSmokePackRespectsRuntimeTierOverride() {
         var activeGGUF = installedPack(
             .caseAssociate,
