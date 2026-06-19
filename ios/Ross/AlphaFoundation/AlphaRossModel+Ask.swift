@@ -193,6 +193,7 @@ extension AlphaRossModel {
             "unsupported_runtime_on_platform",
             "unknown_runtime_error",
             "coreai_generation_failed",
+            "coreai_empty_response",
             "runtime_dependency_unavailable",
             "model_path_missing",
             "inference_failed"

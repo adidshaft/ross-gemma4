@@ -532,6 +532,15 @@ if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelR
     FAIL=1
 fi
 
+if ! grep -q "coreai_empty_response" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
+   ! grep -q "coreai_empty_response" ios/Ross/AlphaFoundation/AlphaRossModel+Ask.swift 2>/dev/null ||
+   ! grep -q "coreai_empty_response" ios/Ross/AlphaFoundation/AlphaRossModel+Documents.swift 2>/dev/null ||
+   ! grep -q "coreai_empty_response" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "coreai_empty_response" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: CoreAI empty-response category is not wired through provider, fallback handling, tests, and docs."
+    FAIL=1
+fi
+
 if ! grep -q "alphaPackUsesSystemFoundationModel" ios/Ross/AlphaFoundation/AlphaRossModel+Persistence.swift 2>/dev/null; then
     echo "❌ FAIL: CoreAI system shortcut and adapter artifact distinction missing."
     FAIL=1
