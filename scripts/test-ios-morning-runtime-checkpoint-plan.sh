@@ -60,6 +60,7 @@ grep -q "gpu_offload evidence" /tmp/ross-morning-plan.out
 grep -q "per-stage token/speed metrics" /tmp/ross-morning-plan.out
 grep -q "native-model markers" /tmp/ross-morning-plan.out
 grep -q "source refs for source-bound stages" /tmp/ross-morning-plan.out
+grep -q "positive .*_draft_attempted and .*_draft_accepted" /tmp/ross-morning-plan.out
 grep -q "Manual UI evidence: when validating a visible answer, open the hidden Answer Details affordance" /tmp/ross-morning-plan.out
 grep -q "Tokens processed, Token speed, runtime, preferred runtime, and fallback status" /tmp/ross-morning-plan.out
 grep -q -- "--preflight-only" /tmp/ross-morning-plan.out
