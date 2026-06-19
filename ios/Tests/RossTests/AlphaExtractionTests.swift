@@ -19090,7 +19090,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testUnavailableMLXRuntimeHealthPreservesHeuristicBudgetsAndTasks() {
+    func testUnavailableMLXRuntimeHealthPreservesHeuristicBudgetsWithoutAdvertisingTasks() {
         let provider = AlphaMLXLocalProvider(
             capabilityTier: .caseAssociate,
             modelPathLabel: "case-associate",
@@ -19103,7 +19103,7 @@ final class AlphaExtractionTests: XCTestCase {
         let health = provider.runtimeHealth()
 
         XCTAssertFalse(health.available)
-        XCTAssertEqual(Set(health.supportedTasks), Set(AlphaLocalModelTask.allCases))
+        XCTAssertTrue(health.supportedTasks.isEmpty)
         XCTAssertEqual(health.estimatedContextTokens, AlphaMLXRuntimeProfile.contextWindowTokens(for: .caseAssociate))
         XCTAssertEqual(health.maxInputChars, AlphaMLXRuntimeProfile.maxInputChars(for: .caseAssociate))
     }
