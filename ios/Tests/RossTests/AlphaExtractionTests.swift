@@ -18844,6 +18844,27 @@ final class AlphaExtractionTests: XCTestCase {
             RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
             "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_runtime_error_detail=nil"
         )
+        let fullMatrixFields = RossLocalModelSmokeView.benchmarkFields(
+            stageOutputs: [
+                ("source", measuredOutput),
+                ("bengali", measuredOutput),
+                ("hindi", measuredOutput),
+                ("tamil", measuredOutput),
+                ("telugu", measuredOutput),
+                ("general", missingMetricsOutput),
+            ]
+        )
+        for stage in ["source", "bengali", "hindi", "tamil", "telugu", "general"] {
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_input_tokens="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_output_tokens="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_token_speed="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_first_token_ms="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_measured_tokens="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_acceleration="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_draft_tokens="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_draft_model="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_runtime_error_detail="))
+        }
     }
 
     func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
