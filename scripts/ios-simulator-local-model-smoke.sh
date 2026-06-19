@@ -256,6 +256,13 @@ gguf_file_looks_usable() {
 
 coreai_adapter_looks_usable() {
   local path="$1"
+  local lower_path
+  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_path" in
+    *.gguf|*.safetensors|*.bin)
+      return 1
+      ;;
+  esac
   if [[ -f "$path" ]]; then
     local size
     size="$(file_size_bytes "$path")"
@@ -265,6 +272,10 @@ coreai_adapter_looks_usable() {
   fi
 
   [[ -d "$path" ]] || return 1
+  if [[ -f "$path/config.json" ]] &&
+     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
+    return 1
+  fi
   find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
 }
 

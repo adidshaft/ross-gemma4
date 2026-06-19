@@ -115,6 +115,14 @@ run_expect_exit_2 \
   "empty CoreAI adapter file" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$empty_coreml_file"
 
+run_expect_exit_2 \
+  "GGUF file passed as CoreAI adapter" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind coreml_model --model "$main_gguf"
+
+run_expect_exit_2 \
+  "MLX directory passed as CoreAI adapter" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$usable_mlx"
+
 coreml_file="$tmpdir/foundation-adapter.mlmodelc"
 mkdir -p "$coreml_file"
 printf 'adapter' >"$coreml_file/model.bin"

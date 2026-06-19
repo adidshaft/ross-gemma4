@@ -76,6 +76,13 @@ mlx_directory_looks_usable() {
 
 coreai_adapter_looks_usable() {
   local path="$1"
+  local lower_path
+  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_path" in
+    *.gguf|*.safetensors|*.bin)
+      return 1
+      ;;
+  esac
   if [[ -f "$path" ]]; then
     local size
     size="$(file_size_bytes "$path")"
@@ -85,6 +92,10 @@ coreai_adapter_looks_usable() {
   fi
 
   [[ -d "$path" ]] || return 1
+  if [[ -f "$path/config.json" ]] &&
+     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
+    return 1
+  fi
   find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
 }
 
@@ -275,9 +286,17 @@ def mlx_directory_looks_usable(path: pathlib.Path) -> bool:
     )
 
 def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
+    lower_path = str(path).lower()
+    if lower_path.endswith((".gguf", ".safetensors", ".bin")):
+        return False
     if path.is_file():
         return file_size(path) > 0
     if not path.is_dir():
+        return False
+    if (path / "config.json").is_file() and (
+        any(file_size(child) > 0 for child in path.glob("**/*.safetensors"))
+        or any(file_size(child) > 0 for child in path.glob("**/*.safetensors.index.json"))
+    ):
         return False
     return any(child.is_file() and file_size(child) > 0 for child in path.rglob("*"))
 
@@ -325,6 +344,8 @@ def compatible_primary(runtime: str, artifact_kind: str, relative_path: str) -> 
                 return False, "manifest_invalid_system_model_sentinel"
         elif artifact_kind not in {"foundation_adapter", "coreai_adapter", "coreml_model"}:
             return False, "manifest_incompatible_artifact_kind"
+        elif lower_path.endswith((".gguf", ".safetensors", ".bin")):
+            return False, "manifest_foreign_coreai_adapter"
     return True, "manifest_primary_compatible"
 
 def compatible_draft(runtime: str, artifact_kind: str, relative_path: str) -> tuple[bool, str]:

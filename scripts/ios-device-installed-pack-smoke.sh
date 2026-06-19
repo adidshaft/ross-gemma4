@@ -463,6 +463,13 @@ if runtime == "apple_foundation_models":
             file=sys.stderr,
         )
         sys.exit(1)
+    if artifact_kind != "system_model" and relative_path.lower().endswith((".gguf", ".safetensors", ".bin")):
+        print(
+            "Selected CoreAI/CoreML adapter manifest points at a foreign model artifact: "
+            f"artifactKind={artifact_kind} relativePath={relative_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     if artifact_kind != "system_model" and artifact_bytes <= 0:
         print(
             "Selected CoreAI/CoreML adapter manifest reports an empty artifact for device smoke: "

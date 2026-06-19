@@ -20918,6 +20918,54 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testRuntimeHealthMarksGGUFConfiguredAsCoreAIAdapterUnavailable() throws {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foreign-foundation-adapter-\(UUID().uuidString).gguf")
+        try Data("GGUF-not-coreai".utf8).write(to: adapterURL)
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "coreml_model"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+    }
+
+    func testRuntimeHealthMarksMLXDirectoryConfiguredAsCoreAIAdapterUnavailable() throws {
+        let adapterURL = try makeMLXDirectoryFixture(named: "foreign-coreai-mlx-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "foundation_adapter"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+    }
+
     func testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider() throws {
         let modelURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-explicit-mlx-no-gguf-fallback-\(UUID().uuidString)")

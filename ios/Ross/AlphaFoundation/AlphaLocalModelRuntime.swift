@@ -2990,6 +2990,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
               fileManager.isReadableFile(atPath: path) else {
             return false
         }
+        guard !adapterPathLooksLikeForeignModel(path, isDirectory: isDirectory.boolValue) else {
+            return false
+        }
         if !isDirectory.boolValue {
             return (try? fileManager.attributesOfItem(atPath: path)[.size] as? NSNumber)?.int64Value ?? 0 > 0
         }
@@ -3002,6 +3005,39 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             return false
         }
         for case let fileURL as URL in enumerator {
+            guard let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true,
+                  (values.fileSize ?? 0) > 0 else {
+                continue
+            }
+            return true
+        }
+        return false
+    }
+
+    private static func adapterPathLooksLikeForeignModel(_ path: String, isDirectory: Bool) -> Bool {
+        let fileManager = FileManager.default
+        let lowerPath = path.lowercased()
+        if lowerPath.hasSuffix(".gguf") || lowerPath.hasSuffix(".safetensors") || lowerPath.hasSuffix(".bin") {
+            return true
+        }
+        guard isDirectory else { return false }
+        let directoryURL = URL(fileURLWithPath: path, isDirectory: true)
+        let hasConfig = fileManager.fileExists(atPath: directoryURL.appendingPathComponent("config.json").path)
+        guard hasConfig,
+              let enumerator = fileManager.enumerator(
+                at: directoryURL,
+                includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+                options: [.skipsHiddenFiles],
+                errorHandler: nil
+              ) else {
+            return false
+        }
+        for case let fileURL as URL in enumerator {
+            let lowerName = fileURL.lastPathComponent.lowercased()
+            guard lowerName.hasSuffix(".safetensors") || lowerName.hasSuffix(".safetensors.index.json") else {
+                continue
+            }
             guard let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
                   values.isRegularFile == true,
                   (values.fileSize ?? 0) > 0 else {
