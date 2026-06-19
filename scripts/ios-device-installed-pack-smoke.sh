@@ -15,6 +15,7 @@ Options:
   --pack-id <id>          Exact installed pack id to target.
   --runtime <mode>        gguf | mlx | coreai | coreml | gemma_local_runtime | mlx_swift_lm | apple_foundation_models
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
+  --launch-timeout <sec>  Overall helper timeout while waiting for a smoke marker. Default: 300
   --smoke-profile <mode>  full | quick | mtp | mtp-quick | mtp_quick. Default: full
   --disable-draft         Force standard acceleration even if the installed pack
                           has a usable draft companion.
@@ -40,6 +41,7 @@ selected_tier=""
 selected_pack_id=""
 selected_runtime=""
 stage_timeout="45"
+launch_timeout="300"
 smoke_profile="full"
 disable_draft="0"
 require_draft_acceleration="0"
@@ -70,6 +72,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stage-timeout)
       stage_timeout="${2:-}"
+      shift 2
+      ;;
+    --launch-timeout)
+      launch_timeout="${2:-}"
       shift 2
       ;;
     --smoke-profile)
@@ -121,6 +127,11 @@ esac
 
 if [[ -z "$stage_timeout" || "$stage_timeout" == *[!0-9]* || "$stage_timeout" -le 0 ]]; then
   echo "Stage timeout must be a positive integer number of seconds." >&2
+  exit 2
+fi
+
+if [[ -z "$launch_timeout" || "$launch_timeout" == *[!0-9]* || "$launch_timeout" -le 0 ]]; then
+  echo "Launch timeout must be a positive integer number of seconds." >&2
   exit 2
 fi
 
@@ -736,12 +747,14 @@ if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
 fi
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$launch_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import signal
+import select
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
@@ -766,6 +779,7 @@ from ross_smoke_summary import (
     draft_model_path,
     draft_model_tokens,
     stage_timeout,
+    launch_timeout,
     smoke_profile,
     disable_draft,
     require_draft_acceleration,
@@ -893,6 +907,7 @@ identity = None
 matrix_fields = None
 pass_fields = None
 fail_fields = None
+deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -904,9 +919,31 @@ process = subprocess.Popen(
 
 try:
     assert process.stdout is not None
-    for raw_line in process.stdout:
+    while True:
+        if time.time() > deadline:
+            outcome = "timeout"
+            print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)
+            fail_fields = {
+                "runtime": runtime_mode,
+                "requested_runtime": runtime_mode,
+                "profile": smoke_profile,
+                "stage": "helper_timeout",
+                "error": "helper_timeout",
+            }
+            process.kill()
+            break
+        ready, _, _ = select.select([process.stdout], [], [], 0.2)
+        if not ready:
+            if process.poll() is not None:
+                break
+            continue
+        raw_line = process.stdout.readline()
+        if raw_line == "":
+            if process.poll() is not None:
+                break
+            continue
         line = raw_line.rstrip("\n")
-        print(line)
+        print(line, flush=True)
         if identity_re.search(line):
             identity = parse_fields(line)
         if matrix_re.search(line):
@@ -941,5 +978,10 @@ if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
+if outcome == "timeout":
+    validate_identity_guard(identity, require_identity=False)
+    print(failure_summary_line(identity, fail_fields, matrix_fields))
+    sys.exit(1)
+print(f"ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome={outcome}", file=sys.stderr)
 sys.exit(process.returncode or 1)
 PY

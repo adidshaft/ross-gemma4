@@ -214,6 +214,16 @@ run_expect_exit_2 \
   "${base_command[@]}" --runtime gguf --stage-timeout 0
 
 run_expect_exit_2 \
+  "nonnumeric installed-pack launch timeout" \
+  "Launch timeout must be a positive integer" \
+  "${base_command[@]}" --runtime gguf --launch-timeout nope
+
+run_expect_exit_2 \
+  "zero installed-pack launch timeout" \
+  "Launch timeout must be a positive integer" \
+  "${base_command[@]}" --runtime gguf --launch-timeout 0
+
+run_expect_exit_2 \
   "installed-pack draft proof without MTP profile" \
   "Draft acceleration proof requires --smoke-profile mtp_quick" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile quick
@@ -404,6 +414,32 @@ run_expect_exit_1 \
   "seeded device-proof pack excluded by default" \
   "Only seeded device-proof manifests matched" \
   "${base_command[@]}" --runtime gguf
+
+write_manifest '{
+  "packId": "silent-installed-pack",
+  "tier": "quick_start",
+  "fileName": "main.gguf",
+  "relativePath": "model-packs/quick/main.gguf",
+  "checksumSha256": "a",
+  "bytes": 2000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+python3 - "$fake_device_root/Library/Application Support/RossAlpha/model-packs/quick/main.gguf" <<'PY'
+import pathlib
+import sys
+pathlib.Path(sys.argv[1]).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
+PY
+cat >"$tmpdir/silent-installed-pack.log" <<'EOF'
+Ross launched without emitting smoke terminal markers.
+EOF
+run_process_guard_expect_exit_1 \
+  "installed-pack smoke rejects silent successful launch" \
+  "no_terminal_smoke_marker" \
+  "$tmpdir/silent-installed-pack.log" \
+  "${base_command[@]}" --runtime gguf --smoke-profile quick
 
 write_manifest '{
   "packId": "mtp-stage-fallback",

@@ -672,6 +672,14 @@ if ! grep -q "Stage timeout must be a positive integer" scripts/ios-morning-runt
     FAIL=1
 fi
 
+if ! grep -q "Launch timeout must be a positive integer" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "reason=helper_timeout" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "reason=no_terminal_smoke_marker" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "silent successful launch" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke helper lacks bounded timeout/no-marker guards."
+    FAIL=1
+fi
+
 if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "without launching Simulator or touching the cabled iPhone" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
