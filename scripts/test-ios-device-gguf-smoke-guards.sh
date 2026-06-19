@@ -59,10 +59,14 @@ case "$command" in
     fi
     mkdir -p "$FAKE_DEVICE_ROOT/$destination"
     for source in "${sources[@]}"; do
+      source_basename="$(basename "$source")"
+      if [[ -n "${FAKE_MODEL_COPY_DELAY:-}" && "$source_basename" == *.gguf ]]; then
+        sleep "$FAKE_MODEL_COPY_DELAY"
+      fi
       if [[ -f "$source" ]]; then
         cp "$source" "$FAKE_DEVICE_ROOT/$destination/"
       fi
-      printf 'COPY_TO %s %s\n' "$(basename "$source")" "$destination" >>"$FAKE_COPY_LOG"
+      printf 'COPY_TO %s %s\n' "$source_basename" "$destination" >>"$FAKE_COPY_LOG"
     done
     if [[ "${#sources[@]}" -eq 1 ]]; then
       echo "Path: $FAKE_DEVICE_ROOT/$destination"
@@ -187,6 +191,34 @@ fi
 if ! grep -q "runtime_identity_artifact_path_mismatch" "$tmpdir/gguf-mismatch.out"; then
   echo "FAIL: mismatched GGUF runtime identity artifact did not hit exact artifact guard." >&2
   cat "$tmpdir/gguf-mismatch.out" >&2 || true
+  exit 1
+fi
+
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  FAKE_MODEL_COPY_DELAY=2 \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --tier quickStart \
+    --pack-id unit-pack \
+    --stage-timeout 5 \
+    --copy-timeout 1 \
+    >"$tmpdir/gguf-copy-timeout.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]]; then
+  echo "FAIL: stalled GGUF model copy should exit 1, got $rc" >&2
+  cat "$tmpdir/gguf-copy-timeout.out" >&2 || true
+  exit 1
+fi
+if ! grep -q "model_copy timed out after 1s" "$tmpdir/gguf-copy-timeout.out"; then
+  echo "FAIL: stalled GGUF model copy did not report the bounded copy timeout." >&2
+  cat "$tmpdir/gguf-copy-timeout.out" >&2 || true
   exit 1
 fi
 

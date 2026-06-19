@@ -17,6 +17,7 @@ Options:
   --pack-id <id>          Logical pack id written into the seeded manifest.
                           Default: <model-basename>-device-proof
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
+  --copy-timeout <sec>    Per-copy devicectl timeout. Default: 300
 
 This helper:
   1. Seeds the GGUF file plus a manifest into RossAlpha/model-packs/<tier>
@@ -32,6 +33,7 @@ bundle_id="com.ross.ios"
 tier="quickStart"
 pack_id=""
 stage_timeout="45"
+copy_timeout="300"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -59,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       stage_timeout="${2:-}"
       shift 2
       ;;
+    --copy-timeout)
+      copy_timeout="${2:-}"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -78,6 +84,11 @@ fi
 
 if [[ ! -f "$model_path" ]]; then
   echo "Model file not found: $model_path" >&2
+  exit 2
+fi
+
+if [[ -z "$copy_timeout" || "$copy_timeout" == *[!0-9]* || "$copy_timeout" -le 0 ]]; then
+  echo "Copy timeout must be a positive integer number of seconds." >&2
   exit 2
 fi
 
@@ -133,6 +144,42 @@ manifest_basename="${seed_model_basename%.*}.manifest.json"
 tmpdir="$(mktemp -d /tmp/ross-ios-device-gguf-smoke.XXXXXX)"
 trap 'rm -rf "$tmpdir"' EXIT
 
+run_devicectl_copy_with_timeout() {
+  local description="$1"
+  local output_file="$2"
+  shift 2
+
+  : > "$output_file"
+  set +e
+  "$@" > "$output_file" 2>&1 &
+  local pid=$!
+  local elapsed=0
+  local rc=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [[ "$elapsed" -ge "$copy_timeout" ]]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -9 "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null
+      set -e
+      echo "GGUF device smoke $description timed out after ${copy_timeout}s." >&2
+      cat "$output_file" >&2 || true
+      exit 1
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$pid"
+  rc=$?
+  set -e
+
+  if [[ "$rc" -ne 0 ]]; then
+    echo "GGUF device smoke $description failed with exit code $rc." >&2
+    cat "$output_file" >&2 || true
+    exit "$rc"
+  fi
+}
+
 probe_dir="$tmpdir/Library/Application Support/RossAlpha"
 seed_dir="$probe_dir/model-packs/$canonical_tier"
 mkdir -p "$seed_dir"
@@ -157,13 +204,13 @@ cat > "$seed_dir/$manifest_basename" <<EOF
 EOF
 
 probe_output="$tmpdir/probe-copy.txt"
-xcrun devicectl device copy to \
+run_devicectl_copy_with_timeout "probe_copy" "$probe_output" \
+  xcrun devicectl device copy to \
   --device "$device_id" \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
   --source "$probe_file" \
-  --destination 'Library/Application Support/RossAlpha/.device-proof-probe' \
-  > "$probe_output"
+  --destination 'Library/Application Support/RossAlpha/.device-proof-probe'
 
 probe_device_path="$(sed -n 's/^Path: //p' "$probe_output" | head -n 1)"
 if [[ -z "$probe_device_path" ]]; then
@@ -179,21 +226,21 @@ echo "Resolved app container root: $container_root"
 echo "Seeding model to: $device_model_path"
 echo "Publishing manifest after model transfer: $manifest_basename"
 
-xcrun devicectl device copy to \
+run_devicectl_copy_with_timeout "model_copy" "$tmpdir/model-copy.txt" \
+  xcrun devicectl device copy to \
   --device "$device_id" \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
   --source "$seed_dir/$seed_model_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/" \
-  > /dev/null
+  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/"
 
-xcrun devicectl device copy to \
+run_devicectl_copy_with_timeout "manifest_copy" "$tmpdir/manifest-copy.txt" \
+  xcrun devicectl device copy to \
   --device "$device_id" \
   --domain-type appDataContainer \
   --domain-identifier "$bundle_id" \
   --source "$seed_dir/$manifest_basename" \
-  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/" \
-  > /dev/null
+  --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier/"
 
 python3 - "$device_id" "$bundle_id" "$device_model_path" "$checksum" "$stage_timeout" "$SCRIPT_DIR" <<'PY'
 import os
