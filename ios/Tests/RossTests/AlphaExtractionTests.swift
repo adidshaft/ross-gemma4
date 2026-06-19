@@ -20365,7 +20365,13 @@ final class AlphaExtractionTests: XCTestCase {
                 throw DraftFailure.speculativeGenerationFailed
             }
             onChunk?("Recovered standard answer")
-            return AlphaMLXGenerationSnapshot(text: "Recovered standard answer")
+            return AlphaMLXGenerationSnapshot(
+                text: "Recovered standard answer",
+                promptTokenCount: 320,
+                generationTokenCount: 24,
+                outputTokensPerSecond: 12.5,
+                timeToFirstTokenMs: 700
+            )
         }
 
         let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
@@ -20421,6 +20427,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(output?.accelerationDraftTokens)
         XCTAssertNil(output?.accelerationDraftModelLabel)
         XCTAssertEqual(output?.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(output?.inputTokenCount, 320)
+        XCTAssertEqual(output?.outputTokenCount, 24)
+        XCTAssertEqual(output?.outputTokensPerSecond ?? 0, 12.5, accuracy: 0.001)
+        XCTAssertEqual(output?.timeToFirstTokenMs, 700)
         XCTAssertNil(output?.errorCategory)
     }
 
