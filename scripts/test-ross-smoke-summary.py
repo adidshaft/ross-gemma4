@@ -832,6 +832,36 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
             )
 
+    def test_benchmark_summary_rejects_coreai_adapter_path_shape(self):
+        identity = self.valid_identity("apple_foundation_models")
+        identity["provider"] = "AlphaFoundationModelsLocalProvider"
+        identity["model_format"] = "coreml_model"
+        identity["artifact_path_type"] = "file"
+        identity["artifact_path"] = "adapter.txt"
+        identity["draft_status"] = "not_supported"
+        with self.assertRaisesRegex(
+            MissingBenchmarkMatrixError,
+            "benchmark_runtime_artifact_mismatch adapter_path_shape=adapter.txt",
+        ):
+            benchmark_summary_line(
+                identity,
+                {
+                    "runtime": "apple_foundation_models",
+                    "requested_runtime": "apple_foundation_models",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
     def test_runtime_identity_artifact_rules_reject_wrong_lane_shapes(self):
         self.assertIsNone(
             runtime_identity_artifact_error(
@@ -946,6 +976,41 @@ class RossSmokeSummaryTests(unittest.TestCase):
             ),
             "adapter_foreign_model_path=model.gguf",
         )
+        for model_format, artifact_path in (
+            ("coreml_model", "FoundationAdapter.mlmodel"),
+            ("coreml_model", "FoundationAdapter.mlmodelc"),
+            ("coreml_model", "FoundationAdapter.mlpackage"),
+            ("foundation_adapter", "FoundationAdapter.bundle"),
+            ("coreai_adapter", "FoundationAdapter.bundle"),
+        ):
+            with self.subTest(model_format=model_format, artifact_path=artifact_path):
+                self.assertIsNone(
+                    runtime_identity_artifact_error(
+                        {
+                            "model_format": model_format,
+                            "artifact_path_type": "directory",
+                            "artifact_path": artifact_path,
+                        },
+                        "apple_foundation_models",
+                    )
+                )
+        for model_format, artifact_path in (
+            ("coreml_model", "adapter.txt"),
+            ("coreml_model", "adapter.bundle"),
+            ("foundation_adapter", "adapter.txt"),
+        ):
+            with self.subTest(model_format=model_format, artifact_path=artifact_path):
+                self.assertEqual(
+                    runtime_identity_artifact_error(
+                        {
+                            "model_format": model_format,
+                            "artifact_path_type": "file",
+                            "artifact_path": artifact_path,
+                        },
+                        "apple_foundation_models",
+                    ),
+                    f"adapter_path_shape={artifact_path}",
+                )
 
     def test_runtime_identity_availability_rules_reject_fallback_numbers(self):
         self.assertIsNone(

@@ -159,6 +159,13 @@ def runtime_identity_artifact_error(identity, expected_runtime):
             artifact_path = (identity.get("artifact_path") or "").lower()
             if artifact_path.endswith((".gguf", ".bin", ".safetensors")):
                 return f"adapter_foreign_model_path={summary_value(identity, 'artifact_path')}"
+            allowed_suffixes = (
+                (".bundle", ".mlmodel", ".mlmodelc", ".mlpackage")
+                if model_format in {"foundation_adapter", "coreai_adapter"}
+                else (".mlmodel", ".mlmodelc", ".mlpackage")
+            )
+            if not artifact_path.endswith(allowed_suffixes):
+                return f"adapter_path_shape={summary_value(identity, 'artifact_path')}"
     return None
 
 
