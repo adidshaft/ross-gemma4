@@ -11,6 +11,7 @@ enum LlamaError: Error {
 struct AlphaSpeculativeDraftMetrics: Codable, Hashable, Sendable {
     var attemptedTokens: Int
     var acceptedTokens: Int
+    var lastFailureReason: String? = nil
 }
 
 @_silgen_name("_Z26llama_set_embeddings_nextnP13llama_contextbb")
@@ -95,6 +96,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
     private var lastAcceptedToken: llama_token?
     private var speculativeDraftTokenAttempts = 0
     private var speculativeDraftTokenAccepts = 0
+    private var speculativeDraftLastFailureReason: String?
 
     var n_len: Int32 = 1024
     private let defaultMaxNewTokens: Int32 = 96
@@ -361,6 +363,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         lastAcceptedToken = nil
         speculativeDraftTokenAttempts = 0
         speculativeDraftTokenAccepts = 0
+        speculativeDraftLastFailureReason = nil
         currentAccelerationMode = .standard
         currentExecutionPathLabel = "Gemma GGUF via llama.cpp"
         hasDecodableLogits = false
@@ -410,6 +413,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         lastAcceptedToken = nil
         speculativeDraftTokenAttempts = 0
         speculativeDraftTokenAccepts = 0
+        speculativeDraftLastFailureReason = nil
         currentAccelerationMode = draftState == nil ? .standard : .draftModelSpeculative
         currentExecutionPathLabel = draftState == nil
             ? "Gemma GGUF via llama.cpp"
@@ -521,12 +525,15 @@ actor LlamaContext: AlphaLlamaCompletionContext {
     }
 
     func speculativeDraftMetrics() -> AlphaSpeculativeDraftMetrics? {
-        guard speculativeDraftTokenAttempts > 0 || speculativeDraftTokenAccepts > 0 else {
+        guard speculativeDraftTokenAttempts > 0 ||
+            speculativeDraftTokenAccepts > 0 ||
+            speculativeDraftLastFailureReason != nil else {
             return nil
         }
         return AlphaSpeculativeDraftMetrics(
             attemptedTokens: speculativeDraftTokenAttempts,
-            acceptedTokens: speculativeDraftTokenAccepts
+            acceptedTokens: speculativeDraftTokenAccepts,
+            lastFailureReason: speculativeDraftLastFailureReason
         )
     }
 
@@ -658,6 +665,11 @@ actor LlamaContext: AlphaLlamaCompletionContext {
 
         let firstTargetToken = llama_sampler_sample(sampling, context, -1)
         guard !draftedTokens.isEmpty, firstTargetToken == draftedTokens[0] else {
+            if draftedTokens.isEmpty {
+                speculativeDraftLastFailureReason = speculativeDraftLastFailureReason ?? "no_draft_tokens"
+            } else {
+                speculativeDraftLastFailureReason = "first_token_mismatch"
+            }
             llama_sampler_accept(sampling, firstTargetToken)
             return commitMainToken(firstTargetToken)
         }
@@ -666,6 +678,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         llama_sampler_accept(sampling, firstTargetToken)
 
         if !decodeDraftVerificationBatchOnMain(draftedTokens, basePos: basePos) {
+            speculativeDraftLastFailureReason = "verification_decode_failed"
             downgradeSpeculation()
             return commitMainToken(firstTargetToken)
         }
@@ -682,6 +695,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
                     continue
                 }
                 mismatchToken = sampledTargetToken
+                speculativeDraftLastFailureReason = "verified_token_mismatch"
                 break
             }
         }
@@ -708,6 +722,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
             return emitted
         }
 
+        speculativeDraftLastFailureReason = nil
         let extraTargetToken = llama_sampler_sample(sampling, context, Int32(draftedTokens.count - 1))
         llama_sampler_accept(sampling, extraTargetToken)
         emitted += commitMainToken(extraTargetToken)
@@ -720,6 +735,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         maxDraftTokens: Int
     ) -> [llama_token] {
         guard !pendingNextnEmbedding.isEmpty else {
+            speculativeDraftLastFailureReason = "missing_nextn_embedding"
             return []
         }
 
@@ -738,6 +754,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
 
         guard llama_decode(draftState.context, draftState.batch) == 0 else {
             print("llama_decode() failed while seeding speculative draft context")
+            speculativeDraftLastFailureReason = "seed_decode_failed"
             return []
         }
 
@@ -745,6 +762,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         while draftedTokens.count < maxDraftTokens, n_cur + Int32(draftedTokens.count) < n_len {
             let token = llama_sampler_sample(draftState.sampling, draftState.context, -1)
             if llama_vocab_is_eog(vocab, token) {
+                speculativeDraftLastFailureReason = draftedTokens.isEmpty ? "draft_eog" : nil
                 break
             }
             llama_sampler_accept(draftState.sampling, token)
@@ -754,6 +772,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
                 break
             }
             guard let hiddenState = llama_get_embeddings_nextn_ith_bridge(draftState.context, 0) else {
+                speculativeDraftLastFailureReason = "missing_draft_nextn_embedding"
                 break
             }
 
@@ -773,6 +792,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
             )
             guard llama_decode(draftState.context, draftState.batch) == 0 else {
                 print("llama_decode() failed while extending speculative draft context")
+                speculativeDraftLastFailureReason = "extend_decode_failed"
                 break
             }
         }

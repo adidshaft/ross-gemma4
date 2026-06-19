@@ -157,6 +157,7 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var accelerationDraftModelLabel: String? = nil
     var speculativeDraftTokenAttempts: Int? = nil
     var speculativeDraftTokenAccepts: Int? = nil
+    var speculativeDraftFailureReason: String? = nil
     var inputChars: Int? = nil
     var inputTokenCount: Int? = nil
     var outputTokenCount: Int? = nil

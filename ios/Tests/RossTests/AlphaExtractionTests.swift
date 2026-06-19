@@ -18908,15 +18908,32 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "source stage", output: measuredOutput),
-            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_draft_attempted=5 source_stage_draft_accepted=3 source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
+            "source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_draft_attempted=5 source_stage_draft_accepted=3 source_stage_draft_failure=nil source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
         )
         XCTAssertEqual(
             RossLocalModelSmokeView.stageDoneLine(stage: "source stage", durationMs: 1_234, output: measuredOutput),
-            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source_stage duration_ms=1234 schema_valid=true error=nil runtime_error_detail=domain:CoreAITest,code:-42 source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_draft_attempted=5 source_stage_draft_accepted=3 source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
+            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source_stage duration_ms=1234 schema_valid=true error=nil runtime_error_detail=domain:CoreAITest,code:-42 source_stage_input_tokens=410 source_stage_output_tokens=28 source_stage_token_speed=19.38 source_stage_first_token_ms=480 source_stage_measured_tokens=true source_stage_acceleration=draftModelSpeculative source_stage_draft_tokens=2 source_stage_draft_model=mtp_draft.gguf source_stage_draft_attempted=5 source_stage_draft_accepted=3 source_stage_draft_failure=nil source_stage_runtime_error_detail=domain:CoreAITest,code:-42"
         )
         XCTAssertEqual(
             RossLocalModelSmokeView.benchmarkFields(stage: "general", output: missingMetricsOutput),
-            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_draft_attempted=nil general_draft_accepted=nil general_runtime_error_detail=nil"
+            "general_input_tokens=nil general_output_tokens=nil general_token_speed=nil general_first_token_ms=nil general_measured_tokens=false general_acceleration=nil general_draft_tokens=nil general_draft_model=nil general_draft_attempted=nil general_draft_accepted=nil general_draft_failure=nil general_runtime_error_detail=nil"
+        )
+        let failedDraftOutput = AlphaLocalModelOutput(
+            rawText: "Answer",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [],
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            accelerationDraftModelLabel: "mtp draft.gguf",
+            speculativeDraftTokenAttempts: 22,
+            speculativeDraftTokenAccepts: 0,
+            speculativeDraftFailureReason: "first token mismatch"
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.benchmarkFields(stage: "source", output: failedDraftOutput)
+                .contains("source_draft_failure=first_token_mismatch")
         )
         let timeoutHealth = AlphaLocalRuntimeHealth(
             runtimeMode: .llamaCppGguf,
@@ -18950,7 +18967,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(timeoutOutput.runtimeErrorDetail, "smoke_stage_timeout_source")
         XCTAssertEqual(
             RossLocalModelSmokeView.stageDoneLine(stage: "source", durationMs: 12_345, output: timeoutOutput),
-            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=12345 schema_valid=false error=smoke_stage_timeout_source runtime_error_detail=smoke_stage_timeout_source source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp_draft.gguf source_draft_attempted=nil source_draft_accepted=nil source_runtime_error_detail=smoke_stage_timeout_source"
+            "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=12345 schema_valid=false error=smoke_stage_timeout_source runtime_error_detail=smoke_stage_timeout_source source_input_tokens=nil source_output_tokens=nil source_token_speed=nil source_first_token_ms=nil source_measured_tokens=false source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp_draft.gguf source_draft_attempted=nil source_draft_accepted=nil source_draft_failure=nil source_runtime_error_detail=smoke_stage_timeout_source"
         )
         let fullMatrixFields = RossLocalModelSmokeView.benchmarkFields(
             stageOutputs: [
@@ -18971,6 +18988,7 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertTrue(fullMatrixFields.contains("\(stage)_acceleration="))
             XCTAssertTrue(fullMatrixFields.contains("\(stage)_draft_tokens="))
             XCTAssertTrue(fullMatrixFields.contains("\(stage)_draft_model="))
+            XCTAssertTrue(fullMatrixFields.contains("\(stage)_draft_failure="))
             XCTAssertTrue(fullMatrixFields.contains("\(stage)_runtime_error_detail="))
         }
     }
