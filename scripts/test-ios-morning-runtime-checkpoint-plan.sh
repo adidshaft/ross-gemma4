@@ -8,6 +8,7 @@ tmpdir="$(mktemp -d /tmp/ross-morning-plan.XXXXXX)"
 trap 'rm -rf "$tmpdir" /tmp/ross-morning-plan.out' EXIT
 
 "$PLAN" --device TEST_DEVICE > /tmp/ross-morning-plan.out
+grep -q "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier." /tmp/ross-morning-plan.out
 grep -q "MTP low-token proof" /tmp/ross-morning-plan.out
 grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out

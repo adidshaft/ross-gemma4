@@ -131,6 +131,8 @@ print_command() {
 echo "ROSS_MORNING_RUNTIME_CHECKPOINT_PLAN dry_run=true device=${device_id} bundle_id=${bundle_id} tier=${tier}"
 if [[ -n "$installed_root" ]]; then
   echo "Inventory gate: installed_root=${installed_root}"
+else
+  echo "Inventory gate: not provided; runtime commands are templates until installed-pack inventory proves matching artifacts for the requested tier."
 fi
 echo
 echo "Order: list installed packs first, run GGUF/MTP as short smokes, then run installed MLX/CoreAI with the full varied document/query matrix when available. Stop on memory pressure, thermal issues, instability, or fallback."
