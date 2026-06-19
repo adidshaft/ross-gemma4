@@ -120,6 +120,15 @@ def first_non_nil_value(*values):
     return "nil"
 
 
+def positive_int_value(fields, key):
+    value = fields.get(key)
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
 def runtime_identity_supported_runtime_error(identity):
     actual_runtime = identity.get("actual_runtime")
     if actual_runtime not in RUNTIME_ARTIFACT_RULES:
@@ -215,6 +224,8 @@ def runtime_identity_draft_artifact_error(identity, expected_runtime):
     if identity.get("draft_status") != "active":
         return f"draft_status={summary_value(identity, 'draft_status')}"
     if identity.get("draft_tokens") in (None, "nil"):
+        return f"draft_tokens={summary_value(identity, 'draft_tokens')}"
+    if positive_int_value(identity, "draft_tokens") is None:
         return f"draft_tokens={summary_value(identity, 'draft_tokens')}"
     if identity.get("draft_model") in (None, "nil"):
         return f"draft_model={summary_value(identity, 'draft_model')}"
@@ -327,6 +338,8 @@ def benchmark_stage_draft_error(identity, pass_fields, matrix_fields):
             return f"{stage}_acceleration={summary_value(pass_fields, f'{stage}_acceleration')}"
         stage_draft_tokens = pass_fields.get(f"{stage}_draft_tokens")
         if stage_draft_tokens in (None, "nil"):
+            return f"{stage}_draft_tokens={summary_value(pass_fields, f'{stage}_draft_tokens')}"
+        if positive_int_value(pass_fields, f"{stage}_draft_tokens") is None:
             return f"{stage}_draft_tokens={summary_value(pass_fields, f'{stage}_draft_tokens')}"
         if identity_draft_tokens not in (None, "nil") and stage_draft_tokens != identity_draft_tokens:
             return f"{stage}_draft_tokens={stage_draft_tokens}"
