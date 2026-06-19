@@ -51,6 +51,11 @@ if ! grep -q "AlphaFoundationModelsLocalProvider" ios/Ross/AlphaFoundation/Alpha
     FAIL=1
 fi
 
+if grep -q "provider=AlphaFoundationModelsProvider" scripts/test-ios-runtime-smoke-preflights.sh scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null; then
+    echo "❌ FAIL: CoreAI smoke fixtures still use stale Foundation provider identity."
+    FAIL=1
+fi
+
 if ! grep -q "ROSS_RUNTIME_IDENTITY" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: runtime identity smoke marker missing."
     FAIL=1
