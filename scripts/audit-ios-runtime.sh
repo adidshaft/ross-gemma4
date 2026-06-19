@@ -882,6 +882,12 @@ if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present"
     FAIL=1
 fi
 
+if ! grep -q "historical physical iPhone standard GGUF full-matrix evidence" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
+   ! grep -q "current post-.*smoke-summary protocol has not yet been rerun as a full physical matrix" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
+    echo "❌ FAIL: model artifact status must separate historical physical GGUF evidence from current checkout final-validation proof."
+    FAIL=1
+fi
+
 if ! grep -q "current repo proof lane is now tighter at .*context_tokens=1024.*prompt batch .*256.*physical batch .*64" docs/REAL_MODEL_QA_RESULTS.md 2>/dev/null; then
     echo "❌ FAIL: real-model QA results do not distinguish historical 2k MTP logs from the current 1024-token proof lane."
     FAIL=1
