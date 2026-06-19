@@ -330,6 +330,15 @@ if catalog_gguf:
 
 present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
 present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)
+catalog_mlx_draft = next(
+    (
+        row for row in rows
+        if row.get("lane") == "catalog_mlx_draft"
+        and row.get("status") == "expected"
+        and row_tier_matches(row)
+    ),
+    None,
+)
 if present_mlx:
     model_path = present_mlx.get("path", "")
     emit(
@@ -355,6 +364,36 @@ if present_mlx:
                 "--runtime", "mlx",
                 "--model", model_path,
                 "--draft-model", present_mlx_draft.get("path", ""),
+                "--draft-tokens", 2,
+                "--require-draft-acceleration",
+                "--smoke-profile", "mtp_quick",
+                "--preflight-only",
+            ),
+        )
+    elif catalog_mlx_draft:
+        file_name = catalog_mlx_draft.get("file") or pathlib.PurePosixPath(catalog_mlx_draft.get("path", "mlx-draft")).name
+        target_dir = target_root / file_name
+        repo = catalog_mlx_draft.get("repo", "unknown")
+        emit(
+            "mlx_draft",
+            "missing",
+            "download",
+            repo=repo,
+            target_dir=target_dir,
+            bytes=catalog_mlx_draft.get("bytes"),
+            checksum=catalog_mlx_draft.get("checksum"),
+            command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} --local-dir {shlex.quote(str(target_dir))}",
+        )
+        emit(
+            "mlx_draft",
+            "missing",
+            "preflight_pair_after_download",
+            target_dir=target_dir,
+            command=command(
+                root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                "--runtime", "mlx",
+                "--model", model_path,
+                "--draft-model", target_dir,
                 "--draft-tokens", 2,
                 "--require-draft-acceleration",
                 "--smoke-profile", "mtp_quick",
@@ -390,6 +429,26 @@ else:
                 "present",
                 "waiting_for_primary",
                 path=present_mlx_draft.get("path", ""),
+                reason="missing_compatible_mlx_primary",
+            )
+            continue
+        if lane == "mlx_draft":
+            emit(
+                lane,
+                "missing",
+                "download",
+                repo=repo,
+                target_dir=target_dir,
+                bytes=row.get("bytes"),
+                checksum=row.get("checksum"),
+                command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} --local-dir {shlex.quote(str(target_dir))}",
+            )
+            emit(
+                lane,
+                "missing",
+                "waiting_for_primary_after_download",
+                target_dir=target_dir,
+                reason="missing_compatible_mlx_primary",
             )
             continue
         emit(

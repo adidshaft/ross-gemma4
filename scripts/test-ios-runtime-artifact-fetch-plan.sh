@@ -44,6 +44,12 @@ if grep -q "lane=mlx status=missing action=download .*repo=mlx-community/gemma-4
   exit 1
 fi
 grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=missing action=waiting_for_primary_after_download .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*reason=missing_compatible_mlx_primary" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect standalone MLX draft preflight when no compatible primary MLX is available." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
 grep -q "lane=coreai_system status=unknown action=preflight .*system://apple-foundation-models" /tmp/ross-runtime-fetch-plan.out
 
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
@@ -103,27 +109,50 @@ printf 'weights' > "$mlx_draft_dir/model.safetensors"
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/draft-only" > /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=blocked action=await_compatible_archive .*repo=mlx-community/gemma-4-E4B-it-qat-4bit" /tmp/ross-runtime-fetch-plan.out
-grep -q "lane=mlx_draft status=present action=waiting_for_primary .*path=$mlx_draft_dir" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=present action=waiting_for_primary .*path=$mlx_draft_dir .*reason=missing_compatible_mlx_primary" /tmp/ross-runtime-fetch-plan.out
 if grep -q "lane=mlx_draft status=missing action=download" /tmp/ross-runtime-fetch-plan.out; then
   echo "Did not expect MLX draft download row when a local draft-like MLX directory is already present." >&2
   cat /tmp/ross-runtime-fetch-plan.out >&2
   exit 1
 fi
 
-mlx_dir="$tmpdir/usable-mlx"
+primary_only_mlx_dir="$tmpdir/primary-only/usable-mlx"
+mkdir -p "$primary_only_mlx_dir"
+printf '{}' > "$primary_only_mlx_dir/config.json"
+printf '{}' > "$primary_only_mlx_dir/tokenizer.json"
+printf 'weights' > "$primary_only_mlx_dir/model.safetensors"
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir/primary-only" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx status=present action=preflight .*path=$primary_only_mlx_dir .*--runtime mlx .*--model $primary_only_mlx_dir .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=missing action=preflight_pair_after_download .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*--runtime mlx .*--model $primary_only_mlx_dir .*--draft-model $tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect primary-present MLX draft plan to use standalone draft preflight." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+
+final_root="$tmpdir/final-usable"
+mlx_dir="$final_root/usable-mlx"
 mkdir -p "$mlx_dir"
 printf '{}' > "$mlx_dir/config.json"
 printf '{}' > "$mlx_dir/tokenizer.json"
 printf 'weights' > "$mlx_dir/model.safetensors"
 
-coreai_dir="$tmpdir/foundation-adapter.mlmodelc"
+final_mlx_draft_dir="$final_root/gemma-4-E4B-it-qat-assistant-6bit"
+mkdir -p "$final_mlx_draft_dir"
+printf '{}' > "$final_mlx_draft_dir/config.json"
+printf '{}' > "$final_mlx_draft_dir/tokenizer.json"
+printf 'weights' > "$final_mlx_draft_dir/model.safetensors"
+
+coreai_dir="$final_root/foundation-adapter.mlmodelc"
 mkdir -p "$coreai_dir"
 printf 'adapter' > "$coreai_dir/model.bin"
 
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
-  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$tmpdir" > /tmp/ross-runtime-fetch-plan.out
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$final_root" > /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mlx status=present action=preflight .*path=$mlx_dir .*--runtime mlx .*--model $mlx_dir .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
-grep -q "lane=mlx_draft status=present action=preflight_pair .*path=$mlx_draft_dir .*--draft-model $mlx_draft_dir .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=present action=preflight_pair .*path=$final_mlx_draft_dir .*--draft-model $final_mlx_draft_dir .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=coreai_adapter status=present action=preflight .*path=$coreai_dir .*--runtime coreml .*--artifact-kind foundation_adapter .*--model $coreai_dir .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 
 echo "iOS runtime artifact fetch plan tests: PASS"
