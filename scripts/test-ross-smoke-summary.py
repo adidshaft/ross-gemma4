@@ -27,6 +27,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "benchmark_runtime_mismatch",
             "benchmark_requested_runtime_missing",
             "benchmark_requested_runtime_mismatch",
+            "benchmark_pass_requested_runtime_missing",
             "benchmark_pass_requested_runtime_mismatch",
             "benchmark_pack_runtime_missing",
             "benchmark_pack_runtime_mismatch",
@@ -93,7 +94,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "general:open_query:en:no_source_refs:max_tokens=192"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=full elapsed=12.34s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=full elapsed=12.34s "
             "source_input_tokens=207 source_output_tokens=118 source_token_speed=9.00 "
             "source_first_token_ms=17392 source_measured_tokens=false "
             "source_refs=1 source_native_model=true "
@@ -145,7 +146,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "stages=source:document_qa:en:source_refs_required:max_tokens=64"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=4.2s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=4.2s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=false "
             "source_raw_chars=240 source_parsed_chars=220 source_refs=1 source_native_model=true"
@@ -205,7 +206,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix_cases"):
             benchmark_summary_line(
                 {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
-                {"runtime": "gemma_local_runtime", "profile": "quick"},
+                {"runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime", "profile": "quick"},
                 incomplete_matrix,
             )
 
@@ -213,7 +214,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_profile_mismatch"):
             benchmark_summary_line(
                 {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
-                {"runtime": "gemma_local_runtime", "profile": "quick"},
+                {"runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime", "profile": "quick"},
                 {
                     "profile": "full",
                     "cases": "english_source_bound_document_qa",
@@ -225,7 +226,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_pass_profile"):
             benchmark_summary_line(
                 {"actual_runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
-                {"runtime": "gemma_local_runtime"},
+                {"runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime"},
                 {
                     "profile": "quick",
                     "cases": "english_source_bound_document_qa",
@@ -237,7 +238,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_runtime_identity"):
             benchmark_summary_line(
                 {},
-                {"runtime": "gemma_local_runtime", "profile": "quick"},
+                {"runtime": "gemma_local_runtime", "requested_runtime": "gemma_local_runtime", "profile": "quick"},
                 {
                     "profile": "quick",
                     "cases": "english_source_bound_document_qa",
@@ -251,6 +252,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 {"actual_runtime": "mlx_swift_lm", "requested_runtime": "mlx_swift_lm"},
                 {
                     "runtime": "gemma_local_runtime",
+                    "requested_runtime": "gemma_local_runtime",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -271,6 +273,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 {"actual_runtime": "gemma_local_runtime", "requested_runtime": "mlx_swift_lm"},
                 {
                     "runtime": "gemma_local_runtime",
+                    "requested_runtime": "gemma_local_runtime",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -306,6 +309,28 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
             )
 
+    def test_benchmark_summary_rejects_missing_pass_requested_runtime(self):
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_pass_requested_runtime_missing"):
+            benchmark_summary_line(
+                self.valid_identity(),
+                {
+                    "runtime": "gemma_local_runtime",
+                    "profile": "quick",
+                    "source_input_tokens": "120",
+                    "source_output_tokens": "32",
+                    "source_token_speed": "11.0",
+                    "source_first_token_ms": "900",
+                    "source_measured_tokens": "false",
+                    "source_refs": "1",
+                    "source_native_model": "true",
+                },
+                {
+                    "profile": "quick",
+                    "cases": "english_source_bound_document_qa",
+                    "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
+                },
+            )
+
     def test_benchmark_summary_rejects_pack_runtime_mismatch(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_pack_runtime_mismatch"):
             benchmark_summary_line(
@@ -320,6 +345,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
                 {
                     "runtime": "mlx_swift_lm",
+                    "requested_runtime": "mlx_swift_lm",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -347,6 +373,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 },
                 {
                     "runtime": "mlx_swift_lm",
+                    "requested_runtime": "mlx_swift_lm",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -393,7 +420,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_unsupported"):
                     benchmark_summary_line(
                         identity,
-                        {**pass_fields, "runtime": runtime},
+                        {**pass_fields, "runtime": runtime, "requested_runtime": runtime},
                         matrix,
                     )
 
@@ -406,6 +433,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 identity,
                 {
                     "runtime": "gemma_local_runtime",
+                    "requested_runtime": "gemma_local_runtime",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -428,7 +456,11 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "cases": "english_source_bound_document_qa",
             "stages": "source:document_qa:en:source_refs_required:max_tokens=192",
         }
-        pass_fields = {"runtime": "gemma_local_runtime", "profile": "quick"}
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
+            "profile": "quick",
+        }
 
         self.assertEqual(
             benchmark_stage_metric_error(pass_fields, matrix),
@@ -449,6 +481,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -474,6 +507,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -499,6 +533,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "full",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -532,6 +567,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -561,6 +597,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "nil",
@@ -588,6 +625,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -615,6 +653,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         valid_pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -652,6 +691,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "16",
@@ -679,6 +719,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 identity,
                 {
                     "runtime": "gemma_local_runtime",
+                    "requested_runtime": "gemma_local_runtime",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -701,6 +742,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 identity,
                 {
                     "runtime": "gemma_local_runtime",
+                    "requested_runtime": "gemma_local_runtime",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -723,6 +765,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 identity,
                 {
                     "runtime": "mlx_swift_lm",
+                    "requested_runtime": "mlx_swift_lm",
                     "profile": "quick",
                     "source_input_tokens": "120",
                     "source_output_tokens": "32",
@@ -865,6 +908,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
         }
         pass_fields = {
             "runtime": "gemma_local_runtime",
+            "requested_runtime": "gemma_local_runtime",
             "profile": "quick",
             "source_input_tokens": "120",
             "source_output_tokens": "32",
@@ -981,7 +1025,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "general:open_query:en:no_source_refs:max_tokens=8"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_acceleration=draftModelSpeculative source_draft_tokens=2 source_draft_model=mtp.gguf "
@@ -1014,7 +1058,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "general:open_query:en:no_source_refs:max_tokens=8"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=1 source_native_model=true "
@@ -1038,7 +1082,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "actual_runtime=gemma_local_runtime acceleration=standard"
         )
         matrix = parse_fields("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp-quick")
-        pass_fields = parse_fields("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp-quick")
+        pass_fields = parse_fields("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp-quick")
 
         self.assertEqual(
             benchmark_profile_draft_error(identity, pass_fields, matrix),
@@ -1051,7 +1095,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "actual_runtime=gemma_local_runtime acceleration=standard"
         )
         matrix = parse_fields("ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=mtp")
-        pass_fields = parse_fields("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp")
+        pass_fields = parse_fields("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp")
 
         self.assertEqual(
             benchmark_profile_draft_error(identity, pass_fields, matrix),
@@ -1075,7 +1119,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "general:open_query:en:no_source_refs:max_tokens=8"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=mtp_quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=8 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=1 source_native_model=true "
@@ -1100,7 +1144,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "stages=source:document_qa:en:source_refs_required:max_tokens=192"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=0 source_native_model=true"
@@ -1117,7 +1161,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "stages=general:open_query:en:no_source_refs:max_tokens=192"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s "
             "general_input_tokens=120 general_output_tokens=32 general_token_speed=11.0 "
             "general_first_token_ms=900 general_measured_tokens=true "
             "general_native_model=false"
@@ -1134,7 +1178,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "stages=source:document_qa:en:source_refs_required:max_tokens=192"
         )
         pass_fields = parse_fields(
-            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime profile=quick elapsed=10.00s "
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
             "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=1 source_native_model=true source_error=source_grounding_failed"

@@ -1000,8 +1000,10 @@ if ! grep -q "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=.*requested_runtime" ios/Ross/
     FAIL=1
 fi
 
-if ! grep -q "benchmark_pass_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
-    echo "❌ FAIL: benchmark summary guard does not reject pass requested/runtime identity mismatches."
+if ! grep -q "benchmark_pass_requested_runtime_missing" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "benchmark_pass_requested_runtime_mismatch" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_missing_pass_requested_runtime" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summary guard does not reject missing or mismatched pass requested/runtime identity."
     FAIL=1
 fi
 
@@ -1070,6 +1072,7 @@ fi
 
 for qa_guard_label in \
     "missing_benchmark_*" \
+    "benchmark_pass_requested_runtime_missing" \
     "benchmark_pass_requested_runtime_mismatch" \
     "benchmark_profile_mismatch" \
     "benchmark_matrix_shape_mismatch" \
