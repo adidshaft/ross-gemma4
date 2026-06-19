@@ -54,7 +54,7 @@
 ## Runtime Evidence Rules
 
 - Do not record a benchmark unless the requested runtime and actual runtime match the lane under test.
-- Prefer `ROSS_SMOKE_BENCHMARK_SUMMARY` over raw pass logs. The summary is valid only when the pass runtime, identity `actual_runtime`, identity `requested_runtime`, required identity `pack_runtime`, benchmark matrix profile, known smoke-stage names, per-stage token/speed metrics, per-stage native-output markers, and source refs for source-bound stages agree.
+- Prefer `ROSS_SMOKE_BENCHMARK_SUMMARY` over raw pass logs. The summary is valid only when the pass runtime, identity `actual_runtime`, identity `requested_runtime`, required identity `pack_runtime`, provider, positive `context_tokens`, `gpu_offload` evidence, benchmark matrix profile, known smoke-stage names, per-stage token/speed metrics, per-stage native-output markers, and source refs for source-bound stages agree.
 - `draft_error_detail` and `runtime_error_detail` are diagnostic fields. Record them for failed-load/routing-only rows, but never use them to upgrade a failed or fallback row into benchmark evidence.
 - MLX requires `actual_runtime=mlx_swift_lm`.
 - CoreAI/CoreML/Foundation Models requires `actual_runtime=apple_foundation_models`.
