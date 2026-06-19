@@ -472,6 +472,13 @@ if ! grep -q "identity_requested" scripts/ios-device-gguf-smoke.sh 2>/dev/null; 
     FAIL=1
 fi
 
+if ! grep -q "runtime_identity_resource_missing" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_resource_missing" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_resource_missing" scripts/ios-device-gguf-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: local model smoke helpers do not reject missing provider/checksum/context/offload identity resources before accepting passes."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
    ! grep -q "missing_runtime_identity" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
    ! grep -q "runtime_identity_artifact_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||

@@ -177,6 +177,7 @@ from ross_smoke_summary import (
     parse_fields,
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
+    runtime_identity_resource_error,
 )
 
 device_id, bundle_id, device_model_path, checksum, stage_timeout = sys.argv[1:-1]
@@ -267,6 +268,16 @@ def validate_identity_guard(identity, *, require_identity):
                 "ROSS_SMOKE_GUARD_FAIL "
                 "reason=runtime_identity_artifact_mismatch requested=gemma_local_runtime "
                 f"{artifact_error}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        resource_error = runtime_identity_resource_error(identity)
+        if resource_error:
+            print(
+                "ROSS_SMOKE_GUARD_FAIL "
+                "reason=runtime_identity_resource_missing requested=gemma_local_runtime "
+                f"{resource_error}",
                 file=sys.stderr,
             )
             sys.exit(1)
