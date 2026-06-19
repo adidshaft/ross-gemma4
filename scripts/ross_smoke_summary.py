@@ -25,6 +25,57 @@ STAGE_AUX_METRICS = [
     "error",
 ]
 
+CASE_EXPECTATIONS = {
+    "english_source_bound_document_qa": {
+        "stage": "source",
+        "task": "document_qa",
+        "language": "en",
+        "source_refs": "source_refs_required",
+    },
+    "english_source_bound_document_qa_low_token": {
+        "stage": "source",
+        "task": "document_qa",
+        "language": "en",
+        "source_refs": "source_refs_required",
+    },
+    "bengali_source_bound_document_qa": {
+        "stage": "bengali",
+        "task": "document_qa",
+        "language": "bn",
+        "source_refs": "source_refs_required",
+    },
+    "hindi_source_bound_document_qa": {
+        "stage": "hindi",
+        "task": "document_qa",
+        "language": "hi",
+        "source_refs": "source_refs_required",
+    },
+    "tamil_source_bound_document_qa": {
+        "stage": "tamil",
+        "task": "document_qa",
+        "language": "ta",
+        "source_refs": "source_refs_required",
+    },
+    "telugu_source_bound_document_qa": {
+        "stage": "telugu",
+        "task": "document_qa",
+        "language": "te",
+        "source_refs": "source_refs_required",
+    },
+    "english_open_no_document_query": {
+        "stage": "general",
+        "task": "open_query",
+        "language": "en",
+        "source_refs": "no_source_refs",
+    },
+    "english_open_no_document_query_low_token": {
+        "stage": "general",
+        "task": "open_query",
+        "language": "en",
+        "source_refs": "no_source_refs",
+    },
+}
+
 RUNTIME_ARTIFACT_RULES = {
     "gemma_local_runtime": {
         "formats": {"local_model_artifact", "gguf", "gguf_model"},
@@ -136,32 +187,46 @@ def runtime_identity_draft_artifact_error(identity, expected_runtime):
 
 
 def benchmark_matrix_stage_names(matrix_fields):
-    stages = matrix_fields.get("stages") or ""
     names = []
-    for stage in stages.split(","):
-        name = stage.split(":", 1)[0].strip()
-        if name:
-            names.append(name)
+    for stage_spec in benchmark_matrix_stage_specs(matrix_fields):
+        names.append(stage_spec["stage"])
     return names
 
 
-def benchmark_matrix_stage_max_tokens(matrix_fields):
+def benchmark_matrix_stage_specs(matrix_fields):
     stages = matrix_fields.get("stages") or ""
-    max_tokens_by_stage = {}
+    specs = []
     for stage_spec in stages.split(","):
         parts = [part.strip() for part in stage_spec.split(":") if part.strip()]
         if not parts:
             continue
-        stage_name = parts[0]
-        for part in parts[1:]:
-            if not part.startswith("max_tokens="):
-                continue
-            raw_value = part.split("=", 1)[1]
-            try:
-                max_tokens_by_stage[stage_name] = int(raw_value)
-            except (TypeError, ValueError):
-                max_tokens_by_stage[stage_name] = None
-            break
+        spec = {
+            "stage": parts[0],
+            "task": parts[1] if len(parts) > 1 else "nil",
+            "language": parts[2] if len(parts) > 2 else "nil",
+            "source_refs": parts[3] if len(parts) > 3 else "nil",
+            "max_tokens": "nil",
+        }
+        for part in parts[4:]:
+            if part.startswith("max_tokens="):
+                spec["max_tokens"] = part.split("=", 1)[1] or "nil"
+                break
+        specs.append(spec)
+    return specs
+
+
+def benchmark_matrix_stage_specs_by_name(matrix_fields):
+    return {spec["stage"]: spec for spec in benchmark_matrix_stage_specs(matrix_fields)}
+
+
+def benchmark_matrix_stage_max_tokens(matrix_fields):
+    max_tokens_by_stage = {}
+    for stage_spec in benchmark_matrix_stage_specs(matrix_fields):
+        raw_value = stage_spec.get("max_tokens")
+        try:
+            max_tokens_by_stage[stage_spec["stage"]] = int(raw_value)
+        except (TypeError, ValueError):
+            max_tokens_by_stage[stage_spec["stage"]] = None
     return max_tokens_by_stage
 
 
@@ -173,6 +238,7 @@ def benchmark_matrix_case_names(matrix_fields):
 def benchmark_matrix_shape_error(matrix_fields):
     cases = benchmark_matrix_case_names(matrix_fields)
     stages = benchmark_matrix_stage_names(matrix_fields)
+    stage_specs = benchmark_matrix_stage_specs(matrix_fields)
     if len(cases) != len(stages):
         return f"cases={len(cases)} stages={len(stages)}"
     unknown_stages = [stage for stage in stages if stage not in STAGES]
@@ -180,6 +246,19 @@ def benchmark_matrix_shape_error(matrix_fields):
         return "unknown_stages=" + ",".join(unknown_stages)
     if len(set(stages)) != len(stages):
         return "duplicate_stages=" + ",".join(stages)
+    unknown_cases = [case for case in cases if case not in CASE_EXPECTATIONS]
+    if unknown_cases:
+        return "unknown_cases=" + ",".join(unknown_cases)
+    for case, stage_spec in zip(cases, stage_specs):
+        expected = CASE_EXPECTATIONS[case]
+        for key in ("stage", "task", "language", "source_refs"):
+            if stage_spec.get(key) != expected[key]:
+                return (
+                    f"case_stage_mismatch case={case} {key}={summary_value(stage_spec, key)} "
+                    f"expected={expected[key]}"
+                )
+        if stage_spec.get("max_tokens") in (None, "nil", ""):
+            return f"case_stage_mismatch case={case} max_tokens=nil"
     return None
 
 
@@ -356,7 +435,21 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
         "matrix_stages": summary_value(matrix_fields, "stages"),
         "elapsed": summary_value(pass_fields, "elapsed"),
     }
+    stage_specs = benchmark_matrix_stage_specs_by_name(matrix_fields)
+    stage_cases = {}
+    for case_name, spec in zip(
+        benchmark_matrix_case_names(matrix_fields),
+        benchmark_matrix_stage_specs(matrix_fields),
+    ):
+        stage_cases[spec.get("stage")] = case_name
     for stage in STAGES:
+        if stage in stage_specs:
+            stage_spec = stage_specs[stage]
+            summary[f"{stage}_case"] = stage_cases.get(stage, "nil")
+            summary[f"{stage}_task"] = summary_value(stage_spec, "task")
+            summary[f"{stage}_language"] = summary_value(stage_spec, "language")
+            summary[f"{stage}_source_refs_policy"] = summary_value(stage_spec, "source_refs")
+            summary[f"{stage}_max_tokens"] = summary_value(stage_spec, "max_tokens")
         for metric in METRICS:
             key = f"{stage}_{metric}"
             if key in pass_fields:

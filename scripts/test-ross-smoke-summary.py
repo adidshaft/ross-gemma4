@@ -84,6 +84,16 @@ class RossSmokeSummaryTests(unittest.TestCase):
         )
         self.assertIn("draft_model_path_type=nil", summary)
         self.assertIn("matrix_stages=source:document_qa:en:source_refs_required:max_tokens=192", summary)
+        self.assertIn("source_case=english_source_bound_document_qa", summary)
+        self.assertIn("source_task=document_qa", summary)
+        self.assertIn("source_language=en", summary)
+        self.assertIn("source_source_refs_policy=source_refs_required", summary)
+        self.assertIn("source_max_tokens=192", summary)
+        self.assertIn("bengali_case=bengali_source_bound_document_qa", summary)
+        self.assertIn("bengali_language=bn", summary)
+        self.assertIn("general_case=english_open_no_document_query", summary)
+        self.assertIn("general_task=open_query", summary)
+        self.assertIn("general_source_refs_policy=no_source_refs", summary)
         self.assertIn("source_token_speed=9.00", summary)
         self.assertIn("bengali_token_speed=8.84", summary)
         self.assertIn("general_token_speed=8.57", summary)
@@ -404,6 +414,39 @@ class RossSmokeSummaryTests(unittest.TestCase):
 
         self.assertEqual(benchmark_matrix_shape_error(matrix), "duplicate_stages=source,source")
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_matrix_shape_mismatch"):
+            benchmark_summary_line(
+                self.valid_identity(),
+                pass_fields,
+                matrix,
+            )
+
+    def test_benchmark_summary_rejects_semantic_matrix_case_stage_mismatch(self):
+        matrix = {
+            "profile": "full",
+            "cases": "english_source_bound_document_qa,bengali_source_bound_document_qa",
+            "stages": "source:document_qa:en:source_refs_required:max_tokens=192,"
+            "bengali:document_qa:en:source_refs_required:max_tokens=192",
+        }
+        pass_fields = {
+            "runtime": "gemma_local_runtime",
+            "profile": "full",
+            "source_input_tokens": "120",
+            "source_output_tokens": "32",
+            "source_token_speed": "11.0",
+            "source_first_token_ms": "900",
+            "source_measured_tokens": "false",
+            "bengali_input_tokens": "130",
+            "bengali_output_tokens": "34",
+            "bengali_token_speed": "10.0",
+            "bengali_first_token_ms": "950",
+            "bengali_measured_tokens": "false",
+        }
+
+        self.assertEqual(
+            benchmark_matrix_shape_error(matrix),
+            "case_stage_mismatch case=bengali_source_bound_document_qa language=en expected=bn",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "case_stage_mismatch"):
             benchmark_summary_line(
                 self.valid_identity(),
                 pass_fields,

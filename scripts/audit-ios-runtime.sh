@@ -146,6 +146,18 @@ if ! grep -q "benchmark_matrix_shape_mismatch" scripts/ross_smoke_summary.py 2>/
     FAIL=1
 fi
 
+if ! grep -q "CASE_EXPECTATIONS" scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "case_stage_mismatch" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared benchmark summary parser does not semantically validate varied document/query matrix cases."
+    FAIL=1
+fi
+
+if ! grep -q 'summary\[f"{stage}_case"\]' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q 'summary\[f"{stage}_max_tokens"\]' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: benchmark summaries do not preserve per-stage case and max-token matrix metadata."
+    FAIL=1
+fi
+
 if ! grep -q "unknown_stages" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not reject unknown matrix stages."
     FAIL=1
