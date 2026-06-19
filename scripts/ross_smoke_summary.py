@@ -551,6 +551,8 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         identity.get("requested_runtime"),
         fail_fields.get("requested_runtime"),
     )
+    identity_runtime = identity.get("actual_runtime")
+    artifact_runtime = identity_runtime if identity_runtime in RUNTIME_ARTIFACT_RULES else requested_runtime
     summary = {
         "provider": summary_value(identity, "provider"),
         "runtime": summary_value(identity, "actual_runtime"),
@@ -571,6 +573,10 @@ def failure_summary_fields(identity, fail_fields, matrix_fields=None):
         "fallback": summary_value(identity, "fallback"),
         "available": summary_value(identity, "available"),
         "identity_error": summary_value(identity, "error"),
+        "identity_availability_error": runtime_identity_availability_error(identity) or "nil",
+        "identity_resource_error": runtime_identity_resource_error(identity) or "nil",
+        "identity_artifact_error": runtime_identity_artifact_error(identity, artifact_runtime) or "nil",
+        "identity_draft_artifact_error": runtime_identity_draft_artifact_error(identity, artifact_runtime) or "nil",
         "fail_runtime": summary_value(fail_fields, "runtime"),
         "profile": summary_value(fail_fields, "profile"),
         "matrix_profile": summary_value(matrix_fields or {}, "profile"),
