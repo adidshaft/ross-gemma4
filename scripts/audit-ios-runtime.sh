@@ -995,6 +995,11 @@ for qa_guard_label in \
     fi
 done
 
+if ! grep -q "test_qa_report_template_documents_benchmark_rejection_labels" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not lock QA template benchmark rejection vocabulary."
+    FAIL=1
+fi
+
 if ! grep -q "runtime_error_detail" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null ||
    ! grep -q "draft_error_detail" docs/LOCAL_MODEL_RUNTIME.md 2>/dev/null ||
    ! grep -q "manifest_primary_unusable_artifact" docs/IOS_RUNTIME.md 2>/dev/null; then

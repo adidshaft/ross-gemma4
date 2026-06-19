@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 import unittest
 
 from ross_smoke_summary import (
@@ -18,6 +19,30 @@ from ross_smoke_summary import (
 
 
 class RossSmokeSummaryTests(unittest.TestCase):
+    def test_qa_report_template_documents_benchmark_rejection_labels(self):
+        template = Path("docs/REAL_MODEL_QA_REPORT_TEMPLATE.md").read_text()
+        expected_labels = [
+            "missing_benchmark_*",
+            "benchmark_runtime_mismatch",
+            "benchmark_requested_runtime_mismatch",
+            "benchmark_pass_requested_runtime_mismatch",
+            "benchmark_pack_runtime_missing",
+            "benchmark_pack_runtime_mismatch",
+            "benchmark_profile_mismatch",
+            "benchmark_matrix_shape_mismatch",
+            "benchmark_runtime_unsupported",
+            "benchmark_runtime_unavailable",
+            "benchmark_runtime_artifact_mismatch",
+            "benchmark_stage_metrics_missing",
+            "benchmark_stage_quality_missing",
+            "benchmark_draft_artifact_mismatch",
+            "benchmark_draft_profile_mismatch",
+            "benchmark_draft_stage_mismatch",
+        ]
+        for label in expected_labels:
+            with self.subTest(label=label):
+                self.assertIn(label, template)
+
     def valid_identity(self, runtime="gemma_local_runtime"):
         defaults = {
             "gemma_local_runtime": ("local_model_artifact", "file", "model.gguf"),
