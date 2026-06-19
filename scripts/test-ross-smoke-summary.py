@@ -957,6 +957,24 @@ class RossSmokeSummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
             benchmark_summary_line(missing_gpu, pass_fields, matrix)
 
+        missing_checksum = self.valid_identity()
+        missing_checksum.pop("checksum_verified")
+        self.assertEqual(
+            runtime_identity_resource_error(missing_checksum),
+            "checksum_verified=nil",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(missing_checksum, pass_fields, matrix)
+
+        invalid_checksum = self.valid_identity()
+        invalid_checksum["checksum_verified"] = "unknown"
+        self.assertEqual(
+            runtime_identity_resource_error(invalid_checksum),
+            "checksum_verified=unknown",
+        )
+        with self.assertRaisesRegex(MissingBenchmarkMatrixError, "benchmark_runtime_identity_missing"):
+            benchmark_summary_line(invalid_checksum, pass_fields, matrix)
+
     def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
         active_mtp = {
             "acceleration": "draftModelSpeculative",
@@ -1015,7 +1033,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "pack_runtime=gemma_local_runtime "
-            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
             "draft_model_path_type=file draft_status=active context_tokens=4096 "
             "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
@@ -1048,7 +1066,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "pack_runtime=gemma_local_runtime "
-            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=standard draft_tokens=nil draft_model=nil "
             "draft_model_path_type=nil draft_status=validator_rejected context_tokens=4096 "
             "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
@@ -1109,7 +1127,7 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider "
             "requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime "
             "pack_runtime=gemma_local_runtime "
-            "model_format=gguf artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
+            "model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=gemma-4-e4b.gguf "
             "acceleration=draftModelSpeculative draft_tokens=2 draft_model=mtp.gguf "
             "draft_model_path_type=file draft_status=active context_tokens=4096 "
             "gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil"
