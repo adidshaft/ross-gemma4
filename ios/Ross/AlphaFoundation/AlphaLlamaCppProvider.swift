@@ -77,7 +77,10 @@ enum AlphaLlamaRuntimeProfile {
         guard smokeContextOverrideTokens(environment: environment) != nil else {
             return baseline
         }
-        return min(baseline, 128)
+        if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
+            return min(baseline, 128)
+        }
+        return min(baseline, 256)
     }
 
     static func effectivePhysicalBatchTokens(

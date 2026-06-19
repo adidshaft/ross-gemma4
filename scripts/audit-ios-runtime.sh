@@ -836,7 +836,7 @@ if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present"
     FAIL=1
 fi
 
-if ! grep -q "current repo proof lane is now tighter at .*context_tokens=1024.*prompt batch .*128.*physical batch .*64" docs/REAL_MODEL_QA_RESULTS.md 2>/dev/null; then
+if ! grep -q "current repo proof lane is now tighter at .*context_tokens=1024.*prompt batch .*256.*physical batch .*64" docs/REAL_MODEL_QA_RESULTS.md 2>/dev/null; then
     echo "❌ FAIL: real-model QA results do not distinguish historical 2k MTP logs from the current 1024-token proof lane."
     FAIL=1
 fi
@@ -1041,10 +1041,13 @@ if ! grep -q "mtp_quick.*/.*mtp-quick" docs/IOS_RUNTIME.md 2>/dev/null ||
 fi
 
 if ! grep -q "return 1_024" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 128)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "return min(baseline, 256)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 64)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "1024-token context cap" docs/IOS_RUNTIME.md 2>/dev/null ||
-   ! grep -q "smaller prompt/physical batches" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "256-token prompt batch for non-constrained proof lanes" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "Constrained 7GB-class E4B keeps the older 128-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: MTP smoke proof profile is not pinned to the low-context activation lane."
     FAIL=1
 fi

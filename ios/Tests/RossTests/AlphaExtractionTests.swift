@@ -21175,7 +21175,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: memory,
                 environment: mtpQuickEnvironment
             ),
-            128
+            256
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.effectivePhysicalBatchTokens(
@@ -21184,6 +21184,15 @@ final class AlphaExtractionTests: XCTestCase {
                 environment: mtpQuickEnvironment
             ),
             64
+        )
+
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.effectivePromptBatchTokens(
+                forModelPath: "/tmp/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+                physicalMemory: 7_200_000_000,
+                environment: mtpQuickEnvironment
+            ),
+            128
         )
     }
 
