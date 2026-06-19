@@ -158,7 +158,8 @@ else
   echo "   SKIP reason=missing_local_gguf model=${gguf_model}"
 fi
 
-if inventory_has_present_lane "installed_mtp_draft" "$tier"; then
+if inventory_has_present_lane "installed_gguf" "$tier" &&
+   inventory_has_present_lane "installed_mtp_draft" "$tier"; then
   print_command \
     "3. MTP low-token proof from installed GGUF pack" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -170,9 +171,12 @@ if inventory_has_present_lane "installed_mtp_draft" "$tier"; then
     --stage-timeout "$stage_timeout" \
     --require-draft-acceleration
 else
+  mtp_skip_reason="$(inventory_skip_reason "installed_gguf" "$tier" ||
+    inventory_skip_reason "installed_mtp_draft" "$tier" ||
+    echo missing_installed_mtp_primary_or_draft_for_tier)"
   print_skip \
     "3. MTP low-token proof from installed GGUF pack" \
-    "$(inventory_skip_reason "installed_mtp_draft" "$tier" || echo missing_installed_mtp_draft_for_tier)"
+    "$mtp_skip_reason"
 fi
 
 if inventory_has_present_lane "installed_mlx" "$tier"; then

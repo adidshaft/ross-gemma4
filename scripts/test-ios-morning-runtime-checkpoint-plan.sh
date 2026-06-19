@@ -120,13 +120,56 @@ packs = support / "model-packs"
 PY
 
 "$PLAN" --device TEST_DEVICE --installed-root "$wrong_tier_support_root" --tier quickStart > /tmp/ross-morning-plan.out
-grep -q "SKIP reason=missing_installed_mtp_draft_for_tier" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=missing_installed_mtp_primary_or_draft_for_tier" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=missing_installed_mlx_for_tier" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=missing_installed_coreai_for_tier" /tmp/ross-morning-plan.out
 if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out ||
    grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out ||
    grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out; then
   echo "Expected wrong-tier inventory to skip runtime lanes for quickStart" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
+broken_mtp_support_root="$tmpdir/RossAlphaBrokenMTP"
+broken_mtp_packs_root="$broken_mtp_support_root/model-packs"
+mkdir -p "$broken_mtp_packs_root/quickStart"
+printf 'GGUF' > "$broken_mtp_packs_root/quickStart/main.gguf"
+printf 'GGUF%*s' 1000000 '' > "$broken_mtp_packs_root/quickStart/draft.gguf"
+python3 - "$broken_mtp_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "quickStart" / "broken-primary.manifest.json").write_text(json.dumps({
+    "packId": "broken-mtp-primary",
+    "tier": "quick_start",
+    "fileName": "main.gguf",
+    "relativePath": "model-packs/quickStart/main.gguf",
+    "checksumSha256": "abc",
+    "bytes": 4,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "draft.gguf",
+        "relativePath": "model-packs/quickStart/draft.gguf",
+        "checksumSha256": "def",
+        "bytes": 1_000_001,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$broken_mtp_support_root" --tier quickStart > /tmp/ross-morning-plan.out
+grep -q "SKIP reason=manifest_primary_unusable_artifact" /tmp/ross-morning-plan.out
+if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
+  echo "Expected broken installed GGUF primary to suppress MTP proof command even with reachable draft" >&2
   cat /tmp/ross-morning-plan.out >&2
   exit 1
 fi

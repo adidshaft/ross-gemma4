@@ -612,6 +612,12 @@ if ! grep -q "inventory_tier_pattern" scripts/ios-morning-runtime-checkpoint-pla
     FAIL=1
 fi
 
+if ! grep -q 'inventory_has_present_lane "installed_gguf"' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "broken installed GGUF primary" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+    echo "❌ FAIL: morning MTP checkpoint plan can run draft proof without a usable installed GGUF primary."
+    FAIL=1
+fi
+
 if grep -q -- "--allow-device-proof-pack" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan should not allow seeded proof packs for MTP proof."
     FAIL=1
