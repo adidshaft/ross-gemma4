@@ -126,6 +126,40 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("source_refs=1", summary)
         self.assertIn("source_native_model=true", summary)
 
+    def test_benchmark_summary_accepts_coreai_system_url_identity(self):
+        identity = self.valid_identity("apple_foundation_models")
+        identity["provider"] = "AlphaFoundationModelsLocalProvider"
+        identity["artifact_path"] = "system://apple-foundation-models"
+        identity["draft_status"] = "not_supported"
+        identity["gpu_offload"] = "system_managed"
+        identity["context_tokens"] = "8192"
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa,english_open_no_document_query "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64,"
+            "general:open_query:en:no_source_refs:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=apple_foundation_models "
+            "requested_runtime=apple_foundation_models profile=quick elapsed=4.2s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=false "
+            "source_refs=1 source_native_model=true "
+            "general_input_tokens=90 general_output_tokens=28 general_token_speed=12.0 "
+            "general_first_token_ms=700 general_measured_tokens=false general_native_model=true"
+        )
+
+        summary = benchmark_summary_line(identity, pass_fields, matrix)
+
+        self.assertIn("provider=AlphaFoundationModelsLocalProvider", summary)
+        self.assertIn("runtime=apple_foundation_models", summary)
+        self.assertIn("model_format=system_model", summary)
+        self.assertIn("artifact_path_type=system", summary)
+        self.assertIn("artifact_path=system://apple-foundation-models", summary)
+        self.assertIn("gpu_offload=system_managed", summary)
+        self.assertIn("source_token_speed=11.0", summary)
+        self.assertIn("general_token_speed=12.0", summary)
+
     def test_missing_benchmark_matrix_is_rejected(self):
         with self.assertRaisesRegex(MissingBenchmarkMatrixError, "missing_benchmark_matrix"):
             benchmark_summary_line({}, {}, {})

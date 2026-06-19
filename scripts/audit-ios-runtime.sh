@@ -234,6 +234,11 @@ if ! grep -q "artifactPathLabel = alphaPackUsesSystemFoundationModel" ios/Ross/A
     FAIL=1
 fi
 
+if ! grep -q "test_benchmark_summary_accepts_coreai_system_url_identity" scripts/test-ross-smoke-summary.py 2>/dev/null; then
+    echo "❌ FAIL: smoke summary tests do not prove CoreAI system:// identities can become guarded benchmark summaries."
+    FAIL=1
+fi
+
 if ! grep -q "mlx_directory_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not reject file-like MLX directory labels."
     FAIL=1
