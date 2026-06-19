@@ -722,7 +722,22 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         }
         
         do {
-            let context = try getOrContext(path: modelPath)
+            let context: any AlphaLlamaCompletionContext
+            do {
+                context = try getOrContext(path: modelPath)
+            } catch {
+                return AlphaLocalModelOutput(
+                    rawText: "",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
+                    sourceRefs: pack.includedSourceRefs,
+                    packedSourceCount: pack.includedSourceRefs.count,
+                    omittedSourceCount: pack.omittedSourceRefs.count,
+                    omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
+                    errorCategory: inferenceFailureCategory(contextCreationFailed: true)
+                )
+            }
             await context.clear()
             let runStartedAt = Date()
             
@@ -892,11 +907,19 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 packedSourceCount: pack.includedSourceRefs.count,
                 omittedSourceCount: pack.omittedSourceRefs.count,
                 omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
-                errorCategory: Self.smokeRequiresDraftAcceleration()
-                    ? "draft_acceleration_required"
-                    : "inference_failed"
+                errorCategory: inferenceFailureCategory(contextCreationFailed: false)
             )
         }
+    }
+
+    private func inferenceFailureCategory(contextCreationFailed: Bool) -> String {
+        guard Self.smokeRequiresDraftAcceleration() else {
+            return "inference_failed"
+        }
+        guard stagedDraftModelPath() != nil else {
+            return "draft_acceleration_required"
+        }
+        return contextCreationFailed ? "draft_context_failed" : "draft_generation_failed"
     }
     
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {

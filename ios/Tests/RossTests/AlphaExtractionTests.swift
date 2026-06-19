@@ -8169,6 +8169,132 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output.executionPathLabel, "Gemma GGUF with draft acceleration")
     }
 
+    func testExperimentalGGUFProviderReportsStrictDraftContextFailureWithoutFallback() async throws {
+        actor StandardContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "Standard answer" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 64 }
+            func generatedTokenCount() -> Int { 1 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "Gemma GGUF via llama.cpp" }
+        }
+
+        final class DraftCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var standardContextCalls = 0
+            private(set) var strictDraftPath: String?
+
+            func recordStandardContextCall() {
+                lock.lock()
+                defer { lock.unlock() }
+                standardContextCalls += 1
+            }
+
+            func recordStrict(draftPath: String) {
+                lock.lock()
+                defer { lock.unlock() }
+                strictDraftPath = draftPath
+            }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("google_gemma-4-E4B-it-UD-Q4_K_XL-strict-fail-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mtp-gemma-4-E4B-it-strict-fail-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousStrictDraftContextFactory = AlphaLlamaCppProvider.strictDraftContextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        let previousPhysicalMemoryProvider = AlphaLlamaCppProvider.physicalMemoryBytesProvider
+        let previousRequireDraft = ProcessInfo.processInfo.environment["ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"]
+        setenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION", "1", 1)
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.strictDraftContextFactory = previousStrictDraftContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+            AlphaLlamaCppProvider.physicalMemoryBytesProvider = previousPhysicalMemoryProvider
+            if let previousRequireDraft {
+                setenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION", previousRequireDraft, 1)
+            } else {
+                unsetenv("ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION")
+            }
+        }
+
+        let capture = DraftCapture()
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in
+            capture.recordStandardContextCall()
+            return StandardContext()
+        }
+        AlphaLlamaCppProvider.strictDraftContextFactory = { _, draftPath, _ in
+            capture.recordStrict(draftPath: draftPath)
+            throw LlamaError.couldNotInitializeDraftContext
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in true }
+        AlphaLlamaCppProvider.physicalMemoryBytesProvider = { 8_400_000_000 }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true,
+            draftModelPath: draftURL.path,
+            draftModelTokens: 2
+        )
+
+        let health = provider.runtimeHealth()
+        let standardContextCallsBeforeRun = capture.standardContextCalls
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 64,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertEqual(health.draftAccelerationStatus, "active")
+        XCTAssertEqual(capture.standardContextCalls, standardContextCallsBeforeRun)
+        XCTAssertEqual(capture.strictDraftPath, draftURL.path)
+        XCTAssertEqual(output.errorCategory, "draft_context_failed")
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertNil(output.accelerationMode)
+        XCTAssertNil(output.accelerationDraftTokens)
+        XCTAssertNil(output.accelerationDraftModelLabel)
+    }
+
     func testExperimentalGGUFProviderSuppressesHighTokenDraftAccelerationForConstrainedQuickStartE4B() async throws {
         actor StubLlamaContext: AlphaLlamaCompletionContext {
             func clear() {}

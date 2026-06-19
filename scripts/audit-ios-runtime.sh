@@ -969,6 +969,12 @@ if ! grep -q "strictDraftContextFactory" ios/Ross/AlphaFoundation/AlphaLlamaCppP
     FAIL=1
 fi
 
+if ! grep -q "draft_context_failed" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
+   ! grep -q "testExperimentalGGUFProviderReportsStrictDraftContextFailureWithoutFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF/MTP required-draft smoke does not preserve strict draft context failure evidence."
+    FAIL=1
+fi
+
 if ! grep -Fq 'draft_status=\(providerHealth.draftAccelerationStatus' ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
     echo "❌ FAIL: app-side MTP failure marker does not report draft status."
     FAIL=1
