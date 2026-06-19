@@ -61,7 +61,7 @@
 - MTP requires `acceleration=draftModelSpeculative`, `draft_status=active`, non-empty draft tokens, and a `.gguf` draft model label in `ROSS_RUNTIME_IDENTITY`. Smoke benchmark summaries also require every matrix stage to report matching `*_acceleration=draftModelSpeculative`, `*_draft_tokens`, and `*_draft_model`.
 - `benchmark_runtime_mismatch`, `benchmark_requested_runtime_mismatch`, `benchmark_pack_runtime_missing`, `benchmark_pack_runtime_mismatch`, `benchmark_runtime_unsupported`, `benchmark_stage_metrics_missing`, `benchmark_stage_quality_missing`, or `benchmark_draft_stage_mismatch` means the entry is not benchmark evidence for the requested lane.
 - Any fallback to GGUF, deterministic development output, or unavailable runtime makes the entry routing-only or failed-load, not a benchmark for the requested lane.
-- Before cabled-device validation, record whether `scripts/ios-runtime-artifact-inventory.sh --installed-root ...` reported the requested installed lane as present. `manifest_primary_unusable_artifact` or `manifest_draft_unusable_artifact` means the lane should be skipped or repaired before launching the app.
+- Before cabled-device validation, record whether `scripts/ios-runtime-artifact-inventory.sh --installed-root ...` reported the requested installed lane as present. MTP requires both `installed_gguf status=present` and `installed_mtp_draft status=present` for the same tier before launch. `manifest_primary_unusable_artifact` or `manifest_draft_unusable_artifact` means the lane should be skipped or repaired before launching the app.
 
 ## Recommended Variety Matrix
 
