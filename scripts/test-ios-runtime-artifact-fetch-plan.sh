@@ -185,7 +185,24 @@ if grep -q "local_unsupported_path=$unsupported_mlx_primary\\|local_unsupported_
   exit 1
 fi
 
-primary_only_mlx_dir="$tmpdir/primary-only/usable-mlx"
+wrong_tier_mlx_root="$tmpdir/wrong-tier-mlx-primary"
+wrong_tier_mlx_primary="$wrong_tier_mlx_root/gemma-4-E4B-it-qat-4bit"
+mkdir -p "$wrong_tier_mlx_primary"
+printf '{}' > "$wrong_tier_mlx_primary/config.json"
+printf '{}' > "$wrong_tier_mlx_primary/tokenizer.json"
+printf 'weights' > "$wrong_tier_mlx_primary/model.safetensors"
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier caseAssociate --target-root "$tmpdir/downloads" --search-root "$wrong_tier_mlx_root" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx status=blocked action=await_compatible_archive .*repo=mlx-community/gemma-4-12B-it-qat-4bit .*reason=catalog_primary_not_release_ready .*ignored_present_mlx_path=$wrong_tier_mlx_primary .*ignored_present_mlx_reason=wrong_catalog_primary_for_tier .*expected_primary_dir=gemma-4-12B-it-qat-4bit" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=blocked action=waiting_for_primary .*repo=mlx-community/gemma-4-12B-it-qat-assistant-4bit .*reason=missing_compatible_mlx_primary .*ignored_present_mlx_path=$wrong_tier_mlx_primary .*ignored_present_mlx_reason=wrong_catalog_primary_for_tier .*expected_primary_dir=gemma-4-12B-it-qat-4bit" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mlx status=present action=preflight .*path=$wrong_tier_mlx_primary" /tmp/ross-runtime-fetch-plan.out ||
+   grep -q "lane=mlx_draft .*action=preflight_pair.*--model $wrong_tier_mlx_primary" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect Quick Start MLX primary to satisfy Case Associate MLX planning." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+
+primary_only_mlx_dir="$tmpdir/primary-only/gemma-4-E4B-it-qat-4bit"
 mkdir -p "$primary_only_mlx_dir"
 printf '{}' > "$primary_only_mlx_dir/config.json"
 printf '{}' > "$primary_only_mlx_dir/tokenizer.json"
@@ -202,7 +219,7 @@ if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/
 fi
 
 primary_with_bad_draft_root="$tmpdir/primary-with-bad-draft"
-primary_with_bad_draft_dir="$primary_with_bad_draft_root/usable-mlx"
+primary_with_bad_draft_dir="$primary_with_bad_draft_root/gemma-4-E4B-it-qat-4bit"
 bad_catalog_mlx_draft_dir="$primary_with_bad_draft_root/gemma-4-E4B-it-qat-assistant-6bit"
 mkdir -p "$primary_with_bad_draft_dir" "$bad_catalog_mlx_draft_dir"
 printf '{}' > "$primary_with_bad_draft_dir/config.json"
@@ -229,7 +246,7 @@ grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemm
 grep -q "lane=mlx_draft status=missing action=preflight_pair_after_download .*--model $primary_with_bad_draft_dir .*--draft-model $tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out
 
 final_root="$tmpdir/final-usable"
-mlx_dir="$final_root/usable-mlx"
+mlx_dir="$final_root/gemma-4-E4B-it-qat-4bit"
 mkdir -p "$mlx_dir"
 printf '{}' > "$mlx_dir/config.json"
 printf '{}' > "$mlx_dir/tokenizer.json"

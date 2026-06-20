@@ -174,6 +174,9 @@ def command(*args: object) -> str:
 def row_tier_matches(row: dict[str, str]) -> bool:
     return row.get("tier") in accepted_tiers
 
+def row_path_name(row: dict[str, str] | None) -> str:
+    return pathlib.PurePath((row or {}).get("path", "")).name
+
 def normalized_sha256(value: object) -> str:
     text = str(value or "").strip().lower()
     return text if len(text) == 64 and all(c in "0123456789abcdef" for c in text) else ""
@@ -472,8 +475,15 @@ if catalog_gguf:
                 ),
             )
 
-present_mlx = next((row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"), None)
-present_mlx_draft = next((row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"), None)
+catalog_mlx_primary = next(
+    (
+        row for row in rows
+        if row.get("lane") == "catalog_mlx"
+        and row.get("status") == "expected"
+        and row_tier_matches(row)
+    ),
+    None,
+)
 catalog_mlx_draft = next(
     (
         row for row in rows
@@ -483,6 +493,42 @@ catalog_mlx_draft = next(
     ),
     None,
 )
+catalog_mlx_primary_file = (
+    catalog_mlx_primary.get("file") or pathlib.PurePosixPath(catalog_mlx_primary.get("path", "mlx-model")).name
+    if catalog_mlx_primary
+    else None
+)
+catalog_mlx_draft_file = (
+    catalog_mlx_draft.get("file") or pathlib.PurePosixPath(catalog_mlx_draft.get("path", "mlx-draft")).name
+    if catalog_mlx_draft
+    else None
+)
+present_mlx_candidates = [row for row in rows if row.get("lane") == "mlx" and row.get("status") == "present"]
+present_mlx_draft_candidates = [row for row in rows if row.get("lane") == "mlx_draft" and row.get("status") == "present"]
+if catalog_mlx_primary_file:
+    present_mlx = next(
+        (row for row in present_mlx_candidates if row_path_name(row) == catalog_mlx_primary_file),
+        None,
+    )
+    ignored_present_mlx = next(
+        (row for row in present_mlx_candidates if row_path_name(row) != catalog_mlx_primary_file),
+        None,
+    )
+else:
+    present_mlx = next(iter(present_mlx_candidates), None)
+    ignored_present_mlx = None
+if catalog_mlx_draft_file:
+    present_mlx_draft = next(
+        (row for row in present_mlx_draft_candidates if row_path_name(row) == catalog_mlx_draft_file),
+        None,
+    )
+    ignored_present_mlx_draft = next(
+        (row for row in present_mlx_draft_candidates if row_path_name(row) != catalog_mlx_draft_file),
+        None,
+    )
+else:
+    present_mlx_draft = next(iter(present_mlx_draft_candidates), None)
+    ignored_present_mlx_draft = None
 if present_mlx:
     model_path = present_mlx.get("path", "")
     emit(
@@ -529,6 +575,9 @@ if present_mlx:
             checksum=catalog_mlx_draft.get("checksum"),
             local_unsupported_path=unsupported_mlx_draft.get("path") if unsupported_mlx_draft else None,
             local_unsupported_reason=unsupported_mlx_draft.get("reason") if unsupported_mlx_draft else None,
+            ignored_present_mlx_draft_path=ignored_present_mlx_draft.get("path") if ignored_present_mlx_draft else None,
+            ignored_present_mlx_draft_reason="wrong_catalog_draft_for_tier" if ignored_present_mlx_draft else None,
+            expected_draft_dir=catalog_mlx_draft_file if ignored_present_mlx_draft else None,
             **mlx_catalog_local_fields(catalog_mlx_draft),
             command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} --local-dir {shlex.quote(str(target_dir))}",
         )
@@ -559,12 +608,6 @@ else:
         row.get("lane") == "catalog_mlx" and row.get("release_ready") == "false"
         for row in catalog_rows
     )
-    catalog_mlx_primary = next((row for row in catalog_rows if row.get("lane") == "catalog_mlx"), None)
-    catalog_mlx_primary_file = (
-        catalog_mlx_primary.get("file")
-        if catalog_mlx_primary
-        else None
-    )
     for row in catalog_rows:
         file_name = row.get("file") or pathlib.PurePosixPath(row.get("path", "mlx-model")).name
         target_dir = target_root / file_name
@@ -582,6 +625,9 @@ else:
                 compatibility_hint="runtime_requires_supported_text_mlx_archive",
                 local_unsupported_path=unsupported_mlx.get("path") if unsupported_mlx else None,
                 local_unsupported_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
+                ignored_present_mlx_path=ignored_present_mlx.get("path") if ignored_present_mlx else None,
+                ignored_present_mlx_reason="wrong_catalog_primary_for_tier" if ignored_present_mlx else None,
+                expected_primary_dir=catalog_mlx_primary_file if ignored_present_mlx else None,
                 **mlx_catalog_local_fields(row),
             )
             continue
@@ -610,6 +656,12 @@ else:
                     local_unsupported_primary_reason=unsupported_mlx.get("reason") if unsupported_mlx else None,
                     local_unsupported_draft_path=unsupported_mlx_draft.get("path") if unsupported_mlx_draft else None,
                     local_unsupported_draft_reason=unsupported_mlx_draft.get("reason") if unsupported_mlx_draft else None,
+                    ignored_present_mlx_path=ignored_present_mlx.get("path") if ignored_present_mlx else None,
+                    ignored_present_mlx_reason="wrong_catalog_primary_for_tier" if ignored_present_mlx else None,
+                    expected_primary_dir=catalog_mlx_primary_file if ignored_present_mlx else None,
+                    ignored_present_mlx_draft_path=ignored_present_mlx_draft.get("path") if ignored_present_mlx_draft else None,
+                    ignored_present_mlx_draft_reason="wrong_catalog_draft_for_tier" if ignored_present_mlx_draft else None,
+                    expected_draft_dir=catalog_mlx_draft_file if ignored_present_mlx_draft else None,
                     **{
                         f"primary_{key}": value
                         for key, value in mlx_catalog_local_fields(catalog_mlx_primary).items()

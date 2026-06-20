@@ -1,5 +1,32 @@
 # Real Model QA Results
 
+## 2026-06-20 physical iPhone E4B installed-pack timeout checkpoint
+
+- Branch: `main`
+- Platform: physical iPhone (`Aman's iPhone`, `iPhone 15 Pro`, `iPhone16,1`, CoreDevice identifier `3803F5B6-1666-56D3-A71A-62F131F6CE3B`, iOS `27.0` build `24A5355q`)
+- Runtime mode requested: `gemma_local_runtime`
+- Installed pack used: `gemma-4-E4B-it-UD-Q4_K_XL-device-proof`
+- Smoke command:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --runtime gguf --smoke-profile quick_low_context --stage-timeout 180 --launch-timeout 900 --physical-memory-bytes 7200000000 --allow-device-proof-pack`
+- Result: failed by bounded helper timeout; no benchmark pass claimed.
+- Runtime identity evidence:
+  - `provider=AlphaLlamaCppProvider`, `requested_runtime=gemma_local_runtime`, `actual_runtime=gemma_local_runtime`, `checksum_verified=true`, `fallback=none`, `context_tokens=1024`, `gpu_offload=n_gpu_layers:0,offload_kqv:false,op_offload:false`
+- Context/batch evidence:
+  - `llama_context: n_ctx = 1024`
+  - `llama_context: n_batch = 256`
+  - `llama_context: n_ubatch = 64`
+- Failure summary:
+  - `ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout=900`
+  - `failure_benchmark_status=invalid_failed_smoke`
+  - `failure_runtime_proof_status=runtime_identity_valid`
+  - `matrix_cases=english_source_bound_document_qa,english_open_no_document_query`
+- Token speed summary:
+  - no token speed was emitted because the first source-bound generation stage did not finish before the helper timeout
+- Current interpretation:
+  - the current physical app can resolve and load the installed E4B GGUF pack with valid runtime identity, checksum, and no fallback
+  - the E4B CPU-only quick-low-context smoke is too slow to count as benchmark evidence on this iPhone 15 Pro under the current bounded run
+  - MTP remains correctly blocked for the 7.2 GB memory plan, and MLX/CoreAI still need usable installed artifacts before physical benchmark claims
+
 ## 2026-06-19 physical iPhone current-build GGUF checkpoint
 
 - Branch: `main`
