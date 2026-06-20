@@ -1194,23 +1194,38 @@ struct RossLocalModelSmokeView: View {
         for stageOutput in stageOutputs {
             let stage = stableSmokeValue(stageOutput.stage)
             let output = stageOutput.output
+            func stageDraftDetail(_ reason: String) -> String {
+                let fields: [(String, String)] = [
+                    ("stage", stage),
+                    ("reason", reason),
+                    ("acceleration", output.accelerationMode?.rawValue ?? "nil"),
+                    ("draft_tokens", output.accelerationDraftTokens.map(String.init) ?? "nil"),
+                    ("draft_model", output.accelerationDraftModelLabel.map(stableSmokeValue) ?? "nil"),
+                    ("draft_attempted", output.speculativeDraftTokenAttempts.map(String.init) ?? "nil"),
+                    ("draft_accepted", output.speculativeDraftTokenAccepts.map(String.init) ?? "nil"),
+                    ("draft_failure", output.speculativeDraftFailureReason.map(stableSmokeValue) ?? "nil"),
+                ]
+                return fields
+                    .map { "\($0.0)=\($0.1)" }
+                    .joined(separator: ",")
+            }
             guard output.accelerationMode == .draftModelSpeculative else {
-                return "\(stage)_acceleration=\(output.accelerationMode?.rawValue ?? "nil")"
+                return stageDraftDetail("\(stage)_acceleration=\(output.accelerationMode?.rawValue ?? "nil")")
             }
             guard output.accelerationDraftTokens != nil else {
-                return "\(stage)_draft_tokens=nil"
+                return stageDraftDetail("\(stage)_draft_tokens=nil")
             }
             guard output.accelerationDraftModelLabel?.isEmpty == false else {
-                return "\(stage)_draft_model=nil"
+                return stageDraftDetail("\(stage)_draft_model=nil")
             }
             guard let attempted = output.speculativeDraftTokenAttempts, attempted > 0 else {
-                return "\(stage)_draft_attempted=\(output.speculativeDraftTokenAttempts.map(String.init) ?? "nil")"
+                return stageDraftDetail("\(stage)_draft_attempted=\(output.speculativeDraftTokenAttempts.map(String.init) ?? "nil")")
             }
             guard let accepted = output.speculativeDraftTokenAccepts, accepted > 0 else {
-                return "\(stage)_draft_accepted=\(output.speculativeDraftTokenAccepts.map(String.init) ?? "nil")"
+                return stageDraftDetail("\(stage)_draft_accepted=\(output.speculativeDraftTokenAccepts.map(String.init) ?? "nil")")
             }
             if accepted > attempted {
-                return "\(stage)_draft_accepted=\(accepted)>draft_attempted=\(attempted)"
+                return stageDraftDetail("\(stage)_draft_accepted=\(accepted)>draft_attempted=\(attempted)")
             }
         }
         return nil

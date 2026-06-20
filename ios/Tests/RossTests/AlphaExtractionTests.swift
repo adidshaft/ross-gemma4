@@ -19117,7 +19117,27 @@ final class AlphaExtractionTests: XCTestCase {
                 requireDraftAcceleration: true,
                 stageOutputs: [("source", zeroAcceptedDraftOutput)]
             ),
-            "source_draft_accepted=0"
+            "stage=source,reason=source_draft_accepted=0,acceleration=draftModelSpeculative,draft_tokens=2,draft_model=mtp_draft.gguf,draft_attempted=22,draft_accepted=0,draft_failure=nil"
+        )
+        let failedDraftOutput = AlphaLocalModelOutput(
+            rawText: "Article 417: verify citation.",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [],
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            accelerationDraftModelLabel: "mtp draft.gguf",
+            speculativeDraftTokenAttempts: 22,
+            speculativeDraftTokenAccepts: 0,
+            speculativeDraftFailureReason: "first token mismatch"
+        )
+        XCTAssertEqual(
+            RossLocalModelSmokeView.draftStageAcceptanceError(
+                requireDraftAcceleration: true,
+                stageOutputs: [("source", failedDraftOutput)]
+            ),
+            "stage=source,reason=source_draft_accepted=0,acceleration=draftModelSpeculative,draft_tokens=2,draft_model=mtp_draft.gguf,draft_attempted=22,draft_accepted=0,draft_failure=first_token_mismatch"
         )
         XCTAssertNil(
             RossLocalModelSmokeView.draftStageAcceptanceError(
