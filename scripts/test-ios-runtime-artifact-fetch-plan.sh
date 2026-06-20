@@ -201,6 +201,33 @@ if grep -q "lane=mlx_draft status=missing action=preflight_after_download" /tmp/
   exit 1
 fi
 
+primary_with_bad_draft_root="$tmpdir/primary-with-bad-draft"
+primary_with_bad_draft_dir="$primary_with_bad_draft_root/usable-mlx"
+bad_catalog_mlx_draft_dir="$primary_with_bad_draft_root/gemma-4-E4B-it-qat-assistant-6bit"
+mkdir -p "$primary_with_bad_draft_dir" "$bad_catalog_mlx_draft_dir"
+printf '{}' > "$primary_with_bad_draft_dir/config.json"
+printf '{}' > "$primary_with_bad_draft_dir/tokenizer.json"
+printf 'weights' > "$primary_with_bad_draft_dir/model.safetensors"
+python3 - "$bad_catalog_mlx_draft_dir" <<'PY'
+import json
+import pathlib
+import sys
+
+directory = pathlib.Path(sys.argv[1])
+(directory / "tokenizer.json").write_text("{}")
+(directory / "model.safetensors").write_text("weights")
+(directory / "config.json").write_text(json.dumps({
+    "model_type": "gemma4",
+    "architectures": ["Gemma4ForConditionalGeneration"],
+    "vision_config": {},
+}))
+PY
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$primary_with_bad_draft_root" > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx status=present action=preflight .*path=$primary_with_bad_draft_dir" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=missing action=download .*repo=mlx-community/gemma-4-E4B-it-qat-assistant-6bit .*target_dir=$tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit .*local_unsupported_path=$bad_catalog_mlx_draft_dir .*local_unsupported_reason=unsupported_gemma4_multimodal .*local_catalog_status=size_mismatch .*local_catalog_path=$bad_catalog_mlx_draft_dir .*local_catalog_bytes=.*local_catalog_checksum=" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mlx_draft status=missing action=preflight_pair_after_download .*--model $primary_with_bad_draft_dir .*--draft-model $tmpdir/downloads/gemma-4-E4B-it-qat-assistant-6bit" /tmp/ross-runtime-fetch-plan.out
+
 final_root="$tmpdir/final-usable"
 mlx_dir="$final_root/usable-mlx"
 mkdir -p "$mlx_dir"

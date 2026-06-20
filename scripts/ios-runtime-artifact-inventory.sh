@@ -77,7 +77,7 @@ gguf_file_looks_usable() {
 gguf_path_is_draft_like() {
   local path="$1"
   local lower_path
-  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  lower_path="$(basename "$path" | tr '[:upper:]' '[:lower:]')"
   case "$lower_path" in
     *mtp*|*draft*|*assistant*)
       return 0
@@ -89,7 +89,7 @@ gguf_path_is_draft_like() {
 mlx_path_is_draft_like() {
   local path="$1"
   local lower_path
-  lower_path="$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')"
+  lower_path="$(basename "$path" | tr '[:upper:]' '[:lower:]')"
   case "$lower_path" in
     *mtp*|*draft*|*assistant*)
       return 0

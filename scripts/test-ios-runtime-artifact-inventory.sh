@@ -87,6 +87,16 @@ grep -q "lane=mlx status=missing .*reason=no_directory_with_config_tokenizer_and
 grep -q "lane=mlx_draft status=present .*path=.*gemma-4-E4B-it-qat-assistant-6bit .*reason=draft_like_mlx_directory" /tmp/ross-runtime-inventory.out
 grep -q "lane=catalog_mlx_draft status=expected .*file=gemma-4-E4B-it-qat-assistant-6bit .*local_status=size_mismatch .*local_path=.*gemma-4-E4B-it-qat-assistant-6bit .*local_bytes=.* .*local_checksum=.*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
+parent_named_draft_root="$tmpdir/parent-with-draft-word"
+parent_named_draft_primary="$parent_named_draft_root/usable-mlx-primary"
+mkdir -p "$parent_named_draft_primary"
+printf '{}' > "$parent_named_draft_primary/config.json"
+printf '{}' > "$parent_named_draft_primary/tokenizer.json"
+printf 'weights' > "$parent_named_draft_primary/model.safetensors"
+"$INVENTORY" --search-root "$parent_named_draft_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx status=present .*path=.*usable-mlx-primary .*reason=usable_mlx_directory" /tmp/ross-runtime-inventory.out
+grep -q "lane=mlx_draft status=missing .*reason=no_draft_like_mlx_directory_found" /tmp/ross-runtime-inventory.out
+
 unsupported_mlx_root="$tmpdir/unsupported-mlx"
 unsupported_mlx_primary="$unsupported_mlx_root/gemma-4-E4B-it-qat-4bit"
 unsupported_mlx_draft="$unsupported_mlx_root/gemma-4-E4B-it-qat-draft-vision"

@@ -885,6 +885,9 @@ if ! grep -q "mlx_path_is_draft_like" scripts/ios-runtime-artifact-inventory.sh 
    ! grep -q "waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "status=blocked action=waiting_for_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "missing_compatible_mlx_primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "primary-with-bad-draft" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q 'local_unsupported_path=$bad_catalog_mlx_draft_dir' scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "local_catalog_status=size_mismatch" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair_after_download" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "preflight_pair" docs/IOS_RUNTIME.md 2>/dev/null ||
@@ -989,6 +992,12 @@ if ! grep -q "local_gguf_is_draft_like" scripts/ios-morning-runtime-checkpoint-p
    ! grep -q "draft-like local GGUF" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "missing_or_invalid_primary_gguf" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan can still print baseline GGUF commands for invalid or draft-like GGUF paths."
+    FAIL=1
+fi
+
+if ! grep -q 'lower_path="$(basename "$path"' scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "parent-with-draft-word" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null; then
+    echo "❌ FAIL: runtime artifact inventory can still classify primary artifacts from parent directory names instead of artifact basenames."
     FAIL=1
 fi
 

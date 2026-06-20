@@ -518,6 +518,7 @@ if present_mlx:
         file_name = catalog_mlx_draft.get("file") or pathlib.PurePosixPath(catalog_mlx_draft.get("path", "mlx-draft")).name
         target_dir = target_root / file_name
         repo = catalog_mlx_draft.get("repo", "unknown")
+        unsupported_mlx_draft = unsupported_local_row("mlx_draft", file_name)
         emit(
             "mlx_draft",
             "missing",
@@ -526,6 +527,9 @@ if present_mlx:
             target_dir=target_dir,
             bytes=catalog_mlx_draft.get("bytes"),
             checksum=catalog_mlx_draft.get("checksum"),
+            local_unsupported_path=unsupported_mlx_draft.get("path") if unsupported_mlx_draft else None,
+            local_unsupported_reason=unsupported_mlx_draft.get("reason") if unsupported_mlx_draft else None,
+            **mlx_catalog_local_fields(catalog_mlx_draft),
             command=f"{downloader_command or 'hf'} download {shlex.quote(repo)} --local-dir {shlex.quote(str(target_dir))}",
         )
         emit(
