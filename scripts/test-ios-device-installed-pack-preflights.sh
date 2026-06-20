@@ -661,6 +661,48 @@ if [[ "$rc" -ne 1 ]] ||
   exit 1
 fi
 
+cat >"$tmpdir/unavailable-identity-terminal-fail.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=model_path_missing context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=false error=model_path_missing
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick stage=active_pack error=model_path_missing runtime_error_detail=model_path_missing elapsed=1.00s
+EOF
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_DEVICECTL_PROCESS_LOG="$tmpdir/unavailable-identity-terminal-fail.log" \
+  "${base_command[@]}" --runtime gguf --smoke-profile quick \
+  >"$tmpdir/out.txt" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]] ||
+   ! grep -q "runtime_identity_unavailable_on_failure" "$tmpdir/out.txt" ||
+   ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" "$tmpdir/out.txt" ||
+   ! grep -q "failure_runtime_proof_error=runtime_unavailable" "$tmpdir/out.txt"; then
+  echo "FAIL: installed-pack terminal fail did not emit unavailable identity guard and summary." >&2
+  cat "$tmpdir/out.txt" >&2 || true
+  exit 1
+fi
+
+cat >"$tmpdir/diagnostic-identity-terminal-fail.log" <<'EOF'
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=manifest_primary_unusable_artifact context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick stage=active_pack error=manifest_primary_unusable_artifact runtime_error_detail=manifest_primary_unusable_artifact elapsed=1.00s
+EOF
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_DEVICECTL_PROCESS_LOG="$tmpdir/diagnostic-identity-terminal-fail.log" \
+  "${base_command[@]}" --runtime gguf --smoke-profile quick \
+  >"$tmpdir/out.txt" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]] ||
+   ! grep -q "runtime_identity_diagnostic_error_on_failure" "$tmpdir/out.txt" ||
+   ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" "$tmpdir/out.txt" ||
+   ! grep -q "failure_runtime_proof_error=runtime_diagnostic_error" "$tmpdir/out.txt"; then
+  echo "FAIL: installed-pack terminal fail did not emit diagnostic identity guard and summary." >&2
+  cat "$tmpdir/out.txt" >&2 || true
+  exit 1
+fi
+
 cat >"$tmpdir/concise-terminal-pass.log" <<'EOF'
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
 ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
