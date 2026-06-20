@@ -436,6 +436,19 @@ if ! grep -q "source_token_speed=11.0" /tmp/ross-runtime-preflight.out ||
   exit 1
 fi
 
+cat >"$tmpdir/simulator-identity-diagnostic-pass.log" <<EOF
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=$(basename "$main_gguf") acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=manifest_primary_unusable_artifact context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 source_first_token_ms=900 source_measured_tokens=true source_acceleration=standard source_draft_tokens=nil source_draft_model=nil source_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil general_input_tokens=80 general_output_tokens=24 general_token_speed=10.5 general_first_token_ms=850 general_measured_tokens=true general_acceleration=standard general_draft_tokens=nil general_draft_model=nil general_runtime_error_detail=nil
+ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick elapsed=10.00s source_refs=1 source_native_model=true general_native_model=true
+EOF
+run_process_guard_expect_exit_1 \
+  "simulator pass rejects diagnostic runtime identity" \
+  "runtime_identity_diagnostic_error" \
+  "$tmpdir/simulator-identity-diagnostic-pass.log" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --smoke-profile quick --launch-timeout 5
+
 mtp_primary_gguf="$tmpdir/gemma-4-E4B-it-test.gguf"
 mtp_draft_gguf="$tmpdir/mtp-gemma-4-E4B-it-test.gguf"
 python3 - "$mtp_primary_gguf" "$mtp_draft_gguf" <<'PY'

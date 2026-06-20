@@ -94,6 +94,7 @@ from ross_smoke_summary import (
     parse_fields,
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
+    runtime_identity_diagnostic_error,
     runtime_identity_resource_error,
 )
 
@@ -220,6 +221,16 @@ def validate_identity_guard(identity):
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
             f"reason=runtime_identity_resource_missing requested={expected_identity_runtime} "
             f"{resource_error}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_diagnostic_error requested={expected_identity_runtime} "
+            f"{diagnostic_error}",
             file=sys.stderr,
         )
         sys.exit(1)

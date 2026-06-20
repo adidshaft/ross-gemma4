@@ -39,6 +39,10 @@ case "${FAKE_ASSISTANT_DOWNLOAD_LOG:-valid}" in
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=false artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=false"
     ;;
+  diagnostic_identity)
+    echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured runtime_error_detail=manifest_primary_unusable_artifact context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
+    echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=true"
+    ;;
   wrong_artifact_identity)
     echo "ROSS_RUNTIME_IDENTITY provider=AlphaMLXLocalProvider requested_runtime=mlx_swift_lm actual_runtime=mlx_swift_lm pack_runtime=mlx_swift_lm model_format=mlx_directory checksum_verified=true artifact_path_type=directory artifact_path=other-mlx-model acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured context_tokens=12288 gpu_offload=mlx_default fallback=none available=true error=nil"
     echo "ROSS_ASSISTANT_DOWNLOAD_SMOKE_PASS elapsed=1.00s tier=quick_start runtime=mlx_swift_lm pack=mlx-pack install_path=model-packs/quick_start/mlx-model checksum=true"
@@ -130,6 +134,11 @@ run_expect_exit_1 \
   "assistant download pass with unverified checksum identity" \
   "checksum_verified=false" \
   env FAKE_ASSISTANT_DOWNLOAD_LOG=unverified_checksum_identity "${base_command[@]}"
+
+run_expect_exit_1 \
+  "assistant download pass with diagnostic runtime identity" \
+  "runtime_identity_diagnostic_error" \
+  env FAKE_ASSISTANT_DOWNLOAD_LOG=diagnostic_identity "${base_command[@]}"
 
 run_expect_exit_1 \
   "assistant download pass with wrong artifact identity" \

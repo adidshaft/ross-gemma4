@@ -326,6 +326,18 @@ if ! grep -q "benchmark_runtime_diagnostic_error" scripts/ross_smoke_summary.py 
     FAIL=1
 fi
 
+if ! grep -q "runtime_identity_diagnostic_error(identity)" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_diagnostic_error(identity)" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_diagnostic_error(identity)" scripts/ios-device-gguf-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_diagnostic_error(identity)" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "simulator pass rejects diagnostic runtime identity" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "installed-pack pass rejects diagnostic runtime identity" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "diagnostic GGUF runtime identity" scripts/test-ios-device-gguf-smoke-guards.sh 2>/dev/null ||
+   ! grep -q "assistant download pass with diagnostic runtime identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null; then
+    echo "❌ FAIL: smoke launch wrappers do not fail pass markers with runtime identity diagnostics."
+    FAIL=1
+fi
+
 if ! grep -q "system_model_path" scripts/ross_smoke_summary.py 2>/dev/null; then
     echo "❌ FAIL: shared benchmark summary parser does not require CoreAI system_model sentinel paths."
     FAIL=1
