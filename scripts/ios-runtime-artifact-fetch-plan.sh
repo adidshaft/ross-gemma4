@@ -206,8 +206,6 @@ def mtp_memory_policy(primary_path: str, draft_path: str) -> tuple[bool, str, di
     target_memory = int(physical_memory_bytes)
     if target_memory >= constrained_e4b_memory_ceiling:
         return (True, "local_draft_memory_policy_not_constrained", {"physical_memory": target_memory})
-    if archive_profile_hint(primary_path) != "e4b":
-        return (True, "local_draft_memory_policy_non_e4b", {"physical_memory": target_memory})
     try:
         main_bytes = pathlib.Path(primary_path).stat().st_size
         draft_bytes = pathlib.Path(draft_path).stat().st_size
@@ -224,6 +222,30 @@ def mtp_memory_policy(primary_path: str, draft_path: str) -> tuple[bool, str, di
             "main_bytes": main_bytes,
             "draft_bytes": draft_bytes,
             "max_combined_bytes": max_combined_bytes,
+            "required_physical_memory_bytes": required_physical_memory,
+        },
+    )
+
+def gguf_memory_policy(primary_path: str) -> tuple[bool, str, dict[str, object]]:
+    if not physical_memory_bytes:
+        return (True, "local_primary_memory_policy_not_checked", {})
+    target_memory = int(physical_memory_bytes)
+    if target_memory >= constrained_e4b_memory_ceiling:
+        return (True, "local_primary_memory_policy_not_constrained", {"physical_memory": target_memory})
+    try:
+        main_bytes = pathlib.Path(primary_path).stat().st_size
+    except OSError:
+        return (True, "local_primary_memory_policy_unknown_size", {"physical_memory": target_memory})
+    max_primary_bytes = int(target_memory * constrained_e4b_draft_artifact_budget_ratio)
+    required_physical_memory = math.ceil(main_bytes / constrained_e4b_draft_artifact_budget_ratio)
+    allowed = main_bytes <= max_primary_bytes
+    return (
+        allowed,
+        "local_primary_memory_policy_reachable" if allowed else "local_primary_memory_policy_blocked",
+        {
+            "physical_memory": target_memory,
+            "main_bytes": main_bytes,
+            "max_primary_bytes": max_primary_bytes,
             "required_physical_memory_bytes": required_physical_memory,
         },
     )
@@ -349,20 +371,33 @@ if catalog_gguf:
         }
     primary_path = present_gguf.get("path", "") if present_gguf else str(expected_primary_path)
     if present_gguf:
-        emit(
-            "gguf",
-            "present",
-            "preflight",
-            path=primary_path,
-            command=command(
-                root_dir / "scripts/ios-simulator-local-model-smoke.sh",
-                "--runtime", "gguf",
-                "--model", primary_path,
-                "--smoke-profile", "quick_low_context",
-                *maybe_physical_memory_args(),
-                "--preflight-only",
-            ),
-        )
+        primary_memory_ok, primary_memory_reason, primary_memory_fields = gguf_memory_policy(primary_path)
+        if not primary_memory_ok:
+            emit(
+                "gguf",
+                "blocked",
+                "memory_policy_blocked",
+                path=primary_path,
+                reason=primary_memory_reason,
+                **primary_memory_fields,
+            )
+        else:
+            emit(
+                "gguf",
+                "present",
+                "preflight",
+                path=primary_path,
+                reason=primary_memory_reason if primary_memory_fields else None,
+                **primary_memory_fields,
+                command=command(
+                    root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                    "--runtime", "gguf",
+                    "--model", primary_path,
+                    "--smoke-profile", "quick_low_context",
+                    *maybe_physical_memory_args(),
+                    "--preflight-only",
+                ),
+            )
     else:
         repo = catalog_gguf.get("repo", "unknown")
         emit(

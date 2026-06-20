@@ -834,22 +834,25 @@ if ! grep -q "manifest_draft_memory_policy_blocked" scripts/ios-runtime-artifact
    ! grep -q "manifest_draft_memory_policy_blocked" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "manifest_draft_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q -- "--physical-memory-bytes" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
-    echo "❌ FAIL: installed MTP inventory/planning does not gate constrained E4B draft pairs by memory fit."
+    echo "❌ FAIL: installed MTP inventory/planning does not gate constrained draft pairs by memory fit."
     FAIL=1
 fi
 
 if ! grep -q "local_draft_memory_policy_blocked" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "local_primary_memory_policy_blocked" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "memory_policy_blocked" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "memory-blocked local 12B GGUF primary" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
    ! grep -q "local_draft_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: local GGUF+MTP fetch plan can advertise constrained E4B draft pairs that fail memory-fit preflight."
+    echo "❌ FAIL: local GGUF+MTP fetch plan can advertise constrained draft pairs that fail memory-fit preflight."
     FAIL=1
 fi
 
 if ! grep -q -- "--physical-memory-bytes" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
-   ! grep -q "constrained E4B draft memory budget" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "constrained draft memory budget" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "memory-blocked E4B MTP installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "memory-blocked 12B MTP installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
    ! grep -q "installed-pack helper" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: direct installed-pack MTP helper can bypass constrained E4B memory preflight."
+    echo "❌ FAIL: direct installed-pack MTP helper can bypass constrained memory preflight."
     FAIL=1
 fi
 
@@ -1612,10 +1615,12 @@ if ! grep -q "draft_memory_policy_blocked" ios/Ross/AlphaFoundation/AlphaLlamaCp
     FAIL=1
 fi
 
-if ! grep -q "GGUF/MTP simulator draft proof exceeds the constrained E4B draft memory budget" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+if ! grep -q "GGUF/MTP simulator draft proof exceeds the constrained draft memory budget" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
+   ! grep -q "GGUF simulator preflight exceeds the constrained primary memory budget" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "memory-blocked E4B simulator MTP proof" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
-   ! grep -q "constrained E4B GGUF+MTP pair exceeds the app's draft memory budget" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: simulator MTP preflight can bypass constrained E4B memory-fit checks."
+   ! grep -q "memory-blocked 12B simulator GGUF primary" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "constrained GGUF+MTP pair exceeds the app's draft memory budget" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP preflight can bypass constrained memory-fit checks."
     FAIL=1
 fi
 

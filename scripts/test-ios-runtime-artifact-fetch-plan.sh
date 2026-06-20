@@ -135,6 +135,27 @@ if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$memory_b
   exit 1
 fi
 
+case_memory_blocked_root="$tmpdir/local-case-memory-blocked"
+mkdir -p "$case_memory_blocked_root"
+printf 'GGUF' > "$case_memory_blocked_root/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+truncate -s 8000000000 "$case_memory_blocked_root/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$case_memory_blocked_root/mtp-gemma-4-12b-it.gguf"
+truncate -s 100000000 "$case_memory_blocked_root/mtp-gemma-4-12b-it.gguf"
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier caseAssociate --target-root "$tmpdir/downloads" --search-root "$case_memory_blocked_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=blocked action=memory_policy_blocked .*path=$case_memory_blocked_root/gemma-4-12b-it-UD-Q4_K_XL.gguf .*reason=local_primary_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=8000000000 .*max_primary_bytes=5184000000 .*required_physical_memory_bytes=11111111112" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=blocked action=memory_policy_blocked .*path=$case_memory_blocked_root/mtp-gemma-4-12b-it.gguf .*reason=local_draft_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=8000000000 .*draft_bytes=100000000 .*max_combined_bytes=5184000000 .*required_physical_memory_bytes=11250000000" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=gguf status=present action=preflight .*path=$case_memory_blocked_root/gemma-4-12b-it-UD-Q4_K_XL.gguf" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect memory-blocked local 12B GGUF primary to print a present preflight row." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$case_memory_blocked_root/mtp-gemma-4-12b-it.gguf" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect memory-blocked local 12B MTP pair to print a present preflight row." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+
 mlx_draft_dir="$tmpdir/draft-only/gemma-4-E4B-it-qat-assistant-6bit"
 mkdir -p "$mlx_draft_dir"
 printf '{}' > "$mlx_draft_dir/config.json"

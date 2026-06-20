@@ -187,6 +187,15 @@ run_expect_exit_2 \
   "$SIM_SMOKE" --runtime gguf --model "$e4b_main_gguf" --draft-model "$e4b_draft_gguf" --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
 grep -q "required_physical_memory_bytes=7234722223" /tmp/ross-runtime-preflight.out
 
+case_12b_main_gguf="$tmpdir/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$case_12b_main_gguf"
+truncate -s 8000000000 "$case_12b_main_gguf"
+run_expect_exit_2 \
+  "memory-blocked 12B simulator GGUF primary" \
+  "$SIM_SMOKE" --runtime gguf --model "$case_12b_main_gguf" --smoke-profile quick_low_context --physical-memory-bytes 7200000000 --preflight-only
+grep -q "GGUF simulator preflight exceeds the constrained primary memory budget" /tmp/ross-runtime-preflight.out
+grep -q "required_physical_memory_bytes=11111111112" /tmp/ross-runtime-preflight.out
+
 run_expect_exit_2 \
   "GGUF file passed as MLX draft proof" \
   "$SIM_SMOKE" --runtime mlx --model "$usable_mlx" --draft-model "$gguf_as_mlx" --require-draft-acceleration

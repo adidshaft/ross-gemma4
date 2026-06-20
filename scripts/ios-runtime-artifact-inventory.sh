@@ -705,8 +705,6 @@ def mtp_memory_policy(
         return True, "manifest_draft_memory_policy_not_checked", {}
     if physical_memory_bytes >= constrained_e4b_memory_ceiling:
         return True, "manifest_draft_memory_policy_not_constrained", {"physical_memory": physical_memory_bytes}
-    if archive_profile_hint(primary_relative_path, primary_file_name) != "e4b":
-        return True, "manifest_draft_memory_policy_non_e4b", {"physical_memory": physical_memory_bytes}
 
     main_bytes = artifact_size_bytes(primary_relative_path, "local_model_artifact", primary_bytes)
     candidate_draft_bytes = artifact_size_bytes(draft_relative_path, "local_model_artifact", draft_bytes)

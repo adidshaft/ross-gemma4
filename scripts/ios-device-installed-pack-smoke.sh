@@ -691,15 +691,14 @@ except ValueError:
 
 constrained_e4b_memory_ceiling = 8_500_000_000
 constrained_e4b_draft_artifact_budget_ratio = 0.72
-is_e4b = "e4b" in primary_path.lower()
-if not is_e4b or physical_memory >= constrained_e4b_memory_ceiling:
+if physical_memory >= constrained_e4b_memory_ceiling:
     sys.exit(0)
 
 max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
 if primary_bytes + draft_bytes > max_combined_bytes:
     required_physical_memory = math.ceil((primary_bytes + draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
     print(
-        "Selected GGUF/MTP manifest exceeds the constrained E4B draft memory budget for device smoke: "
+        "Selected GGUF/MTP manifest exceeds the constrained draft memory budget for device smoke: "
         f"main_bytes={primary_bytes} draft_bytes={draft_bytes} "
         f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
         f"required_physical_memory_bytes={required_physical_memory} "

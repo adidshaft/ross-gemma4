@@ -558,6 +558,39 @@ if [[ -n "$draft_model_path" ]]; then
   esac
 fi
 
+if [[ -n "$physical_memory_bytes" && "$normalized_runtime" == "gemma_local_runtime" ]]; then
+  python3 - "$model_path" "$physical_memory_bytes" <<'PY'
+import pathlib
+import sys
+import math
+
+main_path = pathlib.Path(sys.argv[1])
+physical_memory = int(sys.argv[2])
+constrained_memory_ceiling = 8_500_000_000
+artifact_budget_ratio = 0.72
+
+if physical_memory >= constrained_memory_ceiling:
+    sys.exit(0)
+
+try:
+    main_bytes = main_path.stat().st_size
+except OSError:
+    sys.exit(0)
+
+max_primary_bytes = int(physical_memory * artifact_budget_ratio)
+if main_bytes > max_primary_bytes:
+    required_physical_memory = math.ceil(main_bytes / artifact_budget_ratio)
+    print(
+        "GGUF simulator preflight exceeds the constrained primary memory budget: "
+        f"main_bytes={main_bytes} max_primary_bytes={max_primary_bytes} "
+        f"physical_memory={physical_memory} required_physical_memory_bytes={required_physical_memory} "
+        f"main={main_path.name}",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+PY
+fi
+
 if [[ -n "$physical_memory_bytes" && "$require_draft_acceleration" == "1" && "$normalized_runtime" == "gemma_local_runtime" ]]; then
   python3 - "$model_path" "$draft_model_path" "$physical_memory_bytes" <<'PY'
 import pathlib
@@ -567,10 +600,10 @@ import math
 main_path = pathlib.Path(sys.argv[1])
 draft_path = pathlib.Path(sys.argv[2])
 physical_memory = int(sys.argv[3])
-constrained_e4b_memory_ceiling = 8_500_000_000
-constrained_e4b_draft_artifact_budget_ratio = 0.72
+constrained_memory_ceiling = 8_500_000_000
+artifact_budget_ratio = 0.72
 
-if "e4b" not in str(main_path).lower() or physical_memory >= constrained_e4b_memory_ceiling:
+if physical_memory >= constrained_memory_ceiling:
     sys.exit(0)
 
 try:
@@ -579,11 +612,11 @@ try:
 except OSError:
     sys.exit(0)
 
-max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
+max_combined_bytes = int(physical_memory * artifact_budget_ratio)
 if main_bytes + draft_bytes > max_combined_bytes:
-    required_physical_memory = math.ceil((main_bytes + draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
+    required_physical_memory = math.ceil((main_bytes + draft_bytes) / artifact_budget_ratio)
     print(
-        "GGUF/MTP simulator draft proof exceeds the constrained E4B draft memory budget: "
+        "GGUF/MTP simulator draft proof exceeds the constrained draft memory budget: "
         f"main_bytes={main_bytes} draft_bytes={draft_bytes} "
         f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
         f"required_physical_memory_bytes={required_physical_memory} "

@@ -368,9 +368,43 @@ for raw_path in sys.argv[1:]:
 PY
 run_expect_exit_1 \
   "memory-blocked E4B MTP installed manifest" \
-  "exceeds the constrained E4B draft memory budget" \
+  "exceeds the constrained draft memory budget" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
 grep -q "required_physical_memory_bytes=7234722223" "$tmpdir/out.txt"
+
+write_manifest '{
+  "packId": "memory-blocked-12b-mtp",
+  "tier": "caseAssociate",
+  "fileName": "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+  "relativePath": "model-packs/case/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+  "checksumSha256": "a",
+  "bytes": 8000000000,
+  "artifactKind": "local_model_artifact",
+  "runtimeMode": "gemma_local_runtime",
+  "developmentOnly": false,
+  "draftArtifact": {
+    "fileName": "mtp-gemma-4-12b-it.gguf",
+    "relativePath": "model-packs/case/mtp-gemma-4-12b-it.gguf",
+    "checksumSha256": "b",
+    "bytes": 100000000,
+    "artifactKind": "local_model_artifact",
+    "draftTokens": 2
+  },
+  "verifiedAt": "2026-06-19T00:00:00Z"
+}'
+mkdir -p "$fake_device_root/Library/Application Support/RossAlpha/model-packs/case"
+python3 - "$fake_device_root/Library/Application Support/RossAlpha/model-packs/case/gemma-4-12b-it-UD-Q4_K_XL.gguf" \
+  "$fake_device_root/Library/Application Support/RossAlpha/model-packs/case/mtp-gemma-4-12b-it.gguf" <<'PY'
+import pathlib
+import sys
+for raw_path in sys.argv[1:]:
+    pathlib.Path(raw_path).write_bytes(b"GGUF" + (b"\0" * 2_000_000))
+PY
+run_expect_exit_1 \
+  "memory-blocked 12B MTP installed manifest" \
+  "exceeds the constrained draft memory budget" \
+  "${base_command[@]}" --tier caseAssociate --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
+grep -q "required_physical_memory_bytes=11250000000" "$tmpdir/out.txt"
 
 write_manifest '{
   "packId": "family-mismatched-mtp",

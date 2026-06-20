@@ -278,10 +278,15 @@ grep -q "lane=installed_coreai status=present .*path_type=system" /tmp/ross-runt
 memory_blocked_support_root="$tmpdir/RossAlphaMemoryBlocked"
 memory_blocked_packs_root="$memory_blocked_support_root/model-packs"
 mkdir -p "$memory_blocked_packs_root/quickStart"
+mkdir -p "$memory_blocked_packs_root/caseAssociate"
 printf 'GGUF' > "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
 truncate -s 5130000000 "$memory_blocked_packs_root/quickStart/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
 printf 'GGUF' > "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
 truncate -s 79000000 "$memory_blocked_packs_root/quickStart/mtp-gemma-4-E4B-it.gguf"
+printf 'GGUF' > "$memory_blocked_packs_root/caseAssociate/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+truncate -s 8000000000 "$memory_blocked_packs_root/caseAssociate/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$memory_blocked_packs_root/caseAssociate/mtp-gemma-4-12b-it.gguf"
+truncate -s 100000000 "$memory_blocked_packs_root/caseAssociate/mtp-gemma-4-12b-it.gguf"
 python3 - "$memory_blocked_support_root" <<'PY'
 import json
 import pathlib
@@ -310,16 +315,42 @@ packs = support / "model-packs"
     },
     "verifiedAt": "2026-06-19T00:00:00Z",
 }))
+
+(packs / "caseAssociate" / "memory-blocked.manifest.json").write_text(json.dumps({
+    "packId": "case-12b-memory-blocked",
+    "tier": "caseAssociate",
+    "fileName": "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+    "relativePath": "model-packs/caseAssociate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+    "checksumSha256": "abc",
+    "bytes": 8_000_000_000,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "mtp-gemma-4-12b-it.gguf",
+        "relativePath": "model-packs/caseAssociate/mtp-gemma-4-12b-it.gguf",
+        "checksumSha256": "def",
+        "bytes": 100_000_000,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
 PY
 
 "$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$memory_blocked_support_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_gguf status=present .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_memory_policy_blocked .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_gguf status=present .*pack=case-12b-memory-blocked" /tmp/ross-runtime-inventory.out
+grep -q "lane=installed_mtp_draft status=missing .*reason=manifest_draft_memory_policy_blocked .*pack=case-12b-memory-blocked" /tmp/ross-runtime-inventory.out
 grep -q "physical_memory=7200000000" /tmp/ross-runtime-inventory.out
 grep -q "main_bytes=5130000000" /tmp/ross-runtime-inventory.out
 grep -q "draft_bytes=79000000" /tmp/ross-runtime-inventory.out
 grep -q "max_combined_bytes=5184000000" /tmp/ross-runtime-inventory.out
 grep -q "required_physical_memory_bytes=7234722223" /tmp/ross-runtime-inventory.out
+grep -q "main_bytes=8000000000" /tmp/ross-runtime-inventory.out
+grep -q "draft_bytes=100000000" /tmp/ross-runtime-inventory.out
+grep -q "required_physical_memory_bytes=11250000000" /tmp/ross-runtime-inventory.out
 
 "$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$memory_blocked_support_root" --physical-memory-bytes 12000000000 > /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=present .*reason=manifest_draft_reachable .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out
