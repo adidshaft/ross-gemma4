@@ -2906,6 +2906,22 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         model.isAvailable
     }
 
+    nonisolated(unsafe) static var smokeUnsupportedRuntimeProvider: @Sendable () -> Bool = {
+        let simulatorRuntime: Bool
+        #if targetEnvironment(simulator)
+        simulatorRuntime = true
+        #else
+        simulatorRuntime = false
+        #endif
+        guard simulatorRuntime else { return false }
+        guard let rawValue = getenv("ROSS_LOCAL_MODEL_SMOKE_PROFILE") else {
+            return false
+        }
+        return String(cString: rawValue)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty == false
+    }
+
     nonisolated(unsafe) static var streamGenerator:
         @Sendable (
             SystemLanguageModel,
@@ -3088,6 +3104,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     private func availabilityStatus() -> (available: Bool, userFacingStatus: String, lastErrorCategory: String?) {
         do {
             let model = try resolvedModel()
+            if Self.smokeUnsupportedRuntimeProvider() {
+                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime_on_platform")
+            }
             if Self.modelAvailabilityProbe(model) {
                 return (true, alphaRuntimeHealthStatus(.foundationAvailable), nil)
             }
