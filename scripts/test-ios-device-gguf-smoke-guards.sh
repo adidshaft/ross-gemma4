@@ -92,6 +92,10 @@ case "$command" in
     printf 'DRAFT_MODEL_TOKENS=%s\n' "${DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_TOKENS:-}" >>"$FAKE_ENV_LOG"
     printf 'SMOKE_PROFILE=%s\n' "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_PROFILE:-}" >>"$FAKE_ENV_LOG"
     printf 'REQUIRE_DRAFT=%s\n' "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION:-}" >>"$FAKE_ENV_LOG"
+    if [[ -n "${FAKE_PROCESS_STALL_SECONDS:-}" ]]; then
+      sleep "$FAKE_PROCESS_STALL_SECONDS"
+      exit 0
+    fi
     artifact="$(basename "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_PATH:-model.gguf}")"
     if [[ -n "${FAKE_IDENTITY_ARTIFACT:-}" ]]; then
       artifact="$FAKE_IDENTITY_ARTIFACT"
@@ -283,6 +287,36 @@ fi
 if ! grep -q "runtime_identity_artifact_path_mismatch" "$tmpdir/gguf-mismatch.out"; then
   echo "FAIL: mismatched GGUF runtime identity artifact did not hit exact artifact guard." >&2
   cat "$tmpdir/gguf-mismatch.out" >&2 || true
+  exit 1
+fi
+
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  FAKE_PROCESS_STALL_SECONDS=2 \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --tier quickStart \
+    --pack-id unit-pack \
+    --stage-timeout 5 \
+    --launch-timeout 1 \
+    >"$tmpdir/gguf-launch-timeout.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]]; then
+  echo "FAIL: stalled GGUF launch should exit 1, got $rc" >&2
+  cat "$tmpdir/gguf-launch-timeout.out" >&2 || true
+  exit 1
+fi
+if ! grep -q "reason=helper_timeout" "$tmpdir/gguf-launch-timeout.out" ||
+   ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" "$tmpdir/gguf-launch-timeout.out" ||
+   ! grep -q "stage=helper_timeout" "$tmpdir/gguf-launch-timeout.out"; then
+  echo "FAIL: stalled GGUF launch did not emit the bounded timeout summary." >&2
+  cat "$tmpdir/gguf-launch-timeout.out" >&2 || true
   exit 1
 fi
 

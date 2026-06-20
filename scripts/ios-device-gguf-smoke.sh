@@ -25,6 +25,7 @@ Options:
                           Fail unless the app reports active GGUF draft speculative
                           acceleration with draft_status=active and draft metadata.
   --stage-timeout <sec>   Per-stage smoke timeout. Default: 45
+  --launch-timeout <sec>  Overall helper timeout while waiting for a smoke marker. Default: 300
   --copy-timeout <sec>    Per-copy devicectl timeout. Default: 300
 
 This helper:
@@ -45,6 +46,7 @@ pack_id=""
 smoke_profile="full"
 require_draft_acceleration="0"
 stage_timeout="45"
+launch_timeout="300"
 copy_timeout="300"
 
 while [[ $# -gt 0 ]]; do
@@ -87,6 +89,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stage-timeout)
       stage_timeout="${2:-}"
+      shift 2
+      ;;
+    --launch-timeout)
+      launch_timeout="${2:-}"
       shift 2
       ;;
     --copy-timeout)
@@ -152,6 +158,11 @@ fi
 
 if [[ -z "$copy_timeout" || "$copy_timeout" == *[!0-9]* || "$copy_timeout" -le 0 ]]; then
   echo "Copy timeout must be a positive integer number of seconds." >&2
+  exit 2
+fi
+
+if [[ -z "$launch_timeout" || "$launch_timeout" == *[!0-9]* || "$launch_timeout" -le 0 ]]; then
+  echo "Launch timeout must be a positive integer number of seconds." >&2
   exit 2
 fi
 
@@ -364,12 +375,15 @@ run_devicectl_copy_with_timeout "pack_directory_copy" "$tmpdir/pack-directory-co
   --destination "Library/Application Support/RossAlpha/model-packs/$canonical_tier" \
   --remove-existing-content true
 
-python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$smoke_profile" "$device_draft_model_path" "$draft_tokens" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
+python3 - "$device_id" "$bundle_id" "$relative_model_path" "$checksum" "$stage_timeout" "$launch_timeout" "$smoke_profile" "$device_draft_model_path" "$draft_tokens" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
 import os
+import queue
 import re
 import signal
 import subprocess
 import sys
+import threading
+import time
 
 sys.path.insert(0, sys.argv[-1])
 from ross_smoke_summary import (
@@ -393,6 +407,7 @@ from ross_smoke_summary import (
     device_model_path,
     checksum,
     stage_timeout,
+    launch_timeout,
     smoke_profile,
     draft_model_path,
     draft_tokens,
@@ -622,6 +637,7 @@ matrix_fields = None
 pass_fields = None
 fail_fields = None
 completed_stage_fields = {}
+deadline = time.time() + max(float(launch_timeout), 1.0)
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,
@@ -633,9 +649,38 @@ process = subprocess.Popen(
 
 try:
     assert process.stdout is not None
-    for raw_line in process.stdout:
-        line = raw_line.rstrip("\n")
-        print(line)
+    line_queue = queue.Queue()
+
+    def enqueue_output():
+        assert process.stdout is not None
+        for queued_line in process.stdout:
+            line_queue.put(queued_line.rstrip("\n"))
+        line_queue.put(None)
+
+    threading.Thread(target=enqueue_output, daemon=True).start()
+    while True:
+        if time.time() > deadline:
+            outcome = "timeout"
+            print(f"ROSS_SMOKE_GUARD_FAIL reason=helper_timeout timeout={launch_timeout}", flush=True)
+            fail_fields = {
+                "runtime": "gemma_local_runtime",
+                "requested_runtime": "gemma_local_runtime",
+                "profile": smoke_profile,
+                "stage": "helper_timeout",
+                "error": "helper_timeout",
+                **completed_stage_fields,
+            }
+            process.kill()
+            break
+        try:
+            line = line_queue.get(timeout=0.2)
+        except queue.Empty:
+            if process.poll() is not None:
+                break
+            continue
+        if line is None:
+            break
+        print(line, flush=True)
         if identity_re.search(line):
             identity = parse_fields(line)
         if matrix_re.search(line):
@@ -688,6 +733,13 @@ if outcome == "fail":
     validate_required_draft_failure_metrics(fail_fields)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
+if outcome == "timeout":
+    validate_identity_guard(identity, require_identity=False)
+    emit_failure_identity_diagnostic_guard(identity, outcome="timeout")
+    validate_required_draft_failure_metrics(fail_fields)
+    print(failure_summary_line(identity, fail_fields, matrix_fields))
+    sys.exit(1)
 
+print(f"ROSS_SMOKE_GUARD_FAIL reason=no_terminal_smoke_marker outcome={outcome}", file=sys.stderr)
 sys.exit(process.returncode or 1)
 PY
