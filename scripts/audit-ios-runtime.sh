@@ -1000,6 +1000,16 @@ if ! grep -q "Launch timeout must be a positive integer" scripts/ios-device-inst
     FAIL=1
 fi
 
+for smoke_helper in scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh scripts/ios-simulator-local-model-smoke.sh; do
+    if ! grep -q "start_new_session=True" "$smoke_helper" 2>/dev/null ||
+       ! grep -q "stop_process_group" "$smoke_helper" 2>/dev/null ||
+       ! grep -q "os.killpg(process.pid, signal.SIGINT)" "$smoke_helper" 2>/dev/null ||
+       ! grep -q "os.killpg(process.pid, signal.SIGKILL)" "$smoke_helper" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_helper does not tear down the launch process group on timeout or terminal smoke markers."
+        FAIL=1
+    fi
+done
+
 if ! grep -q -- "--preflight-only" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "ios-runtime-artifact-fetch-plan.sh" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "Plan/download missing local runtime artifacts before any device work" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||

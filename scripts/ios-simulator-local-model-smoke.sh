@@ -941,7 +941,26 @@ process = subprocess.Popen(
     text=True,
     env=env,
     bufsize=1,
+    start_new_session=True,
 )
+
+def stop_process_group(grace_seconds=5):
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGINT)
+    except (PermissionError, ProcessLookupError):
+        return
+    try:
+        process.wait(timeout=grace_seconds)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except (PermissionError, ProcessLookupError):
+        return
+    process.wait(timeout=5)
 
 try:
     assert process.stdout is not None
@@ -966,7 +985,7 @@ try:
                 "error": "helper_timeout",
                 **completed_stage_fields,
             }
-            process.kill()
+            stop_process_group()
             break
 
         try:
@@ -998,7 +1017,7 @@ try:
                 **parse_fields(line),
             }
             try:
-                process.send_signal(signal.SIGINT)
+                stop_process_group()
             except ProcessLookupError:
                 pass
             break
@@ -1009,7 +1028,7 @@ try:
                 **parse_fields(line),
             }
             try:
-                process.send_signal(signal.SIGINT)
+                stop_process_group()
             except ProcessLookupError:
                 pass
             break
@@ -1017,8 +1036,7 @@ finally:
     try:
         process.wait(timeout=15)
     except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
+        stop_process_group()
 
 if outcome == "pass" and pass_fields is not None:
     validate_identity_guard(identity, require_identity=True)
