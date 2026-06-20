@@ -160,6 +160,13 @@ inventory_present_pack_ids_for_lane() {
     sed -nE 's/.* pack=([^ ]+).*/\1/p'
 }
 
+inventory_first_present_pack_id_for_lane() {
+  local lane="$1"
+  local requested_tier="${2:-$tier}"
+  [[ -n "$inventory_output" ]] || return 1
+  inventory_present_pack_ids_for_lane "$lane" "$requested_tier" | head -n 1
+}
+
 inventory_has_present_mtp_pair() {
   local requested_tier="${1:-$tier}"
   [[ -n "$inventory_output" ]] || return 0
@@ -242,6 +249,38 @@ print_installed_pack_command() {
   fi
 }
 
+print_installed_runtime_command() {
+  local label="$1"
+  local runtime="$2"
+  local profile="$3"
+  local pack_id="${4:-}"
+  shift 4
+  if [[ -n "$pack_id" ]]; then
+    print_installed_pack_command \
+      "$label" \
+      scripts/ios-device-installed-pack-smoke.sh \
+      --device "$device_id" \
+      --bundle-id "$bundle_id" \
+      --runtime "$runtime" \
+      --tier "$tier" \
+      --pack-id "$pack_id" \
+      --smoke-profile "$profile" \
+      --stage-timeout "$stage_timeout" \
+      "$@"
+  else
+    print_installed_pack_command \
+      "$label" \
+      scripts/ios-device-installed-pack-smoke.sh \
+      --device "$device_id" \
+      --bundle-id "$bundle_id" \
+      --runtime "$runtime" \
+      --tier "$tier" \
+      --smoke-profile "$profile" \
+      --stage-timeout "$stage_timeout" \
+      "$@"
+  fi
+}
+
 echo "ROSS_MORNING_RUNTIME_CHECKPOINT_PLAN dry_run=true device=${device_id} bundle_id=${bundle_id} tier=${tier}"
 if [[ -n "$installed_root" ]]; then
   echo "Inventory gate: installed_root=${installed_root}"
@@ -287,17 +326,21 @@ else
 fi
 
 if mtp_pair_pack_id="$(inventory_present_mtp_pair_pack_id "$tier")"; then
-  print_installed_pack_command \
-    "3. MTP low-token proof from installed GGUF pack" \
-    scripts/ios-device-installed-pack-smoke.sh \
-    --device "$device_id" \
-    --bundle-id "$bundle_id" \
-    --runtime gguf \
-    --tier "$tier" \
-    --pack-id "$mtp_pair_pack_id" \
-    --smoke-profile mtp_quick \
-    --stage-timeout "$stage_timeout" \
-    --require-draft-acceleration
+  if [[ -n "$inventory_output" ]]; then
+    print_installed_runtime_command \
+      "3. MTP low-token proof from installed GGUF pack" \
+      gguf \
+      mtp_quick \
+      "$mtp_pair_pack_id" \
+      --require-draft-acceleration
+  else
+    print_installed_runtime_command \
+      "3. MTP low-token proof from installed GGUF pack" \
+      gguf \
+      mtp_quick \
+      "" \
+      --require-draft-acceleration
+  fi
 else
   mtp_skip_reason="$(inventory_skip_reason "installed_gguf" "$tier" ||
     inventory_skip_reason "installed_mtp_draft" "$tier" ||
@@ -313,15 +356,20 @@ else
 fi
 
 if inventory_has_present_lane "installed_mlx" "$tier"; then
-  print_installed_pack_command \
-    "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
-    scripts/ios-device-installed-pack-smoke.sh \
-    --device "$device_id" \
-    --bundle-id "$bundle_id" \
-    --runtime mlx \
-    --tier "$tier" \
-    --smoke-profile full \
-    --stage-timeout "$stage_timeout"
+  if [[ -n "$inventory_output" ]]; then
+    mlx_pack_id="$(inventory_first_present_pack_id_for_lane "installed_mlx" "$tier")"
+    print_installed_runtime_command \
+      "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
+      mlx \
+      full \
+      "$mlx_pack_id"
+  else
+    print_installed_runtime_command \
+      "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
+      mlx \
+      full \
+      ""
+  fi
 else
   print_skip \
     "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
@@ -329,15 +377,20 @@ else
 fi
 
 if inventory_has_present_lane "installed_coreai" "$tier"; then
-  print_installed_pack_command \
-    "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
-    scripts/ios-device-installed-pack-smoke.sh \
-    --device "$device_id" \
-    --bundle-id "$bundle_id" \
-    --runtime coreai \
-    --tier "$tier" \
-    --smoke-profile full \
-    --stage-timeout "$stage_timeout"
+  if [[ -n "$inventory_output" ]]; then
+    coreai_pack_id="$(inventory_first_present_pack_id_for_lane "installed_coreai" "$tier")"
+    print_installed_runtime_command \
+      "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
+      coreai \
+      full \
+      "$coreai_pack_id"
+  else
+    print_installed_runtime_command \
+      "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
+      coreai \
+      full \
+      ""
+  fi
 else
   print_skip \
     "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \

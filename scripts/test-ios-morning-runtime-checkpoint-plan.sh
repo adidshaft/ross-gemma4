@@ -67,6 +67,11 @@ grep -q -- "--preflight-only" /tmp/ross-morning-plan.out
 grep -q "ROSS_SIMULATOR_SMOKE_PREFLIGHT_OK" /tmp/ross-morning-plan.out
 grep -q "without launching Simulator or touching the cabled iPhone" /tmp/ross-morning-plan.out
 grep -q "Full matrix cases: English source-bound document QA, Bengali source-bound document QA, Hindi source-bound document QA, Tamil source-bound document QA, Telugu source-bound document QA, and English open no-document query." /tmp/ross-morning-plan.out
+if grep -q -- "--pack-id ''" /tmp/ross-morning-plan.out; then
+  echo "Template morning plan must not print an empty exact pack selector" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
 
 tiny_gguf="$tmpdir/tiny-primary.gguf"
 printf 'GGUF' > "$tiny_gguf"
@@ -475,6 +480,8 @@ grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
 grep -q -- "--pack-id quick-mtp" /tmp/ross-morning-plan.out
+grep -q -- "--pack-id mlx-pack" /tmp/ross-morning-plan.out
+grep -q -- "--pack-id coreai-system" /tmp/ross-morning-plan.out
 grep -q -- "--smoke-profile quick_low_context" /tmp/ross-morning-plan.out
 if [[ "$(grep -c -- "--smoke-profile full" /tmp/ross-morning-plan.out)" -ne 2 ]]; then
   echo "Expected MLX and CoreAI ready lanes to request the full varied profile" >&2
@@ -502,7 +509,7 @@ if [[ "$(grep -c -- "--physical-memory-bytes 12000000000" /tmp/ross-morning-plan
   exit 1
 fi
 grep -q -- "--runtime gguf --tier quickStart --pack-id quick-mtp --smoke-profile mtp_quick --stage-timeout 45 --require-draft-acceleration --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
-grep -q -- "--runtime mlx --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
-grep -q -- "--runtime coreai --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+grep -q -- "--runtime mlx --tier quickStart --pack-id mlx-pack --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+grep -q -- "--runtime coreai --tier quickStart --pack-id coreai-system --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
 
 echo "iOS morning runtime checkpoint plan tests: PASS"
