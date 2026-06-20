@@ -368,23 +368,32 @@ func alphaInstalledModelSmokePack(
     }
 
     if let requestedPackID = nonEmpty(environment.packIDOverride) {
-        return installedPacks.first { $0.packId == requestedPackID }
+        return installedPacks.first {
+            $0.packId == requestedPackID &&
+                alphaInstalledSmokeArtifactKindMatchesRuntime($0)
+        }
     }
 
     guard environment.enableRealInference,
           let requestedRuntime = environment.runtimeModeOverride else {
+        guard let fallbackPack,
+              alphaInstalledSmokeArtifactKindMatchesRuntime(fallbackPack) else {
+            return nil
+        }
         return fallbackPack
     }
 
     let requestedTier = environment.tierOverride ?? fallbackPack?.tier
     if let fallbackPack,
        fallbackPack.runtimeMode == requestedRuntime,
+       alphaInstalledSmokeArtifactKindMatchesRuntime(fallbackPack),
        requestedTier.map({ AlphaCapabilityTier.assistantSelectionsMatch(fallbackPack.tier, $0) }) ?? true {
         return fallbackPack
     }
 
     let candidates = installedPacks.filter { pack in
         pack.runtimeMode == requestedRuntime &&
+            alphaInstalledSmokeArtifactKindMatchesRuntime(pack) &&
             (requestedTier.map { AlphaCapabilityTier.assistantSelectionsMatch(pack.tier, $0) } ?? true)
     }
 
@@ -397,6 +406,14 @@ func alphaInstalledModelSmokePack(
         }
         return lhs.packId.localizedCaseInsensitiveCompare(rhs.packId) == .orderedAscending
     }.first
+}
+
+func alphaInstalledSmokeArtifactKindMatchesRuntime(_ pack: AlphaInstalledModelPack) -> Bool {
+    alphaDebugSmokeArtifactKind(
+        runtimeMode: pack.runtimeMode,
+        modelKind: pack.artifactKind,
+        usesSystemFoundationModel: alphaPackUsesSystemFoundationModel(pack)
+    ) != nil
 }
 
 struct RossLocalModelSmokeView: View {

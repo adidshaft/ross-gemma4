@@ -18061,6 +18061,93 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(selected)
     }
 
+    func testInstalledModelSmokePackRejectsExactPackIDWithCrossRuntimeArtifactKind() {
+        let wrongKindMLX = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "wrong-kind-mlx",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            packIDOverride: "wrong-kind-mlx",
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [wrongKindMLX],
+            fallbackPack: nil,
+            environment: environment
+        )
+
+        XCTAssertNil(selected)
+    }
+
+    func testInstalledModelSmokePackRejectsRuntimeMatchWithCrossRuntimeArtifactKindBeforeFallback() {
+        var activeGGUF = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "active-gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUF.isActive = true
+        let wrongKindMLX = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "wrong-kind-mlx",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [activeGGUF, wrongKindMLX],
+            fallbackPack: activeGGUF,
+            environment: environment
+        )
+
+        XCTAssertNil(selected)
+    }
+
+    func testInstalledModelSmokePackRejectsCoreMLRuntimeWithGGUFArtifactKind() {
+        let wrongKindCoreML = installedPack(
+            .quickStart,
+            runtimeMode: .appleFoundationModels,
+            packId: "wrong-kind-coreml",
+            installPath: "model-packs/quick/wrong-kind-coreml.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            tierOverride: .quickStart,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
+
+        let selected = alphaInstalledModelSmokePack(
+            installedPacks: [wrongKindCoreML],
+            fallbackPack: nil,
+            environment: environment
+        )
+
+        XCTAssertNil(selected)
+    }
+
     func testLocalModelSmokeProfileParsesQuickAliases() {
         XCTAssertEqual(
             RossLocalModelSmokeProfile.fromEnvironment([

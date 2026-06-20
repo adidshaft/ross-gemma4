@@ -1668,6 +1668,15 @@ if ! grep -q "alphaInstalledModelSmokePack" ios/Ross/App/ScreenshotExporter.swif
     FAIL=1
 fi
 
+if ! grep -q "alphaInstalledSmokeArtifactKindMatchesRuntime" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackRejectsExactPackIDWithCrossRuntimeArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackRejectsRuntimeMatchWithCrossRuntimeArtifactKindBeforeFallback" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackRejectsCoreMLRuntimeWithGGUFArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testInstalledModelSmokePackRejectsExactPackIDWithCrossRuntimeArtifactKind" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null; then
+    echo "❌ FAIL: app smoke can still select installed packs whose artifact kind contradicts the requested runtime."
+    FAIL=1
+fi
+
 if [ ! -f docs/IOS_RUNTIME.md ]; then
     echo "❌ FAIL: docs/IOS_RUNTIME.md missing."
     FAIL=1
