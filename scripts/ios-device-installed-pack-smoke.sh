@@ -676,6 +676,7 @@ PY
   if [[ -n "$physical_memory_bytes" && "$selected_runtime_raw" == "gemma_local_runtime" ]]; then
     python3 - "$selected_relative_path" "$selected_bytes" "$selected_draft_relative_path" "$selected_draft_bytes" "$physical_memory_bytes" "$selected_pack_id" "$selected_tier_raw" <<'PY'
 import sys
+import math
 
 primary_path = (sys.argv[1] or "").strip()
 draft_path = (sys.argv[3] or "").strip()
@@ -696,10 +697,12 @@ if not is_e4b or physical_memory >= constrained_e4b_memory_ceiling:
 
 max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
 if primary_bytes + draft_bytes > max_combined_bytes:
+    required_physical_memory = math.ceil((primary_bytes + draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
     print(
         "Selected GGUF/MTP manifest exceeds the constrained E4B draft memory budget for device smoke: "
         f"main_bytes={primary_bytes} draft_bytes={draft_bytes} "
         f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
+        f"required_physical_memory_bytes={required_physical_memory} "
         f"primary={primary_path} draft={draft_path} pack={pack_id} tier={tier}",
         file=sys.stderr,
     )

@@ -446,6 +446,7 @@ PY
 "$PLAN" --device TEST_DEVICE --installed-root "$memory_blocked_support_root" --tier quickStart --physical-memory-bytes 7200000000 > /tmp/ross-morning-plan.out
 grep -q "Inventory MTP memory gate: physical_memory_bytes=7200000000" /tmp/ross-morning-plan.out
 grep -q "SKIP reason=manifest_draft_memory_policy_blocked" /tmp/ross-morning-plan.out
+grep -q "required_physical_memory_bytes=7234722223" /tmp/ross-morning-plan.out
 if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
   echo "Expected memory-blocked E4B MTP pair to suppress MTP proof command" >&2
   cat /tmp/ross-morning-plan.out >&2

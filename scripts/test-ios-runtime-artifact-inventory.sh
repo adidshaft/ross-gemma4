@@ -309,6 +309,7 @@ grep -q "physical_memory=7200000000" /tmp/ross-runtime-inventory.out
 grep -q "main_bytes=5130000000" /tmp/ross-runtime-inventory.out
 grep -q "draft_bytes=79000000" /tmp/ross-runtime-inventory.out
 grep -q "max_combined_bytes=5184000000" /tmp/ross-runtime-inventory.out
+grep -q "required_physical_memory_bytes=7234722223" /tmp/ross-runtime-inventory.out
 
 "$INVENTORY" --search-root "$tmpdir/empty-search-root" --installed-root "$memory_blocked_support_root" --physical-memory-bytes 12000000000 > /tmp/ross-runtime-inventory.out
 grep -q "lane=installed_mtp_draft status=present .*reason=manifest_draft_reachable .*pack=quick-e4b-memory-blocked" /tmp/ross-runtime-inventory.out

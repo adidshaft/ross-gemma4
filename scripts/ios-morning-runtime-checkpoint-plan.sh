@@ -231,6 +231,17 @@ inventory_skip_reason() {
     sed -E 's/.* reason=([^ ]+).*/\1/'
 }
 
+inventory_skip_detail_line() {
+  local lane="$1"
+  local requested_tier="${2:-$tier}"
+  local reason="${3:-}"
+  local tier_pattern
+  tier_pattern="$(inventory_tier_pattern "$requested_tier")"
+  [[ -n "$inventory_output" && -n "$reason" ]] || return 1
+  grep -E "lane=${lane} status=missing .*reason=${reason} .*tier=${tier_pattern}( |$)" <<<"$inventory_output" |
+    head -n 1
+}
+
 print_skip() {
   local label="$1"
   local reason="$2"
@@ -382,6 +393,9 @@ else
   print_skip \
     "3. MTP low-token proof from installed GGUF pack" \
     "$mtp_skip_reason"
+  if mtp_skip_detail="$(inventory_skip_detail_line "installed_mtp_draft" "$tier" "$mtp_skip_reason")"; then
+    printf '   DETAIL %s\n' "$mtp_skip_detail"
+  fi
 fi
 
 if inventory_has_present_lane "installed_mlx" "$tier"; then

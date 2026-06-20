@@ -562,6 +562,7 @@ if [[ -n "$physical_memory_bytes" && "$require_draft_acceleration" == "1" && "$n
   python3 - "$model_path" "$draft_model_path" "$physical_memory_bytes" <<'PY'
 import pathlib
 import sys
+import math
 
 main_path = pathlib.Path(sys.argv[1])
 draft_path = pathlib.Path(sys.argv[2])
@@ -580,10 +581,12 @@ except OSError:
 
 max_combined_bytes = int(physical_memory * constrained_e4b_draft_artifact_budget_ratio)
 if main_bytes + draft_bytes > max_combined_bytes:
+    required_physical_memory = math.ceil((main_bytes + draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
     print(
         "GGUF/MTP simulator draft proof exceeds the constrained E4B draft memory budget: "
         f"main_bytes={main_bytes} draft_bytes={draft_bytes} "
         f"max_combined_bytes={max_combined_bytes} physical_memory={physical_memory} "
+        f"required_physical_memory_bytes={required_physical_memory} "
         f"main={main_path.name} draft={draft_path.name}",
         file=sys.stderr,
     )

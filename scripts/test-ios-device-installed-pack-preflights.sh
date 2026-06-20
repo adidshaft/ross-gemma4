@@ -370,6 +370,7 @@ run_expect_exit_1 \
   "memory-blocked E4B MTP installed manifest" \
   "exceeds the constrained E4B draft memory budget" \
   "${base_command[@]}" --runtime gguf --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
+grep -q "required_physical_memory_bytes=7234722223" "$tmpdir/out.txt"
 
 write_manifest '{
   "packId": "family-mismatched-mtp",

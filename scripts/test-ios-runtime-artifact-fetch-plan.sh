@@ -128,7 +128,7 @@ truncate -s 98653248 "$memory_blocked_root/mtp-gemma-4-E4B-it.gguf"
 ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
   "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$memory_blocked_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=gguf status=present action=preflight .*path=$memory_blocked_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf" /tmp/ross-runtime-fetch-plan.out
-grep -q "lane=mtp_draft status=blocked action=memory_policy_blocked .*path=$memory_blocked_root/mtp-gemma-4-E4B-it.gguf .*reason=local_draft_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=5126304928 .*draft_bytes=98653248 .*max_combined_bytes=5184000000" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=blocked action=memory_policy_blocked .*path=$memory_blocked_root/mtp-gemma-4-E4B-it.gguf .*reason=local_draft_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=5126304928 .*draft_bytes=98653248 .*max_combined_bytes=5184000000 .*required_physical_memory_bytes=7256886356" /tmp/ross-runtime-fetch-plan.out
 if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$memory_blocked_root/mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-fetch-plan.out; then
   echo "Did not expect memory-blocked local E4B MTP pair to print a present preflight row." >&2
   cat /tmp/ross-runtime-fetch-plan.out >&2

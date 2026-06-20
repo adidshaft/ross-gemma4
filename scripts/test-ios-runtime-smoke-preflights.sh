@@ -185,6 +185,7 @@ truncate -s 79000000 "$e4b_draft_gguf"
 run_expect_exit_2 \
   "memory-blocked E4B simulator MTP proof" \
   "$SIM_SMOKE" --runtime gguf --model "$e4b_main_gguf" --draft-model "$e4b_draft_gguf" --require-draft-acceleration --smoke-profile mtp_quick --physical-memory-bytes 7200000000
+grep -q "required_physical_memory_bytes=7234722223" /tmp/ross-runtime-preflight.out
 
 run_expect_exit_2 \
   "GGUF file passed as MLX draft proof" \

@@ -630,6 +630,7 @@ for installed_root in "${installed_roots[@]}"; do
   python3 - "$installed_root" "$physical_memory_bytes" <<'PY'
 import json
 import hashlib
+import math
 import pathlib
 import shlex
 import sys
@@ -712,6 +713,7 @@ def mtp_memory_policy(
     if main_bytes is None or candidate_draft_bytes is None:
         return True, "manifest_draft_memory_policy_unknown_sizes", {"physical_memory": physical_memory_bytes}
     max_combined_bytes = int(physical_memory_bytes * constrained_e4b_draft_artifact_budget_ratio)
+    required_physical_memory = math.ceil((main_bytes + candidate_draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
     allowed = main_bytes + candidate_draft_bytes <= max_combined_bytes
     reason = "manifest_draft_memory_policy_reachable" if allowed else "manifest_draft_memory_policy_blocked"
     return allowed, reason, {
@@ -719,6 +721,7 @@ def mtp_memory_policy(
         "main_bytes": main_bytes,
         "draft_bytes": candidate_draft_bytes,
         "max_combined_bytes": max_combined_bytes,
+        "required_physical_memory_bytes": required_physical_memory,
     }
 
 def normalized_sha256(value: object) -> str:

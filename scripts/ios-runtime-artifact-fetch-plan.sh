@@ -129,6 +129,7 @@ import pathlib
 import shlex
 import sys
 import hashlib
+import math
 
 tier = sys.argv[1]
 target_root = pathlib.Path(sys.argv[2]).expanduser()
@@ -210,6 +211,7 @@ def mtp_memory_policy(primary_path: str, draft_path: str) -> tuple[bool, str, di
     except OSError:
         return (True, "local_draft_memory_policy_unknown_sizes", {"physical_memory": target_memory})
     max_combined_bytes = int(target_memory * constrained_e4b_draft_artifact_budget_ratio)
+    required_physical_memory = math.ceil((main_bytes + draft_bytes) / constrained_e4b_draft_artifact_budget_ratio)
     allowed = main_bytes + draft_bytes <= max_combined_bytes
     return (
         allowed,
@@ -219,6 +221,7 @@ def mtp_memory_policy(primary_path: str, draft_path: str) -> tuple[bool, str, di
             "main_bytes": main_bytes,
             "draft_bytes": draft_bytes,
             "max_combined_bytes": max_combined_bytes,
+            "required_physical_memory_bytes": required_physical_memory,
         },
     )
 
