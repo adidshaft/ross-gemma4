@@ -223,6 +223,89 @@ if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out ||
   exit 1
 fi
 
+multi_pack_support_root="$tmpdir/RossAlphaMultiPack"
+multi_pack_packs_root="$multi_pack_support_root/model-packs"
+mkdir -p "$multi_pack_packs_root/quickStartA" "$multi_pack_packs_root/quickStartB" \
+  "$multi_pack_packs_root/mlxA/gemma-mlx" "$multi_pack_packs_root/mlxB/gemma-mlx" \
+  "$multi_pack_packs_root/coreaiA" "$multi_pack_packs_root/coreaiB"
+printf 'GGUF%*s' 1000000 '' > "$multi_pack_packs_root/quickStartA/main.gguf"
+printf 'GGUF%*s' 1000000 '' > "$multi_pack_packs_root/quickStartA/draft.gguf"
+printf 'GGUF%*s' 1000000 '' > "$multi_pack_packs_root/quickStartB/main.gguf"
+printf 'GGUF%*s' 1000000 '' > "$multi_pack_packs_root/quickStartB/draft.gguf"
+for mlx_dir in "$multi_pack_packs_root/mlxA/gemma-mlx" "$multi_pack_packs_root/mlxB/gemma-mlx"; do
+  printf '{}' > "$mlx_dir/config.json"
+  printf '{}' > "$mlx_dir/tokenizer.json"
+  printf 'weights' > "$mlx_dir/model.safetensors"
+done
+python3 - "$multi_pack_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+for suffix in ("A", "B"):
+    (packs / f"quickStart{suffix}" / f"quick-{suffix}.manifest.json").write_text(json.dumps({
+        "packId": f"quick-mtp-{suffix.lower()}",
+        "tier": "quick_start",
+        "fileName": "main.gguf",
+        "relativePath": f"model-packs/quickStart{suffix}/main.gguf",
+        "checksumSha256": f"abc-{suffix}",
+        "bytes": 1_000_001,
+        "artifactKind": "local_model_artifact",
+        "runtimeMode": "gemma_local_runtime",
+        "developmentOnly": False,
+        "draftArtifact": {
+            "fileName": "draft.gguf",
+            "relativePath": f"model-packs/quickStart{suffix}/draft.gguf",
+            "checksumSha256": f"def-{suffix}",
+            "bytes": 1_000_001,
+            "artifactKind": "local_model_artifact",
+            "draftTokens": 2,
+        },
+        "verifiedAt": "2026-06-19T00:00:00Z",
+    }))
+
+    (packs / f"mlx{suffix}" / f"mlx-{suffix}.manifest.json").write_text(json.dumps({
+        "packId": f"mlx-pack-{suffix.lower()}",
+        "tier": "quick_start",
+        "fileName": "gemma-mlx",
+        "relativePath": f"model-packs/mlx{suffix}/gemma-mlx",
+        "checksumSha256": f"mlx-{suffix}",
+        "bytes": 1_000_001,
+        "artifactKind": "mlx_directory",
+        "runtimeMode": "mlx_swift_lm",
+        "developmentOnly": False,
+        "verifiedAt": "2026-06-19T00:00:00Z",
+    }))
+
+    (packs / f"coreai{suffix}" / f"coreai-{suffix}.manifest.json").write_text(json.dumps({
+        "packId": f"coreai-system-{suffix.lower()}",
+        "tier": "quick_start",
+        "fileName": "system-model",
+        "relativePath": "system-model",
+        "checksumSha256": "system",
+        "bytes": 0,
+        "artifactKind": "system_model",
+        "runtimeMode": "apple_foundation_models",
+        "developmentOnly": False,
+        "verifiedAt": "2026-06-19T00:00:00Z",
+    }))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$multi_pack_support_root" --tier quickStart > /tmp/ross-morning-plan.out
+grep -q "SKIP reason=multiple_installed_mtp_pairs_for_tier" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=multiple_installed_mlx_for_tier" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=multiple_installed_coreai_for_tier" /tmp/ross-morning-plan.out
+if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out ||
+   grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out ||
+   grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out; then
+  echo "Expected multi-pack inventory to skip ambiguous runtime lanes for quickStart" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
 broken_mtp_support_root="$tmpdir/RossAlphaBrokenMTP"
 broken_mtp_packs_root="$broken_mtp_support_root/model-packs"
 mkdir -p "$broken_mtp_packs_root/quickStart"

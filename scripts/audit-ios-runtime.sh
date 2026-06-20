@@ -1025,7 +1025,7 @@ fi
 
 if ! grep -q 'inventory_has_present_mtp_pair' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q 'inventory_present_mtp_pair_pack_id' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
-   ! grep -q 'inventory_first_present_pack_id_for_lane' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q 'inventory_unique_present_pack_id_for_lane' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q 'print_installed_runtime_command' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q -- '--pack-id "$pack_id"' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "broken installed GGUF primary" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
@@ -1033,6 +1033,9 @@ if ! grep -q 'inventory_has_present_mtp_pair' scripts/ios-morning-runtime-checkp
    ! grep -q -- "--pack-id quick-mtp" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q -- "--pack-id mlx-pack" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q -- "--pack-id coreai-system" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q -- "multiple_installed_mtp_pairs_for_tier" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q -- "multiple_installed_mlx_for_tier" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q -- "multiple_installed_coreai_for_tier" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q -- "Template morning plan must not print an empty exact pack selector" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "generated command includes that exact.*--pack-id" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: morning runtime checkpoint plan can run installed proof without targeting usable exact manifest packs."

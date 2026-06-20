@@ -160,11 +160,34 @@ inventory_present_pack_ids_for_lane() {
     sed -nE 's/.* pack=([^ ]+).*/\1/p'
 }
 
-inventory_first_present_pack_id_for_lane() {
+inventory_unique_present_pack_id_for_lane() {
   local lane="$1"
   local requested_tier="${2:-$tier}"
   [[ -n "$inventory_output" ]] || return 1
-  inventory_present_pack_ids_for_lane "$lane" "$requested_tier" | head -n 1
+  local pack_ids
+  pack_ids="$(inventory_present_pack_ids_for_lane "$lane" "$requested_tier" | sort -u)"
+  local pack_count
+  pack_count="$(printf '%s\n' "$pack_ids" | awk 'NF { count++ } END { print count + 0 }')"
+  [[ "$pack_count" -eq 1 ]] || return 1
+  printf '%s\n' "$pack_ids"
+}
+
+inventory_present_mtp_pair_count() {
+  local requested_tier="${1:-$tier}"
+  [[ -n "$inventory_output" ]] || {
+    echo 0
+    return 0
+  }
+  local pack_id
+  local count=0
+  while IFS= read -r pack_id; do
+    [[ -n "$pack_id" ]] || continue
+    if inventory_present_pack_ids_for_lane "installed_mtp_draft" "$requested_tier" |
+      grep -Fxq "$pack_id"; then
+      count=$((count + 1))
+    fi
+  done < <(inventory_present_pack_ids_for_lane "installed_gguf" "$requested_tier" | sort -u)
+  echo "$count"
 }
 
 inventory_has_present_mtp_pair() {
@@ -184,6 +207,7 @@ inventory_has_present_mtp_pair() {
 inventory_present_mtp_pair_pack_id() {
   local requested_tier="${1:-$tier}"
   [[ -n "$inventory_output" ]] || return 0
+  [[ "$(inventory_present_mtp_pair_count "$requested_tier")" -eq 1 ]] || return 1
   local pack_id
   while IFS= read -r pack_id; do
     [[ -n "$pack_id" ]] || continue
@@ -344,6 +368,11 @@ if mtp_pair_pack_id="$(inventory_present_mtp_pair_pack_id "$tier")"; then
 else
   mtp_skip_reason="$(inventory_skip_reason "installed_gguf" "$tier" ||
     inventory_skip_reason "installed_mtp_draft" "$tier" ||
+    if [[ -n "$inventory_output" && "$(inventory_present_mtp_pair_count "$tier")" -gt 1 ]]; then
+      echo multiple_installed_mtp_pairs_for_tier
+    else
+      false
+    fi ||
     if inventory_has_present_lane "installed_gguf" "$tier" &&
        inventory_has_present_lane "installed_mtp_draft" "$tier"; then
       echo missing_installed_mtp_primary_draft_pair_for_tier
@@ -357,12 +386,17 @@ fi
 
 if inventory_has_present_lane "installed_mlx" "$tier"; then
   if [[ -n "$inventory_output" ]]; then
-    mlx_pack_id="$(inventory_first_present_pack_id_for_lane "installed_mlx" "$tier")"
-    print_installed_runtime_command \
-      "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
-      mlx \
-      full \
-      "$mlx_pack_id"
+    if mlx_pack_id="$(inventory_unique_present_pack_id_for_lane "installed_mlx" "$tier")"; then
+      print_installed_runtime_command \
+        "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
+        mlx \
+        full \
+        "$mlx_pack_id"
+    else
+      print_skip \
+        "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
+        "multiple_installed_mlx_for_tier"
+    fi
   else
     print_installed_runtime_command \
       "4. MLX identity and varied document/query full smoke if installed MLX artifact exists" \
@@ -378,12 +412,17 @@ fi
 
 if inventory_has_present_lane "installed_coreai" "$tier"; then
   if [[ -n "$inventory_output" ]]; then
-    coreai_pack_id="$(inventory_first_present_pack_id_for_lane "installed_coreai" "$tier")"
-    print_installed_runtime_command \
-      "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
-      coreai \
-      full \
-      "$coreai_pack_id"
+    if coreai_pack_id="$(inventory_unique_present_pack_id_for_lane "installed_coreai" "$tier")"; then
+      print_installed_runtime_command \
+        "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
+        coreai \
+        full \
+        "$coreai_pack_id"
+    else
+      print_skip \
+        "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
+        "multiple_installed_coreai_for_tier"
+    fi
   else
     print_installed_runtime_command \
       "5. CoreAI/CoreML/Foundation varied document/query full smoke if available" \
