@@ -116,7 +116,7 @@ PY
 "$INVENTORY" --search-root "$unsupported_mlx_root" > /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx status=missing .*path=.*gemma-4-E4B-it-qat-4bit .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
 grep -q "lane=mlx_draft status=missing .*path=.*gemma-4-E4B-it-qat-draft-vision .*reason=unsupported_gemma4_multimodal" /tmp/ross-runtime-inventory.out
-grep -q "lane=catalog_mlx status=expected .*file=gemma-4-E4B-it-qat-4bit .*local_status=size_mismatch .*local_path=.*gemma-4-E4B-it-qat-4bit .*local_bytes=.* .*local_checksum=.*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
+grep -q "lane=catalog_mlx status=expected .*file=gemma-4-E4B-it-qat-4bit .*local_status=size_mismatch .*local_path=.*gemma-4-E4B-it-qat-4bit .*local_compatibility=unsupported_gemma4_multimodal .*local_bytes=.* .*local_checksum=.*acquisition_hint=hf_download_mlx_directory" /tmp/ross-runtime-inventory.out
 
 printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 

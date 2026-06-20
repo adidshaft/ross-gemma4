@@ -23623,6 +23623,66 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeHealth().modelPathLabel, directory.lastPathComponent)
     }
 
+    func testResolveProviderDoesNotBorrowGGUFProviderForExplicitMLXRequest() {
+        let ggufPack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "quick-gguf-active",
+            installPath: "model-packs/quick/main.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: ggufPack,
+            requestedTier: ggufPack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let resolvedProvider = try? XCTUnwrap(provider)
+        XCTAssertEqual(resolvedProvider?.runtimeMode, .mlxSwiftLm)
+        XCTAssertFalse(resolvedProvider is AlphaLlamaCppProvider)
+        XCTAssertNotEqual(resolvedProvider?.runtimeMode, .llamaCppGguf)
+    }
+
+    func testResolveProviderDoesNotBorrowGGUFProviderForExplicitCoreAIRequest() {
+        let ggufPack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "quick-gguf-active",
+            installPath: "model-packs/quick/main.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: ggufPack,
+            requestedTier: ggufPack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let resolvedProvider = try? XCTUnwrap(provider)
+        XCTAssertEqual(resolvedProvider?.runtimeMode, .appleFoundationModels)
+        XCTAssertFalse(resolvedProvider is AlphaLlamaCppProvider)
+        XCTAssertNotEqual(resolvedProvider?.runtimeMode, .llamaCppGguf)
+    }
+
     func testExperimentalMLXProviderUsesGemma4AssistantDraftArchive() async throws {
         actor DraftCapture {
             var draftPath: String?

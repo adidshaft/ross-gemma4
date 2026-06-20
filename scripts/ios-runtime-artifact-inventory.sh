@@ -303,6 +303,7 @@ printf 'ROSS_RUNTIME_ARTIFACT_INVENTORY lane=coreai_system status=unknown path=s
 
 python3 - "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel.swift" "$ROOT_DIR/ios/Ross/AlphaFoundation/AlphaRossModel+PrivateAI.swift" "${search_roots[@]}" <<'PY'
 import hashlib
+import json
 import os
 import re
 import shlex
