@@ -865,8 +865,9 @@ fi
 
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "bad-coreai" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
+   ! grep -q "foreign-adapter.mlmodelc" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
    ! grep -q "lane=coreai_adapter status=missing" scripts/test-ios-runtime-artifact-inventory.sh 2>/dev/null ||
-   ! grep -q "Local and installed file-backed CoreAI/CoreML adapter rows must have non-empty reachable adapter contents" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "must not contain foreign Hugging Face/GGUF-style model weights" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: installed CoreAI adapter inventory can treat empty adapter paths as ready."
     FAIL=1
 fi
@@ -1137,6 +1138,7 @@ done
 if ! grep -q "coreai_adapter_looks_usable" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter directory" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "empty CoreAI adapter file" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
+   ! grep -q "foreign CoreAI adapter directory contents" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "non-CoreML path shape passed as CoreML adapter" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null; then
     echo "❌ FAIL: simulator CoreAI adapter smoke does not reject empty or non-adapter artifacts before launch."
     FAIL=1
