@@ -637,6 +637,42 @@ if runtime == "gemma_local_runtime" and draft_bytes <= 1_000_000:
     sys.exit(1)
 PY
 
+  if [[ "$selected_runtime_raw" == "gemma_local_runtime" ]]; then
+    python3 - "$selected_relative_path" "$selected_draft_relative_path" "$selected_pack_id" "$selected_tier_raw" <<'PY'
+import sys
+
+primary_path = (sys.argv[1] or "").strip()
+draft_path = (sys.argv[2] or "").strip()
+pack_id = (sys.argv[3] or "").strip()
+tier = (sys.argv[4] or "").strip()
+
+
+def gguf_mtp_family(path: str) -> str:
+    lower = path.lower()
+    if "26b-a4b" in lower:
+        return "26b-a4b"
+    if "12b" in lower:
+        return "12b"
+    if "e4b" in lower:
+        return "e4b"
+    if "e2b" in lower or "gemma-2-2b" in lower or "gemma-2b" in lower:
+        return "2b"
+    return "unknown"
+
+
+primary_family = gguf_mtp_family(primary_path)
+draft_family = gguf_mtp_family(draft_path)
+if primary_family != "unknown" and draft_family != "unknown" and primary_family != draft_family:
+    print(
+        "Selected GGUF/MTP manifest pairs incompatible primary and draft model families for device smoke: "
+        f"primary_family={primary_family} draft_family={draft_family} "
+        f"primary={primary_path} draft={draft_path} pack={pack_id} tier={tier}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+  fi
+
   if [[ -n "$physical_memory_bytes" && "$selected_runtime_raw" == "gemma_local_runtime" ]]; then
     python3 - "$selected_relative_path" "$selected_bytes" "$selected_draft_relative_path" "$selected_draft_bytes" "$physical_memory_bytes" "$selected_pack_id" "$selected_tier_raw" <<'PY'
 import sys

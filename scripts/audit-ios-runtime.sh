@@ -560,7 +560,10 @@ if ! grep -q "testRuntimeHealthKeepsMLXAvailableWithInvalidDraftArtifactWithoutC
 fi
 
 if ! grep -q "alphaDebugSmokeArtifactKind" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
-   ! grep -q "testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
+   ! grep -q "alphaDebugLocalModelSmokePackFailureReason" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+   ! grep -q "testDebugLocalModelSmokePackRejectsMissingRuntimeArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testDebugLocalModelSmokePackFailureReasonRejectsCrossRuntimeMLXArtifactKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testDebugLocalModelSmokePackFailureReasonRejectsWrongFoundationSentinelKind" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: debug smoke packs do not fail closed on missing or mismatched artifact kinds."
     FAIL=1
 fi
@@ -1589,6 +1592,13 @@ if ! grep -q "GGUF/MTP simulator draft proof exceeds the constrained E4B draft m
    ! grep -q "memory-blocked E4B simulator MTP proof" scripts/test-ios-runtime-smoke-preflights.sh 2>/dev/null ||
    ! grep -q "constrained E4B GGUF+MTP pair exceeds the app's draft memory budget" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: simulator MTP preflight can bypass constrained E4B memory-fit checks."
+    FAIL=1
+fi
+
+if ! grep -q "pairs incompatible primary and draft model families" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
+   ! grep -q "family-mismatched MTP installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||
+   ! grep -q "primary/draft family mismatches" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MTP preflight can pair incompatible primary and draft families."
     FAIL=1
 fi
 

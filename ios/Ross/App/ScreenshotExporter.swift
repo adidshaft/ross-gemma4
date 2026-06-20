@@ -308,6 +308,54 @@ func alphaDebugLocalModelSmokePack(
     )
 }
 
+func alphaDebugLocalModelSmokePackFailureReason(
+    environment: AlphaLocalRuntimeEnvironment,
+    fileManager: FileManager = .default
+) -> String? {
+    func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    guard environment.enableRealInference,
+          let modelPath = nonEmpty(environment.modelPath) else {
+        return nil
+    }
+    let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
+    guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
+        return "unsupported_runtime"
+    }
+    let usesSystemFoundationModel = alphaDebugSmokePathUsesSystemFoundationModel(
+        runtimeMode: runtimeMode,
+        modelPath: modelPath
+    )
+    let resolvedModelURL = alphaDebugSmokeResolvedModelURL(for: modelPath)
+    guard usesSystemFoundationModel || fileManager.fileExists(atPath: resolvedModelURL.path) else {
+        return alphaDebugSmokeMissingArtifactError(for: runtimeMode)
+    }
+    guard alphaDebugSmokeArtifactKind(
+        runtimeMode: runtimeMode,
+        modelKind: nonEmpty(environment.modelKind),
+        usesSystemFoundationModel: usesSystemFoundationModel
+    ) != nil else {
+        return alphaDebugSmokeMissingArtifactError(for: runtimeMode)
+    }
+    return nil
+}
+
+func alphaDebugSmokeMissingArtifactError(for runtimeMode: AlphaPackRuntimeMode) -> String {
+    switch runtimeMode {
+    case .llamaCppGguf:
+        return "missing_model_file"
+    case .mlxSwiftLm:
+        return "missing_mlx_artifact"
+    case .appleFoundationModels:
+        return "missing_coreai_artifact"
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        return "unsupported_runtime"
+    }
+}
+
 func alphaDebugSmokeResolvedModelURL(for modelPath: String) -> URL {
     if modelPath.hasPrefix("/") {
         return URL(fileURLWithPath: modelPath)
@@ -453,14 +501,21 @@ struct RossLocalModelSmokeView: View {
         let debugModelPathExists = debugModelPath
             .map { FileManager.default.fileExists(atPath: alphaDebugSmokeResolvedModelURL(for: $0).path) }
             ?? false
+        let debugPackFailureReason = alphaDebugLocalModelSmokePackFailureReason(environment: runtimeEnvironment)
         RossLocalModelSmokeView.log(
-            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPathExists) draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false) physical_memory_bytes=\(runtimeEnvironment.physicalMemoryBytes.map(String.init) ?? "nil")"
+            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPathExists) debug_pack_error=\(debugPackFailureReason ?? "nil") draft_disabled=\(runtimeEnvironment.disableDraftAcceleration) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false) physical_memory_bytes=\(runtimeEnvironment.physicalMemoryBytes.map(String.init) ?? "nil")"
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "launch"))
         let activePack: AlphaInstalledModelPack?
         if let debugPack = debugLocalModelSmokePack(environment: runtimeEnvironment) {
             activePack = debugPack
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE using_debug_pack")
+        } else if let debugPackFailureReason {
+            status = RossLocalModelSmokeStatusCopy.missingAssistantStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "gemma_local_runtime") requested_runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") profile=\(smokeProfile.rawValue) stage=debug_pack error=\(debugPackFailureReason) runtime_error_detail=\(debugPackFailureReason) draft_error_detail=nil"
+            )
+            return
         } else {
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE load_model_state")
             await model.loadIfNeeded()

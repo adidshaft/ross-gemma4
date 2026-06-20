@@ -18079,6 +18079,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(alphaDebugLocalModelSmokePack(environment: environment))
     }
 
+    func testDebugLocalModelSmokePackFailureReasonRejectsCrossRuntimeMLXArtifactKind() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let modelURL = root.appendingPathComponent("mlx-model", isDirectory: true)
+        try FileManager.default.createDirectory(at: modelURL, withIntermediateDirectories: true)
+
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .mlxSwiftLm,
+            tierOverride: .caseAssociate,
+            modelPath: modelURL.path,
+            modelChecksum: String(repeating: "d", count: 64),
+            modelKind: "local_model_artifact"
+        )
+
+        XCTAssertEqual(
+            alphaDebugLocalModelSmokePackFailureReason(environment: environment),
+            "missing_mlx_artifact"
+        )
+    }
+
+    func testDebugLocalModelSmokePackFailureReasonRejectsMissingGGUFPath() throws {
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .llamaCppGguf,
+            tierOverride: .quickStart,
+            modelPath: "/tmp/ross/missing-debug-model.gguf",
+            modelChecksum: String(repeating: "e", count: 64),
+            modelKind: "gguf"
+        )
+
+        XCTAssertEqual(
+            alphaDebugLocalModelSmokePackFailureReason(environment: environment),
+            "missing_model_file"
+        )
+    }
+
+    func testDebugLocalModelSmokePackFailureReasonRejectsWrongFoundationSentinelKind() throws {
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            tierOverride: .quickStart,
+            modelPath: "system-model",
+            modelChecksum: nil,
+            modelKind: "coreml_model"
+        )
+
+        XCTAssertEqual(
+            alphaDebugLocalModelSmokePackFailureReason(environment: environment),
+            "missing_coreai_artifact"
+        )
+    }
+
     func testDebugLocalModelSmokePackAllowsFoundationSystemModelSentinel() throws {
         let environment = AlphaLocalRuntimeEnvironment(
             enableRealInference: true,
