@@ -602,8 +602,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     nonisolated(unsafe) private static var cachedContext: (any AlphaLlamaCompletionContext)?
     nonisolated(unsafe) private static var cachedKey: String?
     nonisolated(unsafe) private static var degenerateDraftKeys: Set<String> = []
+    nonisolated(unsafe) private static var invalidDraftStageKeys: Set<String> = []
     private static let cacheLock = NSLock()
     private static let degenerateDraftLock = NSLock()
+    private static let invalidDraftStageLock = NSLock()
 
     private func draftHealthKey(path: String, draftPath: String, draftTokens: Int?) -> String {
         [path, draftPath, draftTokens.map(String.init) ?? "nil"].joined(separator: "|")
@@ -628,6 +630,25 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         degenerateDraftLock.lock()
         degenerateDraftKeys.insert(key)
         degenerateDraftLock.unlock()
+
+        cacheLock.lock()
+        cachedContext = nil
+        cachedKey = nil
+        cacheLock.unlock()
+    }
+
+    private static func draftStagePreviouslyInvalid(_ key: String?) -> Bool {
+        guard let key else { return false }
+        invalidDraftStageLock.lock()
+        defer { invalidDraftStageLock.unlock() }
+        return invalidDraftStageKeys.contains(key)
+    }
+
+    private static func markDraftStageInvalid(_ key: String?) {
+        guard let key else { return }
+        invalidDraftStageLock.lock()
+        invalidDraftStageKeys.insert(key)
+        invalidDraftStageLock.unlock()
 
         cacheLock.lock()
         cachedContext = nil
@@ -865,6 +886,12 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let activeAccelerationMode = await context.accelerationMode()
             let surfacedDraftMetadata = surfacedDraftMetadata(for: activeAccelerationMode)
             let speculativeDraftMetrics = await context.speculativeDraftMetrics()
+            if activeAccelerationMode == .draftModelSpeculative,
+               let speculativeDraftMetrics,
+               speculativeDraftMetrics.attemptedTokens > 0,
+               speculativeDraftMetrics.acceptedTokens == 0 {
+                Self.markDraftStageInvalid(activeDraftHealthKey(path: modelPath))
+            }
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             if activeAccelerationMode == .draftModelSpeculative,
@@ -1258,6 +1285,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             ),
             draftMemoryPolicyAllows(draftPath: draftPath),
             !Self.draftOutputPreviouslyDegenerated(degenerateDraftKey)
+            && !Self.draftStagePreviouslyInvalid(degenerateDraftKey)
         else {
             return nil
         }
@@ -1293,6 +1321,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             modelPath.map { draftHealthKey(path: $0, draftPath: draftPath, draftTokens: metadata.tokens) }
         ) {
             return ("draft_output_degenerate", draftPath, metadata)
+        }
+        if Self.draftStagePreviouslyInvalid(
+            modelPath.map { draftHealthKey(path: $0, draftPath: draftPath, draftTokens: metadata.tokens) }
+        ) {
+            return ("draft_stage_invalid", draftPath, metadata)
         }
         return ("candidate", draftPath, metadata)
     }
@@ -1406,6 +1439,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             return "draft_validator_failed"
         case "draft_output_degenerate":
             return "draft_output_degenerate"
+        case "draft_stage_invalid":
+            return "draft_stage_invalid"
         default:
             return nil
         }

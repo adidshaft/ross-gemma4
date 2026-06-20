@@ -7714,6 +7714,180 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(draftPaths.dropFirst().contains(nil))
     }
 
+    func testExperimentalGGUFProviderQuarantinesZeroAcceptedDraftStage() async throws {
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            private let chunks: [String]
+            private let reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode
+            private let reportedExecutionPathLabel: String
+            private let reportedDraftMetrics: AlphaSpeculativeDraftMetrics?
+            private var emittedIndex = 0
+
+            init(
+                chunks: [String],
+                reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode,
+                reportedExecutionPathLabel: String,
+                reportedDraftMetrics: AlphaSpeculativeDraftMetrics? = nil
+            ) {
+                self.chunks = chunks
+                self.reportedAccelerationMode = reportedAccelerationMode
+                self.reportedExecutionPathLabel = reportedExecutionPathLabel
+                self.reportedDraftMetrics = reportedDraftMetrics
+            }
+
+            func clear() {
+                emittedIndex = 0
+            }
+
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+
+            func completionLoop() -> String {
+                guard emittedIndex < chunks.count else { return "" }
+                let chunk = chunks[emittedIndex]
+                emittedIndex += 1
+                return chunk
+            }
+
+            func isDone() -> Bool {
+                emittedIndex >= chunks.count
+            }
+
+            func promptTokenCount() -> Int { 198 }
+            func generatedTokenCount() -> Int { emittedIndex * 10 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { reportedAccelerationMode }
+            func executionPathLabel() -> String { reportedExecutionPathLabel }
+            func speculativeDraftMetrics() -> AlphaSpeculativeDraftMetrics? { reportedDraftMetrics }
+        }
+
+        final class DraftAttemptCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var draftPaths: [String?] = []
+
+            func record(draftPath: String?) {
+                lock.lock()
+                defer { lock.unlock() }
+                draftPaths.append(draftPath)
+            }
+
+            func snapshot() -> [String?] {
+                lock.lock()
+                defer { lock.unlock() }
+                return draftPaths
+            }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-zero-accepted-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-zero-accepted-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+        }
+
+        let capture = DraftAttemptCapture()
+        AlphaLlamaCppProvider.contextFactory = { _, draftPath, _ in
+            capture.record(draftPath: draftPath)
+            if draftPath == nil {
+                return StubLlamaContext(
+                    chunks: ["Standard answer"],
+                    reportedAccelerationMode: .standard,
+                    reportedExecutionPathLabel: "Gemma GGUF via llama.cpp"
+                )
+            }
+            return StubLlamaContext(
+                chunks: ["Draft answered without accepted speculative tokens."],
+                reportedAccelerationMode: .draftModelSpeculative,
+                reportedExecutionPathLabel: "Gemma GGUF with draft acceleration",
+                reportedDraftMetrics: AlphaSpeculativeDraftMetrics(
+                    attemptedTokens: 22,
+                    acceptedTokens: 0,
+                    lastFailureReason: "first_token_mismatch"
+                )
+            )
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in true }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true,
+            draftModelPath: draftURL.path,
+            draftModelTokens: 2
+        )
+
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: UUID(),
+                        documentId: UUID(),
+                        documentTitle: "Selected Order",
+                        pageNumber: 1,
+                        textSnippet: "The matter is listed on 14 May 2026."
+                    ),
+                    text: "The matter is listed on 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 24,
+            extractionMode: .caseAssociate
+        )
+
+        let output = await provider.run(input)
+
+        XCTAssertNil(output.errorCategory)
+        XCTAssertTrue(output.schemaValid)
+        XCTAssertEqual(output.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output.speculativeDraftTokenAttempts, 22)
+        XCTAssertEqual(output.speculativeDraftTokenAccepts, 0)
+        XCTAssertEqual(output.speculativeDraftFailureReason, "first_token_mismatch")
+
+        let healthAfterZeroAcceptedStage = provider.runtimeHealth()
+        XCTAssertEqual(healthAfterZeroAcceptedStage.accelerationMode, .standard)
+        XCTAssertEqual(healthAfterZeroAcceptedStage.draftAccelerationStatus, "draft_stage_invalid")
+        XCTAssertEqual(healthAfterZeroAcceptedStage.lastErrorCategory, "draft_stage_invalid")
+        XCTAssertNil(healthAfterZeroAcceptedStage.draftModelPathLabel)
+        XCTAssertNil(healthAfterZeroAcceptedStage.accelerationDraftTokens)
+        XCTAssertEqual(healthAfterZeroAcceptedStage.draftCandidatePathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(healthAfterZeroAcceptedStage.draftCandidateTokens, 2)
+        XCTAssertEqual(healthAfterZeroAcceptedStage.draftModelPathType, "file")
+
+        let followUpOutput = await provider.run(input)
+
+        XCTAssertEqual(followUpOutput.rawText, "Standard answer")
+        XCTAssertEqual(followUpOutput.accelerationMode, .standard)
+        XCTAssertNil(followUpOutput.accelerationDraftTokens)
+        XCTAssertNil(followUpOutput.accelerationDraftModelLabel)
+        let draftPaths = capture.snapshot()
+        XCTAssertFalse(draftPaths.isEmpty)
+        XCTAssertEqual(draftPaths[0], draftURL.path)
+        XCTAssertTrue(draftPaths.dropFirst().contains(nil))
+    }
+
     func testExperimentalGGUFProviderSurfacesDefaultDraftTokensWhenImplicit() async throws {
         final class DraftCapture: @unchecked Sendable {
             private let lock = NSLock()
