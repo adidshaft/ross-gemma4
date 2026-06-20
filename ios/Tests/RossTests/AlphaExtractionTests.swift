@@ -22415,7 +22415,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(line.contains("error=missing_mlx_artifact"))
     }
 
-    func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() {
+    func testExplicitCoreMLSystemModelRequestDoesNotTreatSentinelAsMissingAdapter() throws {
         let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
         let environment = AlphaLocalRuntimeEnvironment(
             enableRealInference: true,
@@ -22432,6 +22432,7 @@ final class AlphaExtractionTests: XCTestCase {
         ) { _ in
             AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
         }
+        let resolvedProvider = try XCTUnwrap(provider)
         let health = provider?.runtimeHealth()
 
         XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
@@ -22443,6 +22444,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertEqual(health?.draftAccelerationStatus, "not_supported")
         XCTAssertNotEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        let identityLine = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: pack,
+            providerName: String(describing: type(of: resolvedProvider)),
+            actualRuntime: resolvedProvider.runtimeMode,
+            providerHealth: try XCTUnwrap(health),
+            requestedRuntime: .appleFoundationModels
+        )
+        XCTAssertTrue(identityLine.contains("requested_runtime=apple_foundation_models"))
+        XCTAssertTrue(identityLine.contains("actual_runtime=apple_foundation_models"))
+        XCTAssertTrue(identityLine.contains("artifact_path_type=system"))
+        XCTAssertTrue(identityLine.contains("artifact_path=system-model"))
+        XCTAssertFalse(identityLine.contains("missing_coreai_artifact"))
     }
 
     func testRuntimeHealthMarksIncompleteConfiguredMLXDirectoryUnavailable() throws {

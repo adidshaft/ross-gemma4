@@ -3529,6 +3529,9 @@ enum AlphaLocalModelRuntime {
     ) -> String? {
         let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
         if let debugPath = debug.modelPath, !debugPath.isEmpty {
+            if debugPath == "system-model" || debugPath.hasPrefix("system://") {
+                return debugPath
+            }
             if debugPath.hasPrefix("/") {
                 return debugPath
             }
