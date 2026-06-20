@@ -417,6 +417,22 @@ if [[ "$rc" -ne 1 ]] ||
   exit 1
 fi
 
+cat >"$tmpdir/simulator-terminal-fail-diagnostic-identity.log" <<EOF
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=$(basename "$main_gguf") acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=manifest_primary_unusable_artifact context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime profile=quick stage=active_pack error=manifest_primary_unusable_artifact runtime_error_detail=manifest_primary_unusable_artifact elapsed=1.00s
+EOF
+run_process_guard_expect_exit_1 \
+  "simulator terminal fail emits diagnostic runtime identity guard" \
+  "runtime_identity_diagnostic_error_on_failure" \
+  "$tmpdir/simulator-terminal-fail-diagnostic-identity.log" \
+  "$SIM_SMOKE" --runtime gguf --model "$main_gguf" --smoke-profile quick --launch-timeout 5
+if ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" /tmp/ross-runtime-preflight.out ||
+   ! grep -q "failure_runtime_proof_error=runtime_diagnostic_error" /tmp/ross-runtime-preflight.out; then
+  echo "❌ FAIL: simulator terminal fail did not preserve diagnostic identity in failure summary." >&2
+  cat /tmp/ross-runtime-preflight.out >&2 || true
+  exit 1
+fi
+
 cat >"$tmpdir/simulator-sparse-pass-stage-done.log" <<EOF
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=gguf checksum_verified=true artifact_path_type=file artifact_path=$(basename "$main_gguf") acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=nil context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
 ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick cases=english_source_bound_document_qa,english_open_no_document_query stages=source:document_qa:en:source_refs_required:max_tokens=192,general:open_query:en:no_source_refs:max_tokens=192

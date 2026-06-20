@@ -874,6 +874,56 @@ def validate_required_draft_failure_metrics(fields):
             sys.exit(1)
 
 
+def emit_failure_identity_diagnostic_guard(identity, *, outcome):
+    suffix = "on_failure" if outcome == "fail" else "on_timeout"
+    if identity is None:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=missing_runtime_identity_{suffix} requested={runtime}",
+            file=sys.stderr,
+        )
+        return
+
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_unavailable_{suffix} requested={runtime} "
+            f"{availability_error}",
+            file=sys.stderr,
+        )
+        return
+
+    artifact_error = runtime_identity_artifact_error(identity, runtime)
+    if artifact_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_artifact_mismatch_{suffix} requested={runtime} "
+            f"{artifact_error}",
+            file=sys.stderr,
+        )
+        return
+
+    resource_error = runtime_identity_resource_error(identity)
+    if resource_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_resource_missing_{suffix} requested={runtime} "
+            f"{resource_error}",
+            file=sys.stderr,
+        )
+        return
+
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_diagnostic_error_{suffix} requested={runtime} "
+            f"{diagnostic_error}",
+            file=sys.stderr,
+        )
+
+
 identity = None
 matrix_fields = None
 pass_fields = None
@@ -979,12 +1029,14 @@ if outcome == "pass" and pass_fields is not None:
 
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
+    emit_failure_identity_diagnostic_guard(identity, outcome="fail")
     validate_required_draft_failure_metrics(fail_fields)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 
 if outcome == "timeout":
     validate_identity_guard(identity, require_identity=False)
+    emit_failure_identity_diagnostic_guard(identity, outcome="timeout")
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)
 
