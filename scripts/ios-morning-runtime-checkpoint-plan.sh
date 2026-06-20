@@ -150,6 +150,30 @@ inventory_has_present_lane() {
   grep -Eq "lane=${lane} status=present .*tier=${tier_pattern}( |$)" <<<"$inventory_output"
 }
 
+inventory_present_pack_ids_for_lane() {
+  local lane="$1"
+  local requested_tier="${2:-$tier}"
+  local tier_pattern
+  tier_pattern="$(inventory_tier_pattern "$requested_tier")"
+  [[ -n "$inventory_output" ]] || return 0
+  grep -E "lane=${lane} status=present .*tier=${tier_pattern}( |$)" <<<"$inventory_output" |
+    sed -nE 's/.* pack=([^ ]+).*/\1/p'
+}
+
+inventory_has_present_mtp_pair() {
+  local requested_tier="${1:-$tier}"
+  [[ -n "$inventory_output" ]] || return 0
+  local pack_id
+  while IFS= read -r pack_id; do
+    [[ -n "$pack_id" ]] || continue
+    if inventory_present_pack_ids_for_lane "installed_mtp_draft" "$requested_tier" |
+      grep -Fxq "$pack_id"; then
+      return 0
+    fi
+  done < <(inventory_present_pack_ids_for_lane "installed_gguf" "$requested_tier")
+  return 1
+}
+
 inventory_skip_reason() {
   local lane="$1"
   local requested_tier="${2:-$tier}"
@@ -247,8 +271,7 @@ else
   fi
 fi
 
-if inventory_has_present_lane "installed_gguf" "$tier" &&
-   inventory_has_present_lane "installed_mtp_draft" "$tier"; then
+if inventory_has_present_mtp_pair "$tier"; then
   print_installed_pack_command \
     "3. MTP low-token proof from installed GGUF pack" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -262,7 +285,12 @@ if inventory_has_present_lane "installed_gguf" "$tier" &&
 else
   mtp_skip_reason="$(inventory_skip_reason "installed_gguf" "$tier" ||
     inventory_skip_reason "installed_mtp_draft" "$tier" ||
-    echo missing_installed_mtp_primary_or_draft_for_tier)"
+    if inventory_has_present_lane "installed_gguf" "$tier" &&
+       inventory_has_present_lane "installed_mtp_draft" "$tier"; then
+      echo missing_installed_mtp_primary_draft_pair_for_tier
+    else
+      echo missing_installed_mtp_primary_or_draft_for_tier
+    fi)"
   print_skip \
     "3. MTP low-token proof from installed GGUF pack" \
     "$mtp_skip_reason"

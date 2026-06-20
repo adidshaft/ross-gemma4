@@ -261,6 +261,63 @@ if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
   exit 1
 fi
 
+split_mtp_support_root="$tmpdir/RossAlphaSplitMTP"
+split_mtp_packs_root="$split_mtp_support_root/model-packs"
+mkdir -p "$split_mtp_packs_root/goodPrimary" "$split_mtp_packs_root/brokenDraftPack"
+printf 'GGUF%*s' 1000000 '' > "$split_mtp_packs_root/goodPrimary/main.gguf"
+printf 'NOPE' > "$split_mtp_packs_root/brokenDraftPack/main.gguf"
+printf 'GGUF%*s' 1000000 '' > "$split_mtp_packs_root/brokenDraftPack/draft.gguf"
+python3 - "$split_mtp_support_root" <<'PY'
+import json
+import pathlib
+import sys
+
+support = pathlib.Path(sys.argv[1])
+packs = support / "model-packs"
+
+(packs / "goodPrimary" / "good-primary.manifest.json").write_text(json.dumps({
+    "packId": "good-primary-no-draft",
+    "tier": "quick_start",
+    "fileName": "main.gguf",
+    "relativePath": "model-packs/goodPrimary/main.gguf",
+    "checksumSha256": "abc",
+    "bytes": 1_000_001,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+
+(packs / "brokenDraftPack" / "broken-primary-with-draft.manifest.json").write_text(json.dumps({
+    "packId": "broken-primary-with-draft",
+    "tier": "quick_start",
+    "fileName": "main.gguf",
+    "relativePath": "model-packs/brokenDraftPack/main.gguf",
+    "checksumSha256": "abc",
+    "bytes": 4,
+    "artifactKind": "local_model_artifact",
+    "runtimeMode": "gemma_local_runtime",
+    "developmentOnly": False,
+    "draftArtifact": {
+        "fileName": "draft.gguf",
+        "relativePath": "model-packs/brokenDraftPack/draft.gguf",
+        "checksumSha256": "def",
+        "bytes": 1_000_001,
+        "artifactKind": "local_model_artifact",
+        "draftTokens": 2,
+    },
+    "verifiedAt": "2026-06-19T00:00:00Z",
+}))
+PY
+
+"$PLAN" --device TEST_DEVICE --installed-root "$split_mtp_support_root" --tier quickStart > /tmp/ross-morning-plan.out
+grep -q "SKIP reason=manifest_primary_unusable_artifact" /tmp/ross-morning-plan.out
+if grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out; then
+  echo "Expected split-pack MTP evidence to suppress MTP proof command" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
 memory_blocked_support_root="$tmpdir/RossAlphaMemoryBlockedMTP"
 memory_blocked_packs_root="$memory_blocked_support_root/model-packs"
 mkdir -p "$memory_blocked_packs_root/quickStart"
