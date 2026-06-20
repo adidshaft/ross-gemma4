@@ -1101,6 +1101,7 @@ fi
 if ! grep -q "adapterPathLooksLikeForeignModel" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksGGUFConfiguredAsCoreAIAdapterUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "testRuntimeHealthMarksMLXDirectoryConfiguredAsCoreAIAdapterUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+   ! grep -q "testRuntimeHealthMarksAdapterShapedGGUFDirectoryAsCoreAIUnavailable" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "foreign model artifact" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: CoreAI adapter health/preflights can still accept foreign GGUF/MLX artifacts."
     FAIL=1

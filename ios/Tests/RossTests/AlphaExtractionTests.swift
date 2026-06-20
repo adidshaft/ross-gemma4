@@ -22020,6 +22020,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
     }
 
+    func testRuntimeHealthMarksAdapterShapedGGUFDirectoryAsCoreAIUnavailable() throws {
+        let adapterURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foreign-coreai-gguf-\(UUID().uuidString)")
+            .appendingPathExtension("mlmodelc")
+        try FileManager.default.createDirectory(at: adapterURL, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: adapterURL.appendingPathComponent("config.json"))
+        try Data("GGUF-not-coreai".utf8).write(to: adapterURL.appendingPathComponent("model.gguf"))
+        defer { try? FileManager.default.removeItem(at: adapterURL) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: adapterURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "coreml_model"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.modelPathPresent, false)
+        XCTAssertEqual(health?.lastErrorCategory, "missing_coreai_artifact")
+        XCTAssertEqual(health?.runtimeErrorDetail, "missing_coreai_artifact")
+    }
+
     func testExplicitMLXRuntimeRequestDoesNotFallBackToGGUFProvider() throws {
         let modelURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-explicit-mlx-no-gguf-fallback-\(UUID().uuidString)")
@@ -24426,9 +24455,16 @@ final class AlphaExtractionTests: XCTestCase {
             .appendingPathExtension("gguf")
         try Data("GGUF-not-coreai".utf8).write(to: ggufURL)
         let mlxDirectoryURL = try makeMLXDirectoryFixture(named: "foreign-coreai-run-mlx-\(UUID().uuidString)")
+        let adapterShapedGGUFDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foreign-coreai-run-gguf-\(UUID().uuidString)")
+            .appendingPathExtension("mlmodelc")
+        try FileManager.default.createDirectory(at: adapterShapedGGUFDirectoryURL, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: adapterShapedGGUFDirectoryURL.appendingPathComponent("config.json"))
+        try Data("GGUF-not-coreai".utf8).write(to: adapterShapedGGUFDirectoryURL.appendingPathComponent("model.gguf"))
         defer {
             try? FileManager.default.removeItem(at: ggufURL)
             try? FileManager.default.removeItem(at: mlxDirectoryURL)
+            try? FileManager.default.removeItem(at: adapterShapedGGUFDirectoryURL)
         }
 
         let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
@@ -24444,7 +24480,7 @@ final class AlphaExtractionTests: XCTestCase {
             return AlphaFoundationModelsGenerationSnapshot(text: "")
         }
 
-        for adapterURL in [ggufURL, mlxDirectoryURL] {
+        for adapterURL in [ggufURL, mlxDirectoryURL, adapterShapedGGUFDirectoryURL] {
             let provider = AlphaFoundationModelsLocalProvider(
                 capabilityTier: .caseAssociate,
                 modelPathLabel: adapterURL.lastPathComponent,

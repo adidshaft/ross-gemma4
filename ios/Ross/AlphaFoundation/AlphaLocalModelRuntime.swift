@@ -3069,7 +3069,10 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         }
         for case let fileURL as URL in enumerator {
             let lowerName = fileURL.lastPathComponent.lowercased()
-            guard lowerName.hasSuffix(".safetensors") || lowerName.hasSuffix(".safetensors.index.json") else {
+            guard lowerName.hasSuffix(".safetensors") ||
+                lowerName.hasSuffix(".safetensors.index.json") ||
+                lowerName.hasSuffix(".gguf") ||
+                lowerName.hasSuffix(".bin") else {
                 continue
             }
             guard let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
