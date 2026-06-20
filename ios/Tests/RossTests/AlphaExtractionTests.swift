@@ -21962,7 +21962,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 7_200_000_000,
                 environment: mtpQuickEnvironment
             ),
-            128
+            256
         )
     }
 

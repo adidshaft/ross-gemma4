@@ -78,7 +78,9 @@ enum AlphaLlamaRuntimeProfile {
             return baseline
         }
         if usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory) {
-            return min(baseline, 128)
+            // Keep the smoke prompt batch large enough for real source-bound prompts.
+            // A 128-token prompt batch can abort in llama.cpp before generation.
+            return min(baseline, 256)
         }
         return min(baseline, 256)
     }

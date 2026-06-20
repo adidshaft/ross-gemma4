@@ -1316,13 +1316,12 @@ if ! grep -q "return 1_024" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift
    ! grep -q "quick_low_context" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "quick-low-context" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "usesConstrainedE4BProfile(forModelPath: path, physicalMemory: physicalMemory)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
-   ! grep -q "return min(baseline, 128)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 256)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "return min(baseline, 64)" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null ||
    ! grep -q "1024-token context cap" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "quick_low_context" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "256-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null ||
-   ! grep -q "Constrained 7GB-class E4B keeps the older 128-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null; then
+   ! grep -q "Constrained 7GB-class E4B uses the same 256-token prompt batch" docs/IOS_RUNTIME.md 2>/dev/null; then
     echo "❌ FAIL: MTP smoke proof profile is not pinned to the low-context activation lane."
     FAIL=1
 fi
