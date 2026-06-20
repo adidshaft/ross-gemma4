@@ -2907,19 +2907,16 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     nonisolated(unsafe) static var smokeUnsupportedRuntimeProvider: @Sendable () -> Bool = {
-        let simulatorRuntime: Bool
         #if targetEnvironment(simulator)
-        simulatorRuntime = true
-        #else
-        simulatorRuntime = false
-        #endif
-        guard simulatorRuntime else { return false }
         guard let rawValue = getenv("ROSS_LOCAL_MODEL_SMOKE_PROFILE") else {
             return false
         }
         return String(cString: rawValue)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty == false
+        #else
+        return false
+        #endif
     }
 
     nonisolated(unsafe) static var streamGenerator:
