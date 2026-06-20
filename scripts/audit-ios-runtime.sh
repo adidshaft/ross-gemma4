@@ -816,6 +816,13 @@ if ! grep -q "manifest_draft_memory_policy_blocked" scripts/ios-runtime-artifact
     FAIL=1
 fi
 
+if ! grep -q "local_draft_memory_policy_blocked" scripts/ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "memory_policy_blocked" scripts/test-ios-runtime-artifact-fetch-plan.sh 2>/dev/null ||
+   ! grep -q "local_draft_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: local GGUF+MTP fetch plan can advertise constrained E4B draft pairs that fail memory-fit preflight."
+    FAIL=1
+fi
+
 if ! grep -q -- "--physical-memory-bytes" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "constrained E4B draft memory budget" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null ||
    ! grep -q "memory-blocked E4B MTP installed manifest" scripts/test-ios-device-installed-pack-preflights.sh 2>/dev/null ||

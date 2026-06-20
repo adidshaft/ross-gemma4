@@ -138,6 +138,8 @@ downloader_status = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATU
 downloader_command = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_COMMAND", "")
 venv_python = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_VENV_PYTHON", "")
 physical_memory_bytes = os.environ.get("ROSS_RUNTIME_ARTIFACT_FETCH_PHYSICAL_MEMORY_BYTES", "").strip()
+constrained_e4b_memory_ceiling = 8_500_000_000
+constrained_e4b_draft_artifact_budget_ratio = 0.72
 
 tier_aliases = {
     "quickStart": {"quickStart", "quick_start"},
@@ -181,6 +183,44 @@ def file_sha256(path: pathlib.Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+def archive_profile_hint(path: pathlib.Path | str) -> str:
+    text = pathlib.PurePath(str(path)).name.lower()
+    if "26b-a4b" in text:
+        return "gemma26bA4b"
+    if "12b" in text:
+        return "gemma12b"
+    if "e4b" in text:
+        return "e4b"
+    if "e2b" in text:
+        return "flash"
+    return "unknown"
+
+def mtp_memory_policy(primary_path: str, draft_path: str) -> tuple[bool, str, dict[str, object]]:
+    if not physical_memory_bytes:
+        return (True, "local_draft_memory_policy_not_checked", {})
+    target_memory = int(physical_memory_bytes)
+    if target_memory >= constrained_e4b_memory_ceiling:
+        return (True, "local_draft_memory_policy_not_constrained", {"physical_memory": target_memory})
+    if archive_profile_hint(primary_path) != "e4b":
+        return (True, "local_draft_memory_policy_non_e4b", {"physical_memory": target_memory})
+    try:
+        main_bytes = pathlib.Path(primary_path).stat().st_size
+        draft_bytes = pathlib.Path(draft_path).stat().st_size
+    except OSError:
+        return (True, "local_draft_memory_policy_unknown_sizes", {"physical_memory": target_memory})
+    max_combined_bytes = int(target_memory * constrained_e4b_draft_artifact_budget_ratio)
+    allowed = main_bytes + draft_bytes <= max_combined_bytes
+    return (
+        allowed,
+        "local_draft_memory_policy_reachable" if allowed else "local_draft_memory_policy_blocked",
+        {
+            "physical_memory": target_memory,
+            "main_bytes": main_bytes,
+            "draft_bytes": draft_bytes,
+            "max_combined_bytes": max_combined_bytes,
+        },
+    )
 
 def catalog_gguf_file_status(path: pathlib.Path, catalog_row: dict[str, str]) -> tuple[bool, str]:
     if not path.is_file():
@@ -364,23 +404,39 @@ if catalog_gguf:
             }
         draft_path = present_mtp_draft.get("path", "") if present_mtp_draft else str(expected_draft_path)
         if present_mtp_draft:
-            emit(
-                "mtp_draft",
-                "present",
-                "waiting_for_primary" if not present_gguf else "preflight_pair",
-                path=draft_path,
-                command=command(
-                    root_dir / "scripts/ios-simulator-local-model-smoke.sh",
-                    "--runtime", "gguf",
-                    "--model", primary_path,
-                    "--draft-model", draft_path,
-                    "--draft-tokens", 2,
-                    "--require-draft-acceleration",
-                    "--smoke-profile", "mtp_quick",
-                    *maybe_physical_memory_args(),
-                    "--preflight-only",
-                ) if present_gguf else None,
+            memory_ok, memory_reason, memory_fields = (
+                mtp_memory_policy(primary_path, draft_path) if present_gguf
+                else (True, "local_draft_memory_policy_waiting_for_primary", {})
             )
+            if present_gguf and not memory_ok:
+                emit(
+                    "mtp_draft",
+                    "blocked",
+                    "memory_policy_blocked",
+                    path=draft_path,
+                    reason=memory_reason,
+                    **memory_fields,
+                )
+            else:
+                emit(
+                    "mtp_draft",
+                    "present",
+                    "waiting_for_primary" if not present_gguf else "preflight_pair",
+                    path=draft_path,
+                    reason=memory_reason,
+                    **memory_fields,
+                    command=command(
+                        root_dir / "scripts/ios-simulator-local-model-smoke.sh",
+                        "--runtime", "gguf",
+                        "--model", primary_path,
+                        "--draft-model", draft_path,
+                        "--draft-tokens", 2,
+                        "--require-draft-acceleration",
+                        "--smoke-profile", "mtp_quick",
+                        *maybe_physical_memory_args(),
+                        "--preflight-only",
+                    ) if present_gguf else None,
+                )
         else:
             repo = catalog_mtp_draft.get("repo", "unknown")
             emit(

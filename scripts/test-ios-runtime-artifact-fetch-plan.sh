@@ -119,6 +119,22 @@ grep -q "lane=gguf status=present action=preflight .*path=$quick_gguf_root/gemma
 grep -q "lane=gguf status=present action=preflight .*--physical-memory-bytes 7200000000 .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$quick_gguf_root/mtp-gemma-4-E4B-it.gguf .*--draft-tokens 2 .*--require-draft-acceleration .*--smoke-profile mtp_quick .*--physical-memory-bytes 7200000000 .*--preflight-only" /tmp/ross-runtime-fetch-plan.out
 
+memory_blocked_root="$tmpdir/local-memory-blocked"
+mkdir -p "$memory_blocked_root"
+printf 'GGUF' > "$memory_blocked_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+truncate -s 5126304928 "$memory_blocked_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$memory_blocked_root/mtp-gemma-4-E4B-it.gguf"
+truncate -s 98653248 "$memory_blocked_root/mtp-gemma-4-E4B-it.gguf"
+ROSS_RUNTIME_ARTIFACT_FETCH_DOWNLOADER_STATUS=hf_cli \
+  "$FETCH_PLAN" --tier quickStart --target-root "$tmpdir/downloads" --search-root "$memory_blocked_root" --physical-memory-bytes 7200000000 > /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=gguf status=present action=preflight .*path=$memory_blocked_root/gemma-4-E4B-it-UD-Q4_K_XL.gguf" /tmp/ross-runtime-fetch-plan.out
+grep -q "lane=mtp_draft status=blocked action=memory_policy_blocked .*path=$memory_blocked_root/mtp-gemma-4-E4B-it.gguf .*reason=local_draft_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=5126304928 .*draft_bytes=98653248 .*max_combined_bytes=5184000000" /tmp/ross-runtime-fetch-plan.out
+if grep -q "lane=mtp_draft status=present action=preflight_pair .*path=$memory_blocked_root/mtp-gemma-4-E4B-it.gguf" /tmp/ross-runtime-fetch-plan.out; then
+  echo "Did not expect memory-blocked local E4B MTP pair to print a present preflight row." >&2
+  cat /tmp/ross-runtime-fetch-plan.out >&2
+  exit 1
+fi
+
 mlx_draft_dir="$tmpdir/draft-only/gemma-4-E4B-it-qat-assistant-6bit"
 mkdir -p "$mlx_draft_dir"
 printf '{}' > "$mlx_draft_dir/config.json"
