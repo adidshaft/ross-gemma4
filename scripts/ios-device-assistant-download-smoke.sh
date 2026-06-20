@@ -279,6 +279,16 @@ def validate_failure_identity_guard(identity, *, outcome):
         if outcome == "failure"
         else "runtime_identity_resource_missing_on_exit"
     )
+    availability_reason = (
+        "runtime_identity_unavailable_on_failure"
+        if outcome == "failure"
+        else "runtime_identity_unavailable_on_exit"
+    )
+    diagnostic_reason = (
+        "runtime_identity_diagnostic_error_on_failure"
+        if outcome == "failure"
+        else "runtime_identity_diagnostic_error_on_exit"
+    )
     if identity is None:
         print(
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
@@ -294,6 +304,16 @@ def validate_failure_identity_guard(identity, *, outcome):
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
             f"reason={mismatch_reason} requested={expected_runtime} "
             f"identity_requested={requested_runtime} actual={actual_runtime}",
+            file=sys.stderr,
+        )
+        return
+
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={availability_reason} requested={expected_runtime} "
+            f"{availability_error}",
             file=sys.stderr,
         )
         return
@@ -314,6 +334,15 @@ def validate_failure_identity_guard(identity, *, outcome):
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
             f"reason={resource_reason} requested={expected_runtime} "
             f"{resource_error}",
+            file=sys.stderr,
+        )
+
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={diagnostic_reason} requested={expected_runtime} "
+            f"{diagnostic_error}",
             file=sys.stderr,
         )
 
