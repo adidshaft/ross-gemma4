@@ -114,6 +114,36 @@ gguf_path_is_draft_like() {
   return 1
 }
 
+gguf_primary_memory_policy_block_reason() {
+  local file="$1"
+  [[ -n "$physical_memory_bytes" ]] || return 1
+  local size
+  size="$(file_size_bytes "$file")"
+  [[ "$size" =~ ^[0-9]+$ ]] || return 1
+  python3 - "$size" "$physical_memory_bytes" <<'PY'
+import math
+import sys
+
+main_bytes = int(sys.argv[1])
+physical_memory = int(sys.argv[2])
+constrained_memory_ceiling = 8_500_000_000
+artifact_budget_ratio = 0.72
+if physical_memory >= constrained_memory_ceiling:
+    sys.exit(1)
+max_primary_bytes = int(physical_memory * artifact_budget_ratio)
+if main_bytes <= max_primary_bytes:
+    sys.exit(1)
+required_physical_memory = math.ceil(main_bytes / artifact_budget_ratio)
+print(
+    "local_primary_memory_policy_blocked "
+    f"physical_memory={physical_memory} "
+    f"main_bytes={main_bytes} "
+    f"max_primary_bytes={max_primary_bytes} "
+    f"required_physical_memory_bytes={required_physical_memory}"
+)
+PY
+}
+
 inventory_output=""
 if [[ -n "$installed_root" ]]; then
   inventory_args=(scripts/ios-runtime-artifact-inventory.sh --search-root /dev/null --installed-root "$installed_root")
@@ -341,7 +371,8 @@ print_command \
   --bundle-id "$bundle_id" \
   --list-only
 
-if gguf_file_looks_usable "$gguf_model" && ! gguf_path_is_draft_like "$gguf_model"; then
+if gguf_file_looks_usable "$gguf_model" && ! gguf_path_is_draft_like "$gguf_model" &&
+   ! gguf_primary_memory_skip_detail="$(gguf_primary_memory_policy_block_reason "$gguf_model")"; then
   print_command \
     "2. GGUF baseline seeded quick smoke" \
     scripts/ios-device-gguf-smoke.sh \
@@ -355,6 +386,8 @@ else
   echo "2. GGUF baseline seeded quick smoke:"
   if [[ -f "$gguf_model" ]] && gguf_path_is_draft_like "$gguf_model"; then
     echo "   SKIP reason=local_gguf_is_draft_like model=${gguf_model}"
+  elif [[ -n "${gguf_primary_memory_skip_detail:-}" ]]; then
+    echo "   SKIP reason=${gguf_primary_memory_skip_detail} model=${gguf_model}"
   else
     echo "   SKIP reason=missing_or_invalid_primary_gguf model=${gguf_model}"
   fi

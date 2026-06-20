@@ -110,6 +110,26 @@ grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
 grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out
 grep -q -- "--model $primary_gguf" /tmp/ross-morning-plan.out
 
+oversized_gguf="$tmpdir/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+printf 'GGUF' > "$oversized_gguf"
+truncate -s 8000000000 "$oversized_gguf"
+"$PLAN" --device TEST_DEVICE --gguf-model "$oversized_gguf" --physical-memory-bytes 7200000000 > /tmp/ross-morning-plan.out
+grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
+grep -q "SKIP reason=local_primary_memory_policy_blocked .*physical_memory=7200000000 .*main_bytes=8000000000 .*max_primary_bytes=5184000000 .*required_physical_memory_bytes=11111111112 .*model=$oversized_gguf" /tmp/ross-morning-plan.out
+if grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out; then
+  echo "Expected memory-blocked local GGUF to suppress baseline device smoke command" >&2
+  cat /tmp/ross-morning-plan.out >&2
+  exit 1
+fi
+
+ross_safe_gguf="$tmpdir/gemma-2-2b-it-Q4_K_M.gguf"
+printf 'GGUF' > "$ross_safe_gguf"
+truncate -s 2000000000 "$ross_safe_gguf"
+"$PLAN" --device TEST_DEVICE --gguf-model "$ross_safe_gguf" --physical-memory-bytes 7200000000 > /tmp/ross-morning-plan.out
+grep -q "2. GGUF baseline seeded quick smoke:" /tmp/ross-morning-plan.out
+grep -q "scripts/ios-device-gguf-smoke.sh" /tmp/ross-morning-plan.out
+grep -q -- "--model $ross_safe_gguf" /tmp/ross-morning-plan.out
+
 support_root="$tmpdir/RossAlpha"
 packs_root="$support_root/model-packs"
 mkdir -p "$packs_root/quickStart"

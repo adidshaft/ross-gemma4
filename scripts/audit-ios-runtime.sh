@@ -994,9 +994,11 @@ fi
 
 if ! grep -q "local_gguf_is_draft_like" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "missing_or_invalid_primary_gguf" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "local_primary_memory_policy_blocked" scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
    ! grep -q "draft-like local GGUF" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
-   ! grep -q "missing_or_invalid_primary_gguf" docs/IOS_RUNTIME.md 2>/dev/null; then
-    echo "❌ FAIL: morning runtime checkpoint plan can still print baseline GGUF commands for invalid or draft-like GGUF paths."
+   ! grep -q "memory-blocked local GGUF" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "local_primary_memory_policy_blocked" docs/IOS_RUNTIME.md 2>/dev/null; then
+    echo "❌ FAIL: morning runtime checkpoint plan can still print baseline GGUF commands for invalid, draft-like, or memory-blocked GGUF paths."
     FAIL=1
 fi
 
