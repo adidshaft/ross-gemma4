@@ -191,6 +191,65 @@ private func alphaPatchGemma4SharedKVOverlayIndex(
     try patchedData.write(to: overlayIndexURL, options: [.atomic])
 }
 
+private func alphaAppendLittleEndianInteger<T: FixedWidthInteger>(_ value: T, to data: inout Data) {
+    var littleEndianValue = value.littleEndian
+    withUnsafeBytes(of: &littleEndianValue) { bytes in
+        data.append(contentsOf: bytes)
+    }
+}
+
+private func alphaGemma4SharedKVShimElementCount(_ shape: [Int]) throws -> Int {
+    try shape.reduce(1) { partial, dimension in
+        guard dimension > 0 else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        let (next, overflow) = partial.multipliedReportingOverflow(by: dimension)
+        guard !overflow else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        return next
+    }
+}
+
+private func alphaWriteGemma4SharedKVShimSafetensors(
+    plan: AlphaGemma4SharedKVShimPlan,
+    to fileURL: URL
+) throws {
+    var header: [String: Any] = [:]
+    var payload = Data()
+    var offset = 0
+
+    for key in plan.tensors.keys.sorted() {
+        guard let tensor = plan.tensors[key] else { continue }
+        let elementCount = try alphaGemma4SharedKVShimElementCount(tensor.shape)
+        let byteCount = elementCount * MemoryLayout<UInt16>.size
+        header[key] = [
+            "dtype": "F16",
+            "shape": tensor.shape,
+            "data_offsets": [offset, offset + byteCount]
+        ]
+
+        let value: UInt16
+        switch tensor.fillStyle {
+        case .zeros:
+            value = 0x0000
+        case .ones:
+            value = 0x3C00
+        }
+        for _ in 0 ..< elementCount {
+            alphaAppendLittleEndianInteger(value, to: &payload)
+        }
+        offset += byteCount
+    }
+
+    let headerData = try JSONSerialization.data(withJSONObject: header, options: [.sortedKeys])
+    var fileData = Data()
+    alphaAppendLittleEndianInteger(UInt64(headerData.count), to: &fileData)
+    fileData.append(headerData)
+    fileData.append(payload)
+    try fileData.write(to: fileURL, options: [.atomic])
+}
+
 private func alphaGemma4SharedKVShimPlan(for directoryURL: URL) -> AlphaGemma4SharedKVShimPlan? {
     guard
         let config = alphaGemma4SharedKVShimConfig(from: directoryURL),
@@ -307,18 +366,9 @@ private func alphaPreparedMLXRuntimeDirectory(
     try fileManager.createDirectory(at: overlayDirectory, withIntermediateDirectories: true)
     do {
         try alphaMirrorMLXRuntimeDirectory(from: sourceDirectory, to: overlayDirectory, fileManager: fileManager)
-        var arrays: [String: MLXArray] = [:]
-        for (key, tensor) in shimPlan.tensors {
-            switch tensor.fillStyle {
-            case .zeros:
-                arrays[key] = MLXArray.zeros(tensor.shape, dtype: .float16)
-            case .ones:
-                arrays[key] = MLXArray.ones(tensor.shape, dtype: .float16)
-            }
-        }
         let shimFileName = "ross-shared-kv-shim.safetensors"
         let shimURL = overlayDirectory.appendingPathComponent(shimFileName)
-        try MLX.save(arrays: arrays, url: shimURL)
+        try alphaWriteGemma4SharedKVShimSafetensors(plan: shimPlan, to: shimURL)
         try alphaPatchGemma4SharedKVOverlayIndex(
             sourceDirectory: sourceDirectory,
             overlayDirectory: overlayDirectory,
@@ -1041,6 +1091,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         alphaAssistantUsesPhoneFormFactor()
     }
 
+    nonisolated(unsafe) static var simulatorRuntimeProvider: () -> Bool = {
+        #if targetEnvironment(simulator)
+        true
+        #else
+        false
+        #endif
+    }
+
     func isAvailable() -> Bool {
         runtimeAvailability().available
     }
@@ -1445,6 +1503,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
             return (false, "missing_mlx_artifact", alphaRuntimeHealthStatus(.llamaMissingSetup))
+        }
+        guard !Self.simulatorRuntimeProvider() else {
+            return (false, "unsupported_runtime_on_platform", alphaRuntimeHealthStatus(.privateAssistantUnavailable))
         }
         let physicalMemoryBytes = Self.physicalMemoryBytesProvider()
         guard alphaAssistantMLXRuntimeSupportedOnCurrentDevice(

@@ -9169,6 +9169,74 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(sourceWeightMap["language_model.model.layers.2.self_attn.v_proj.weight"])
     }
 
+    func testPreparedMLXRuntimeDirectoryWritesSafetensorsShimWithoutMLXArrays() throws {
+        let sourceDirectory = try makeGemma4SharedKVOverlayFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let preparedDirectory = try AlphaMLXLocalProvider.preparedRuntimeDirectoryURL(for: sourceDirectory)
+        defer {
+            if preparedDirectory.path != sourceDirectory.path {
+                try? FileManager.default.removeItem(at: preparedDirectory)
+            }
+        }
+
+        let shimURL = preparedDirectory.appendingPathComponent("ross-shared-kv-shim.safetensors")
+        let shimData = try Data(contentsOf: shimURL)
+        XCTAssertGreaterThan(shimData.count, 8)
+
+        func littleEndianUInt64(from data: Data, offset: Int) -> UInt64 {
+            data[offset ..< offset + 8].enumerated().reduce(UInt64(0)) { partial, item in
+                partial | (UInt64(item.element) << UInt64(item.offset * 8))
+            }
+        }
+
+        func littleEndianUInt16(from data: Data, offset: Int) -> UInt16 {
+            data[offset ..< offset + 2].enumerated().reduce(UInt16(0)) { partial, item in
+                partial | (UInt16(item.element) << UInt16(item.offset * 8))
+            }
+        }
+
+        let headerLength = Int(littleEndianUInt64(from: shimData, offset: 0))
+        XCTAssertGreaterThan(headerLength, 0)
+        XCTAssertLessThan(8 + headerLength, shimData.count)
+
+        let headerData = shimData.subdata(in: 8 ..< 8 + headerLength)
+        let header = try XCTUnwrap(JSONSerialization.jsonObject(with: headerData) as? [String: Any])
+        let zeroTensor = try XCTUnwrap(
+            header["language_model.model.layers.2.self_attn.v_proj.weight"] as? [String: Any]
+        )
+        let oneTensor = try XCTUnwrap(
+            header["language_model.model.layers.3.self_attn.k_norm.weight"] as? [String: Any]
+        )
+
+        XCTAssertEqual(zeroTensor["dtype"] as? String, "F16")
+        XCTAssertEqual(zeroTensor["shape"] as? [Int], [8, 16])
+        XCTAssertEqual(oneTensor["dtype"] as? String, "F16")
+        XCTAssertEqual(oneTensor["shape"] as? [Int], [8])
+
+        let zeroOffsets = try XCTUnwrap(zeroTensor["data_offsets"] as? [Int])
+        let oneOffsets = try XCTUnwrap(oneTensor["data_offsets"] as? [Int])
+        let payloadStart = 8 + headerLength
+        XCTAssertEqual(littleEndianUInt16(from: shimData, offset: payloadStart + zeroOffsets[0]), 0x0000)
+        XCTAssertEqual(littleEndianUInt16(from: shimData, offset: payloadStart + oneOffsets[0]), 0x3C00)
+
+        let preparedIndexData = try Data(
+            contentsOf: preparedDirectory.appendingPathComponent("model.safetensors.index.json")
+        )
+        let preparedIndex = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: preparedIndexData) as? [String: Any]
+        )
+        let preparedWeightMap = try XCTUnwrap(preparedIndex["weight_map"] as? [String: String])
+        XCTAssertEqual(
+            preparedWeightMap["language_model.model.layers.2.self_attn.v_proj.weight"],
+            "ross-shared-kv-shim.safetensors"
+        )
+        XCTAssertEqual(
+            preparedWeightMap["language_model.model.layers.3.self_attn.k_norm.weight"],
+            "ross-shared-kv-shim.safetensors"
+        )
+    }
+
     func testPreferredAssistantDownloadFallbackUsesRossDirectoryDigestChecksumsForBundledDirectMLX() {
         let quickStart = alphaPreferredAssistantDownloadFallback(
             for: .quickStart,
@@ -23208,6 +23276,34 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(health?.draftModelPathLabel)
         XCTAssertEqual(health?.draftModelPathType, "missing")
         XCTAssertEqual(health?.draftAccelerationStatus, "insufficient_device_memory")
+    }
+
+    func testRuntimeHealthMarksMLXUnavailableOnSimulatorBeforeGeneration() throws {
+        let originalSimulatorRuntimeProvider = AlphaMLXLocalProvider.simulatorRuntimeProvider
+        defer { AlphaMLXLocalProvider.simulatorRuntimeProvider = originalSimulatorRuntimeProvider }
+        AlphaMLXLocalProvider.simulatorRuntimeProvider = { true }
+
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-simulator-unavailable-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "e", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_runtime_on_platform")
+        XCTAssertEqual(health?.runtimeErrorDetail, "unsupported_runtime_on_platform")
+        XCTAssertEqual(health?.draftAccelerationStatus, "unsupported_runtime_on_platform")
     }
 
     func testResolveProviderReturnsExperimentalMLXProviderForDebugDirectory() throws {
