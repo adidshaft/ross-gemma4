@@ -22649,6 +22649,59 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.draftAccelerationStatus, "invalid_mlx_draft_artifact")
     }
 
+    func testRuntimeHealthReportsPreciseUnsupportedMLXDraftArchiveCategory() throws {
+        let originalPhysicalMemoryProvider = AlphaMLXLocalProvider.physicalMemoryBytesProvider
+        let originalPhoneFormFactorProvider = AlphaMLXLocalProvider.phoneFormFactorProvider
+        defer { AlphaMLXLocalProvider.physicalMemoryBytesProvider = originalPhysicalMemoryProvider }
+        defer { AlphaMLXLocalProvider.phoneFormFactorProvider = originalPhoneFormFactorProvider }
+        AlphaMLXLocalProvider.physicalMemoryBytesProvider = {
+            18 * 1_073_741_824
+        }
+        AlphaMLXLocalProvider.phoneFormFactorProvider = {
+            true
+        }
+
+        let directory = try makeMLXDirectoryFixture(named: "ross-mlx-valid-main-unsupported-draft-\(UUID().uuidString)")
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-unsupported-multimodal-draft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        try Data(#"{"model_type":"gemma4","architectures":["Gemma4ForConditionalGeneration"],"vision_config":{"model_type":"gemma4_vision"}}"#.utf8)
+            .write(to: draftDirectory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: draftDirectory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: draftDirectory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_gemma4_multimodal")
+        XCTAssertNil(health?.runtimeErrorDetail)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertEqual(health?.draftModelPathType, "directory")
+        XCTAssertEqual(health?.draftCandidatePathLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(health?.draftCandidateTokens, 4)
+        XCTAssertEqual(health?.draftAccelerationStatus, "unsupported_gemma4_multimodal")
+    }
+
     func testExperimentalMLXProviderRunsStandardGenerationWhenDraftArtifactIsInvalid() async throws {
         actor AttemptCapture {
             var draftPath: String?

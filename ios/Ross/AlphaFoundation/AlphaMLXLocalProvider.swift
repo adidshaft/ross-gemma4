@@ -1591,8 +1591,14 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard Self.localModelDirectoryLooksUsable(draftDirectoryURL) else {
             return (.standard, nil, nil, "invalid_mlx_draft_artifact")
         }
-        guard Self.archiveCanServeAsDraft(Self.archiveCompatibility(for: draftDirectoryURL)) else {
-            return (.standard, nil, nil, "unsupported_mlx_draft_artifact")
+        let draftCompatibility = Self.archiveCompatibility(for: draftDirectoryURL)
+        guard Self.archiveCanServeAsDraft(draftCompatibility) else {
+            return (
+                .standard,
+                nil,
+                nil,
+                draftCompatibility.runtimeErrorCategory ?? "unsupported_mlx_draft_artifact"
+            )
         }
         return (
             .draftModelSpeculative,
@@ -1610,7 +1616,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         switch status {
         case "draft_file_unavailable",
              "invalid_mlx_draft_artifact",
-             "unsupported_mlx_draft_artifact":
+             "unsupported_mlx_draft_artifact",
+             "unsupported_gemma4_assistant",
+             "unsupported_gemma4_multimodal",
+             "unsupported_gemma4_moe",
+             "unsupported_gemma4_dense_31b":
             return status
         default:
             return nil
