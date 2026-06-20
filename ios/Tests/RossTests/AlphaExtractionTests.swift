@@ -5259,7 +5259,8 @@ final class AlphaExtractionTests: XCTestCase {
                 inputTokenCount: 412,
                 outputTokenCount: 38,
                 outputTokensPerSecond: 19.25,
-                timeToFirstTokenMs: 610
+                timeToFirstTokenMs: 610,
+                usesMeasuredTokenCounts: true
             )
         )
 
@@ -5277,6 +5278,63 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.accelerationMode, AlphaLocalRuntimeAccelerationMode.draftModelSpeculative)
         XCTAssertEqual(completed.accelerationDraftTokens, 4)
         XCTAssertEqual(completed.accelerationDraftModelLabel, "gemma-4-e4b-draft")
+        XCTAssertTrue(completed.usesMeasuredTokenCounts)
+    }
+
+    func testModelInvocationCompletionKeepsUncertifiedTokenMetricsApproximate() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Adjourned to 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Summarize the selected order.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter was adjourned to 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .quickStart,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            input: input
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Answer from the selected order.",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef],
+                inputTokenCount: 412,
+                outputTokenCount: 38,
+                outputTokensPerSecond: 19.25,
+                timeToFirstTokenMs: 610,
+                usesMeasuredTokenCounts: false
+            )
+        )
+
+        XCTAssertFalse(completed.usesMeasuredTokenCounts)
+        XCTAssertEqual(completed.estimatedProcessedTokens, 450)
+        XCTAssertEqual(completed.answerDetailProcessedTokensLabel, "~450")
+        XCTAssertEqual(completed.answerDetailTokenSpeedLabel, "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 19.25))")
     }
 
     func testModelInvocationCompletionCountsOnlyDocumentSourcesAsReviewed() {

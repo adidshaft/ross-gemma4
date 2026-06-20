@@ -247,12 +247,7 @@ enum AlphaModelInvocationStore {
         if copy.timeToFirstTokenMs == nil, let timeToFirstTokenMs = output.timeToFirstTokenMs {
             copy.timeToFirstTokenMs = timeToFirstTokenMs
         }
-        let runtimeUsesMeasuredTokenCounts =
-            invocation.runtimeMode == AlphaPackRuntimeMode.mlxSwiftLm.rawValue ||
-            invocation.runtimeMode == AlphaPackRuntimeMode.llamaCppGguf.rawValue
-        copy.usesMeasuredTokenCounts =
-            output.usesMeasuredTokenCounts ||
-            (runtimeUsesMeasuredTokenCounts && output.inputTokenCount != nil && output.outputTokenCount != nil)
+        copy.usesMeasuredTokenCounts = output.usesMeasuredTokenCounts
         copy.status = switch output.errorCategory {
         case "cancelled":
             .cancelled
