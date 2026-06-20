@@ -474,6 +474,7 @@ grep -q -- "--runtime gguf" /tmp/ross-morning-plan.out
 grep -q -- "--require-draft-acceleration" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai" /tmp/ross-morning-plan.out
+grep -q -- "--pack-id quick-mtp" /tmp/ross-morning-plan.out
 grep -q -- "--smoke-profile quick_low_context" /tmp/ross-morning-plan.out
 if [[ "$(grep -c -- "--smoke-profile full" /tmp/ross-morning-plan.out)" -ne 2 ]]; then
   echo "Expected MLX and CoreAI ready lanes to request the full varied profile" >&2
@@ -500,7 +501,7 @@ if [[ "$(grep -c -- "--physical-memory-bytes 12000000000" /tmp/ross-morning-plan
   cat /tmp/ross-morning-plan.out >&2
   exit 1
 fi
-grep -q -- "--runtime gguf --tier quickStart --smoke-profile mtp_quick --stage-timeout 45 --require-draft-acceleration --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
+grep -q -- "--runtime gguf --tier quickStart --pack-id quick-mtp --smoke-profile mtp_quick --stage-timeout 45 --require-draft-acceleration --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
 grep -q -- "--runtime mlx --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
 grep -q -- "--runtime coreai --tier quickStart --smoke-profile full --stage-timeout 45 --physical-memory-bytes 12000000000" /tmp/ross-morning-plan.out
 

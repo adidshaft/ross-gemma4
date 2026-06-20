@@ -174,6 +174,21 @@ inventory_has_present_mtp_pair() {
   return 1
 }
 
+inventory_present_mtp_pair_pack_id() {
+  local requested_tier="${1:-$tier}"
+  [[ -n "$inventory_output" ]] || return 0
+  local pack_id
+  while IFS= read -r pack_id; do
+    [[ -n "$pack_id" ]] || continue
+    if inventory_present_pack_ids_for_lane "installed_mtp_draft" "$requested_tier" |
+      grep -Fxq "$pack_id"; then
+      printf '%s\n' "$pack_id"
+      return 0
+    fi
+  done < <(inventory_present_pack_ids_for_lane "installed_gguf" "$requested_tier")
+  return 1
+}
+
 inventory_skip_reason() {
   local lane="$1"
   local requested_tier="${2:-$tier}"
@@ -271,7 +286,7 @@ else
   fi
 fi
 
-if inventory_has_present_mtp_pair "$tier"; then
+if mtp_pair_pack_id="$(inventory_present_mtp_pair_pack_id "$tier")"; then
   print_installed_pack_command \
     "3. MTP low-token proof from installed GGUF pack" \
     scripts/ios-device-installed-pack-smoke.sh \
@@ -279,6 +294,7 @@ if inventory_has_present_mtp_pair "$tier"; then
     --bundle-id "$bundle_id" \
     --runtime gguf \
     --tier "$tier" \
+    --pack-id "$mtp_pair_pack_id" \
     --smoke-profile mtp_quick \
     --stage-timeout "$stage_timeout" \
     --require-draft-acceleration
