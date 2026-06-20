@@ -891,6 +891,7 @@ private struct AlphaMLXTokenizerBridge: MLXLMCommon.Tokenizer {
 
 private enum AlphaMLXArchiveCompatibility {
     case supported
+    case supportedGemma4TextRuntimeOverlay
     case unsupportedGemma4Assistant
     case unsupportedGemma4Multimodal
     case unsupportedGemma4MoE
@@ -898,7 +899,7 @@ private enum AlphaMLXArchiveCompatibility {
 
     var runtimeErrorCategory: String? {
         switch self {
-        case .supported:
+        case .supported, .supportedGemma4TextRuntimeOverlay:
             return nil
         case .unsupportedGemma4Assistant:
             return "unsupported_gemma4_assistant"
@@ -1463,7 +1464,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         }
 
         switch Self.archiveCompatibility(for: directoryURL) {
-        case .supported:
+        case .supported, .supportedGemma4TextRuntimeOverlay:
             break
         case let unsupported:
             return (
@@ -1837,6 +1838,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
         if architectures.contains(where: { $0.contains("gemma4forconditionalgeneration") }) ||
             json["vision_config"] != nil {
+            if gemma4MultimodalCanUseTextRuntimeOverlay(json: json, directoryURL: directoryURL) {
+                return .supportedGemma4TextRuntimeOverlay
+            }
             return .unsupportedGemma4Multimodal
         }
 
@@ -1860,9 +1864,24 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         switch compatibility {
         case .supported, .unsupportedGemma4Assistant:
             return true
-        case .unsupportedGemma4Multimodal, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
+        case .supportedGemma4TextRuntimeOverlay,
+             .unsupportedGemma4Multimodal,
+             .unsupportedGemma4MoE,
+             .unsupportedGemma4Dense31B:
             return false
         }
+    }
+
+    private static func gemma4MultimodalCanUseTextRuntimeOverlay(
+        json: [String: Any],
+        directoryURL: URL
+    ) -> Bool {
+        guard (json["text_config"] as? [String: Any]) != nil,
+              let weightMap = alphaGemma4SharedKVWeightMap(from: directoryURL),
+              weightMap.keys.contains(where: { $0.hasPrefix("language_model.") }) else {
+            return false
+        }
+        return alphaGemma4SharedKVShimPlan(for: directoryURL) != nil
     }
 
     private nonisolated static func extractiveMatterAnswer(

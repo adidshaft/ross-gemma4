@@ -135,6 +135,17 @@ name_hints = " ".join(
 
 is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
 is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+text_config = config.get("text_config")
+try:
+    index = json.loads((directory / "model.safetensors.index.json").read_text(encoding="utf-8"))
+except Exception:
+    index = {}
+weight_map = index.get("weight_map") if isinstance(index, dict) else {}
+has_text_runtime_overlay_evidence = (
+    isinstance(text_config, dict)
+    and any(str(key).startswith("language_model.") for key in (weight_map or {}))
+    and int(text_config.get("num_kv_shared_layers") or 0) > 0
+)
 is_moe = any(
     key in config
     for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
@@ -143,7 +154,7 @@ is_dense_31b = any(value in name_hints for value in ("gemma-4-31b", "gemma4-31b"
 
 if is_assistant and mode != "draft":
     print("unsupported_gemma4_assistant")
-elif is_multimodal:
+elif is_multimodal and not has_text_runtime_overlay_evidence:
     print("unsupported_gemma4_multimodal")
 elif is_moe:
     print("unsupported_gemma4_moe")
@@ -462,6 +473,18 @@ def mlx_archive_unsupported_reason(path: str, mode: str) -> str:
 
     is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
     is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+    text_config = config.get("text_config")
+    try:
+        with open(os.path.join(path, "model.safetensors.index.json"), encoding="utf-8") as handle:
+            index = json.load(handle)
+    except Exception:
+        index = {}
+    weight_map = index.get("weight_map") if isinstance(index, dict) else {}
+    has_text_runtime_overlay_evidence = (
+        isinstance(text_config, dict)
+        and any(str(key).startswith("language_model.") for key in (weight_map or {}))
+        and int(text_config.get("num_kv_shared_layers") or 0) > 0
+    )
     is_moe = any(
         key in config
         for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
@@ -470,7 +493,7 @@ def mlx_archive_unsupported_reason(path: str, mode: str) -> str:
 
     if is_assistant and mode != "draft":
         return "unsupported_gemma4_assistant"
-    if is_multimodal:
+    if is_multimodal and not has_text_runtime_overlay_evidence:
         return "unsupported_gemma4_multimodal"
     if is_moe:
         return "unsupported_gemma4_moe"
@@ -746,6 +769,17 @@ def mlx_archive_unsupported_reason(path: pathlib.Path, mode: str = "primary") ->
     )
     is_assistant = model_type == "gemma4_assistant" or any("gemma4assistant" in value for value in architectures)
     is_multimodal = any("gemma4forconditionalgeneration" in value for value in architectures) or "vision_config" in config
+    text_config = config.get("text_config")
+    try:
+        index = json.loads((path / "model.safetensors.index.json").read_text(encoding="utf-8"))
+    except Exception:
+        index = {}
+    weight_map = index.get("weight_map") if isinstance(index, dict) else {}
+    has_text_runtime_overlay_evidence = (
+        isinstance(text_config, dict)
+        and any(str(key).startswith("language_model.") for key in (weight_map or {}))
+        and int(text_config.get("num_kv_shared_layers") or 0) > 0
+    )
     is_moe = any(
         key in config
         for key in ("num_local_experts", "num_experts", "router_aux_loss_coef", "expert_capacity")
@@ -754,7 +788,7 @@ def mlx_archive_unsupported_reason(path: pathlib.Path, mode: str = "primary") ->
 
     if is_assistant and mode != "draft":
         return "unsupported_gemma4_assistant"
-    if is_multimodal:
+    if is_multimodal and not has_text_runtime_overlay_evidence:
         return "unsupported_gemma4_multimodal"
     if is_moe:
         return "unsupported_gemma4_moe"

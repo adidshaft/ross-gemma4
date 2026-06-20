@@ -22696,6 +22696,79 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testMLXRunAllowsGemma4MultimodalWrapperWhenTextOverlayIsAvailable() async throws {
+        let directory = try makeGemma4SharedKVOverlayFixture(
+            named: "ross-mlx-gemma4-text-overlay-primary-\(UUID().uuidString)"
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let configData = try Data(contentsOf: directory.appendingPathComponent("config.json"))
+        var config = try XCTUnwrap(JSONSerialization.jsonObject(with: configData) as? [String: Any])
+        config["architectures"] = ["Gemma4ForConditionalGeneration"]
+        config["vision_config"] = ["model_type": "gemma4_vision"]
+        let wrappedConfigData = try JSONSerialization.data(withJSONObject: config, options: [.sortedKeys])
+        try wrappedConfigData.write(to: directory.appendingPathComponent("config.json"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        actor GenerationCapture {
+            private var modelDirectoryPath: String?
+
+            func record(_ path: String) {
+                modelDirectoryPath = path
+            }
+
+            func path() -> String? {
+                modelDirectoryPath
+            }
+        }
+
+        let capture = GenerationCapture()
+        AlphaMLXLocalProvider.streamGenerator = { directoryURL, _, _, _, _, _, onChunk in
+            await capture.record(directoryURL.path)
+            onChunk?("MLX answer from text overlay")
+            return AlphaMLXGenerationSnapshot(
+                text: "MLX answer from text overlay",
+                promptTokenCount: 120,
+                generationTokenCount: 7,
+                outputTokensPerSecond: 8.5,
+                timeToFirstTokenMs: 420,
+                usesMeasuredTokenCounts: true
+            )
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true
+        )
+        let health = provider.runtimeHealth()
+
+        XCTAssertTrue(health.available)
+        XCTAssertNil(health.lastErrorCategory)
+        XCTAssertEqual(health.runtimeMode, .mlxSwiftLm)
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        XCTAssertTrue(output.schemaValid)
+        XCTAssertEqual(output.rawText, "MLX answer from text overlay")
+        XCTAssertNil(output.errorCategory)
+        XCTAssertEqual(output.executionPathLabel, "MLX standard generation")
+        let capturedModelDirectoryPath = await capture.path()
+        XCTAssertEqual(capturedModelDirectoryPath, directory.path)
+    }
+
     func testRuntimeHealthMarksEmptyMLXWeightsUnavailable() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-empty-mlx-weights-\(UUID().uuidString)", isDirectory: true)
