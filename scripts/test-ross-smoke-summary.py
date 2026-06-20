@@ -189,10 +189,10 @@ class RossSmokeSummaryTests(unittest.TestCase):
             "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=apple_foundation_models "
             "requested_runtime=apple_foundation_models profile=quick elapsed=4.2s "
             "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
-            "source_first_token_ms=900 source_measured_tokens=false "
+            "source_first_token_ms=900 source_measured_tokens=true "
             "source_refs=1 source_native_model=true "
             "general_input_tokens=90 general_output_tokens=28 general_token_speed=12.0 "
-            "general_first_token_ms=700 general_measured_tokens=false general_native_model=true"
+            "general_first_token_ms=700 general_measured_tokens=true general_native_model=true"
         )
 
         summary = benchmark_summary_line(identity, pass_fields, matrix)
@@ -205,6 +205,57 @@ class RossSmokeSummaryTests(unittest.TestCase):
         self.assertIn("gpu_offload=system_managed", summary)
         self.assertIn("source_token_speed=11.0", summary)
         self.assertIn("general_token_speed=12.0", summary)
+
+    def test_benchmark_summary_rejects_estimated_coreai_stage_metrics(self):
+        identity = self.valid_identity("apple_foundation_models")
+        identity["provider"] = "AlphaFoundationModelsLocalProvider"
+        identity["artifact_path"] = "system://apple-foundation-models"
+        identity["draft_status"] = "not_supported"
+        identity["gpu_offload"] = "system_managed"
+        identity["context_tokens"] = "8192"
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=apple_foundation_models "
+            "requested_runtime=apple_foundation_models profile=quick elapsed=4.2s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=false "
+            "source_refs=1 source_native_model=true"
+        )
+
+        with self.assertRaisesRegex(
+            MissingBenchmarkMatrixError,
+            "benchmark_stage_metrics_missing source_measured_tokens=false",
+        ):
+            benchmark_summary_line(identity, pass_fields, matrix)
+
+    def test_benchmark_summary_rejects_estimated_mlx_stage_metrics(self):
+        identity = self.valid_identity("mlx_swift_lm")
+        identity["provider"] = "AlphaMLXLocalProvider"
+        identity["artifact_path"] = "gemma-mlx"
+        identity["gpu_offload"] = "mlx_default"
+        identity["context_tokens"] = "12288"
+        matrix = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=quick "
+            "cases=english_source_bound_document_qa "
+            "stages=source:document_qa:en:source_refs_required:max_tokens=64"
+        )
+        pass_fields = parse_fields(
+            "ROSS_LOCAL_MODEL_SMOKE_PASS runtime=mlx_swift_lm "
+            "requested_runtime=mlx_swift_lm profile=quick elapsed=4.2s "
+            "source_input_tokens=120 source_output_tokens=32 source_token_speed=11.0 "
+            "source_first_token_ms=900 source_measured_tokens=false "
+            "source_refs=1 source_native_model=true"
+        )
+
+        with self.assertRaisesRegex(
+            MissingBenchmarkMatrixError,
+            "benchmark_stage_metrics_missing source_measured_tokens=false",
+        ):
+            benchmark_summary_line(identity, pass_fields, matrix)
 
     def test_benchmark_summary_accepts_complete_full_multilingual_matrix(self):
         identity = self.valid_identity("mlx_swift_lm")

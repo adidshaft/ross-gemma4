@@ -201,11 +201,15 @@ fi
 if ! grep -q "timeoutOutput(" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "providerHealth.accelerationMode" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
    ! grep -q "stageDoneLine(stage: stage, durationMs: durationMs, output: timeoutOutput)" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
-   ! grep -q "draftStageAcceptanceError" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
-   ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
-   ! grep -q "testLocalModelSmokeDraftStageAcceptanceGateRejectsZeroAcceptedTokens" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+	   ! grep -q "draftStageAcceptanceError" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null ||
+	   ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
+	   ! grep -q "testLocalModelSmokeDraftStageAcceptanceGateRejectsZeroAcceptedTokens" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null ||
    ! grep -q "testLocalModelSmokeBenchmarkFieldsIncludeTokensAndSpeed" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
    ! grep -q "testLocalModelSmokeDraftStageAcceptanceGateRejectsZeroAcceptedTokens" scripts/test-ios-runtime-swiftpm.sh 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_estimated_mlx_stage_metrics" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q "test_benchmark_summary_rejects_estimated_coreai_stage_metrics" scripts/test-ross-smoke-summary.py 2>/dev/null ||
+   ! grep -q 'actual_runtime in {"mlx_swift_lm", "apple_foundation_models"}' scripts/ross_smoke_summary.py 2>/dev/null ||
+   ! grep -q "MLX and Apple Foundation/CoreAI summaries require" docs/IOS_RUNTIME.md 2>/dev/null ||
    ! grep -q "smoke_stage_timeout_source" ios/Tests/RossTests/AlphaExtractionTests.swift 2>/dev/null; then
     echo "❌ FAIL: smoke stage timeouts do not preserve benchmark/runtime metadata."
     FAIL=1

@@ -410,7 +410,7 @@ def is_mtp_profile(pass_fields=None, matrix_fields=None):
     return any(profile == "mtp" or profile.startswith("mtp_") for profile in profiles)
 
 
-def benchmark_stage_metric_error(pass_fields, matrix_fields):
+def benchmark_stage_metric_error(pass_fields, matrix_fields, identity=None):
     required_metrics = [
         "input_tokens",
         "output_tokens",
@@ -418,6 +418,8 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
         "first_token_ms",
         "measured_tokens",
     ]
+    actual_runtime = identity.get("actual_runtime") if identity else None
+    requires_measured_tokens = actual_runtime in {"mlx_swift_lm", "apple_foundation_models"}
     matrix_max_tokens = benchmark_matrix_stage_max_tokens(matrix_fields)
     for stage in benchmark_matrix_stage_names(matrix_fields):
         for metric in required_metrics:
@@ -458,6 +460,8 @@ def benchmark_stage_metric_error(pass_fields, matrix_fields):
             return f"{stage}_first_token_ms={summary_value(pass_fields, f'{stage}_first_token_ms')}"
         if measured_tokens not in ("true", "false"):
             return f"{stage}_measured_tokens={summary_value(pass_fields, f'{stage}_measured_tokens')}"
+        if requires_measured_tokens and measured_tokens != "true":
+            return f"{stage}_measured_tokens={measured_tokens}"
     return None
 
 
@@ -568,7 +572,7 @@ def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     draft_stage_error = benchmark_stage_draft_error(identity, pass_fields, matrix_fields)
     if draft_stage_error:
         raise MissingBenchmarkMatrixError(f"benchmark_draft_stage_mismatch {draft_stage_error}")
-    stage_metric_error = benchmark_stage_metric_error(pass_fields, matrix_fields)
+    stage_metric_error = benchmark_stage_metric_error(pass_fields, matrix_fields, identity=identity)
     if stage_metric_error:
         raise MissingBenchmarkMatrixError(f"benchmark_stage_metrics_missing {stage_metric_error}")
     stage_quality_error = benchmark_stage_quality_error(pass_fields, matrix_fields)
