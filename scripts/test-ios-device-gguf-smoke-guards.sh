@@ -100,9 +100,11 @@ case "$command" in
     if [[ "${DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION:-}" == "1" ]]; then
       draft_artifact="$(basename "${DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_PATH:-draft.gguf}")"
       draft_tokens="${DEVICECTL_CHILD_ROSS_LOCAL_DRAFT_MODEL_TOKENS:-2}"
+      draft_status="${FAKE_DRAFT_STATUS:-active}"
+      draft_detail="${FAKE_DRAFT_DETAIL:-configured_acceleration=draftModelSpeculative}"
       cat <<EOF
 Launched application with com.ross.ios bundle identifier.
-ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=draftModelSpeculative draft_tokens=$draft_tokens draft_model=$draft_artifact draft_model_path_type=file draft_status=active draft_error_detail=configured_acceleration=draftModelSpeculative runtime_error_detail=nil context_tokens=1024 gpu_offload=n_gpu_layers:0 fallback=none available=true
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=draftModelSpeculative draft_tokens=$draft_tokens draft_model=$draft_artifact draft_model_path_type=file draft_status=$draft_status draft_error_detail=$draft_detail runtime_error_detail=nil context_tokens=1024 gpu_offload=n_gpu_layers:0 fallback=none available=true
 ROSS_LOCAL_MODEL_SMOKE_BENCHMARK_MATRIX profile=$smoke_profile cases=english_source_bound_document_qa_low_token,english_open_no_document_query_low_token stages=source:document_qa:en:source_refs_required:max_tokens=24,general:open_query:en:no_source_refs:max_tokens=24
 ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=source duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil source_input_tokens=10 source_output_tokens=5 source_token_speed=10.0 source_first_token_ms=100 source_measured_tokens=true source_acceleration=draftModelSpeculative source_draft_tokens=$draft_tokens source_draft_model=$draft_artifact source_draft_attempted=4 source_draft_accepted=2 source_draft_failure=nil source_runtime_error_detail=nil
 ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=general duration_ms=100 schema_valid=true error=nil runtime_error_detail=nil general_input_tokens=10 general_output_tokens=5 general_token_speed=10.0 general_first_token_ms=100 general_measured_tokens=true general_acceleration=draftModelSpeculative general_draft_tokens=$draft_tokens general_draft_model=$draft_artifact general_draft_attempted=4 general_draft_accepted=2 general_draft_failure=nil general_runtime_error_detail=nil
@@ -414,6 +416,40 @@ if draft.get("artifactKind") != "local_model_artifact":
 if draft.get("draftTokens") != 2:
     raise SystemExit(f"draftTokens mismatch: {draft.get('draftTokens')}")
 PY
+
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  FAKE_DRAFT_STATUS=validator_rejected \
+  FAKE_DRAFT_DETAIL=configured_acceleration=standard \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --draft-model "$tmpdir/draft.gguf" \
+    --draft-tokens 2 \
+    --tier quickStart \
+    --pack-id unit-pack-mtp-rejected \
+    --smoke-profile mtp_quick \
+    --require-draft-acceleration \
+    --stage-timeout 5 \
+    >"$tmpdir/gguf-draft-rejected.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]]; then
+  echo "FAIL: fake GGUF MTP rejected draft status should exit 1, got $rc" >&2
+  cat "$tmpdir/gguf-draft-rejected.out" >&2 || true
+  exit 1
+fi
+if ! grep -q "reason=draft_acceleration_inactive" "$tmpdir/gguf-draft-rejected.out" ||
+   ! grep -q "draft_status=validator_rejected" "$tmpdir/gguf-draft-rejected.out" ||
+   ! grep -q "draft_artifact_error=draft_status=validator_rejected" "$tmpdir/gguf-draft-rejected.out"; then
+  echo "FAIL: rejected draft identity did not preserve strict draft status diagnostics." >&2
+  cat "$tmpdir/gguf-draft-rejected.out" >&2 || true
+  exit 1
+fi
 
 set +e
 PATH="$fake_bin:$PATH" \

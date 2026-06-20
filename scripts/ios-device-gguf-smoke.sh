@@ -508,20 +508,22 @@ def validate_identity_guard(identity, *, require_identity):
             sys.exit(1)
 
         if require_draft_acceleration:
-            if identity.get("acceleration") != "draftModelSpeculative":
+            acceleration = identity.get("acceleration")
+            draft_tokens = identity.get("draft_tokens")
+            draft_model = identity.get("draft_model")
+            draft_model_path_type = identity.get("draft_model_path_type")
+            draft_status = identity.get("draft_status")
+            draft_artifact_error = runtime_identity_draft_artifact_error(identity, "gemma_local_runtime")
+            if acceleration != "draftModelSpeculative" or draft_artifact_error:
                 print(
                     "ROSS_SMOKE_GUARD_FAIL "
                     "reason=draft_acceleration_inactive requested=gemma_local_runtime "
-                    f"acceleration={identity.get('acceleration') or 'nil'}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            draft_artifact_error = runtime_identity_draft_artifact_error(identity, "gemma_local_runtime")
-            if draft_artifact_error:
-                print(
-                    "ROSS_SMOKE_GUARD_FAIL "
-                    "reason=runtime_identity_draft_artifact_mismatch requested=gemma_local_runtime "
-                    f"{draft_artifact_error}",
+                    f"acceleration={acceleration or 'nil'} "
+                    f"draft_tokens={draft_tokens or 'nil'} "
+                    f"draft_model={draft_model or 'nil'} "
+                    f"draft_model_path_type={draft_model_path_type or 'nil'} "
+                    f"draft_status={draft_status or 'nil'} "
+                    f"draft_artifact_error={draft_artifact_error or 'nil'}",
                     file=sys.stderr,
                 )
                 sys.exit(1)
