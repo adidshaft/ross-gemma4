@@ -95,6 +95,7 @@ from ross_smoke_summary import (
     runtime_identity_artifact_error,
     runtime_identity_availability_error,
     runtime_identity_diagnostic_error,
+    runtime_identity_draft_artifact_error,
     runtime_identity_resource_error,
 )
 
@@ -235,6 +236,16 @@ def validate_identity_guard(identity):
         )
         sys.exit(1)
 
+    draft_artifact_error = runtime_identity_draft_artifact_error(identity, expected_identity_runtime)
+    if draft_artifact_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_draft_artifact_mismatch requested={expected_identity_runtime} "
+            f"{draft_artifact_error}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 
 def validate_pass_artifact_identity(identity, pass_fields):
     install_path = (pass_fields or {}).get("install_path") or ""
@@ -288,6 +299,11 @@ def validate_failure_identity_guard(identity, *, outcome):
         "runtime_identity_diagnostic_error_on_failure"
         if outcome == "failure"
         else "runtime_identity_diagnostic_error_on_exit"
+    )
+    draft_artifact_reason = (
+        "runtime_identity_draft_artifact_mismatch_on_failure"
+        if outcome == "failure"
+        else "runtime_identity_draft_artifact_mismatch_on_exit"
     )
     if identity is None:
         print(
@@ -343,6 +359,15 @@ def validate_failure_identity_guard(identity, *, outcome):
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
             f"reason={diagnostic_reason} requested={expected_runtime} "
             f"{diagnostic_error}",
+            file=sys.stderr,
+        )
+
+    draft_artifact_error = runtime_identity_draft_artifact_error(identity, expected_runtime)
+    if draft_artifact_error:
+        print(
+            "ROSS_ASSISTANT_DOWNLOAD_SMOKE_GUARD_FAIL "
+            f"reason={draft_artifact_reason} requested={expected_runtime} "
+            f"{draft_artifact_error}",
             file=sys.stderr,
         )
 

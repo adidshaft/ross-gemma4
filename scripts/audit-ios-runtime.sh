@@ -631,8 +631,11 @@ fi
 if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
    ! grep -q "missing_runtime_identity" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
    ! grep -q "runtime_identity_artifact_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "runtime_identity_draft_artifact_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
    ! grep -q "runtime_identity_resource_missing" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
+   ! grep -q "invalid_draft_identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null ||
    ! grep -q "fail_missing_resource_identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null ||
+   ! grep -q "fail_invalid_draft_identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null ||
    ! grep -q "unverified_checksum_identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null ||
    ! grep -q "fail_unverified_checksum_identity" scripts/test-ios-device-assistant-download-smoke-guards.sh 2>/dev/null ||
    ! grep -q "runtime_identity_mismatch_on_failure" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null ||
