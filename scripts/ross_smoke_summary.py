@@ -187,6 +187,9 @@ def runtime_identity_artifact_error(identity, expected_runtime):
             )
             if not artifact_path.endswith(allowed_suffixes):
                 return f"adapter_path_shape={summary_value(identity, 'artifact_path')}"
+            directory_only_suffixes = (".bundle", ".mlmodelc", ".mlpackage")
+            if artifact_path.endswith(directory_only_suffixes) and artifact_path_type != "directory":
+                return f"adapter_path_type={summary_value(identity, 'artifact_path_type')}"
     return None
 
 
