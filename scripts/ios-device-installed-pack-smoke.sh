@@ -931,7 +931,7 @@ if [[ -n "$device_draft_path" ]]; then
   echo "Using installed draft path: $device_draft_path"
 fi
 
-python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$launch_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$SCRIPT_DIR" <<'PY'
+python3 - "$device_id" "$bundle_id" "$device_model_path" "$selected_checksum" "$selected_artifact_kind" "$selected_runtime_raw" "$selected_tier_raw" "$selected_pack_id" "$device_draft_path" "$selected_draft_tokens" "$stage_timeout" "$launch_timeout" "$smoke_profile" "$disable_draft" "$require_draft_acceleration" "$physical_memory_bytes" "$SCRIPT_DIR" <<'PY'
 import os
 import re
 import queue
@@ -973,6 +973,7 @@ from ross_smoke_summary import (
     smoke_profile,
     disable_draft,
     require_draft_acceleration,
+    physical_memory_bytes,
 ) = sys.argv[1:-1]
 
 env = os.environ.copy()
@@ -997,6 +998,8 @@ if disable_draft == "1":
     env["DEVICECTL_CHILD_ROSS_LOCAL_DISABLE_DRAFT_ACCELERATION"] = "1"
 if require_draft_acceleration == "1":
     env["DEVICECTL_CHILD_ROSS_LOCAL_MODEL_SMOKE_REQUIRE_DRAFT_ACCELERATION"] = "1"
+if physical_memory_bytes:
+    env["DEVICECTL_CHILD_ROSS_LOCAL_PHYSICAL_MEMORY_BYTES"] = physical_memory_bytes
 
 command = [
     "xcrun",

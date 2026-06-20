@@ -110,6 +110,9 @@ pathlib.Path(sys.argv[2]).write_text(json.dumps({"result": {"files": files}}))
 PY
     ;;
   process)
+    if [[ -n "${FAKE_DEVICECTL_ENV_LOG:-}" ]]; then
+      env | sort > "$FAKE_DEVICECTL_ENV_LOG"
+    fi
     if [[ -n "${FAKE_DEVICECTL_PROCESS_LOG:-}" ]]; then
       cat "$FAKE_DEVICECTL_PROCESS_LOG"
       if [[ -n "${FAKE_DEVICECTL_SLEEP_AFTER_CAT:-}" ]]; then
@@ -184,6 +187,7 @@ run_process_guard_expect_exit_1() {
   PATH="$fake_bin:$PATH" \
     FAKE_DEVICE_ROOT="$fake_device_root" \
     FAKE_DEVICECTL_PROCESS_LOG="$process_log" \
+    FAKE_DEVICECTL_ENV_LOG="${FAKE_DEVICECTL_ENV_LOG:-}" \
     "$@" >"$tmpdir/out.txt" 2>&1
   local rc=$?
   set -e
@@ -207,6 +211,7 @@ run_process_guard_expect_exit_0() {
   PATH="$fake_bin:$PATH" \
     FAKE_DEVICE_ROOT="$fake_device_root" \
     FAKE_DEVICECTL_PROCESS_LOG="$process_log" \
+    FAKE_DEVICECTL_ENV_LOG="${FAKE_DEVICECTL_ENV_LOG:-}" \
     "$@" >"$tmpdir/out.txt" 2>&1
   if ! grep -q "$expected" "$tmpdir/out.txt"; then
     echo "FAIL: $description did not emit expected message: $expected" >&2
@@ -760,6 +765,18 @@ run_process_guard_expect_exit_0 \
   "matrix_profile=quick_low_context" \
   "$tmpdir/quick-low-context-terminal-pass.log" \
   "${base_command[@]}" --runtime gguf --smoke-profile quick_low_context
+
+env_log="$tmpdir/installed-pack-launch-env.log"
+FAKE_DEVICECTL_ENV_LOG="$env_log" run_process_guard_expect_exit_0 \
+  "installed-pack smoke forwards physical memory override to app launch" \
+  "ROSS_SMOKE_BENCHMARK_SUMMARY" \
+  "$tmpdir/quick-low-context-terminal-pass.log" \
+  "${base_command[@]}" --runtime gguf --smoke-profile quick_low_context --physical-memory-bytes 7200000000
+if ! grep -q '^DEVICECTL_CHILD_ROSS_LOCAL_PHYSICAL_MEMORY_BYTES=7200000000$' "$env_log"; then
+  echo "FAIL: installed-pack smoke did not pass physical memory override into app launch environment." >&2
+  cat "$env_log" >&2 || true
+  exit 1
+fi
 
 cat >"$tmpdir/identity-diagnostic-terminal-pass.log" <<'EOF'
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=main.gguf acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=manifest_primary_unusable_artifact context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
