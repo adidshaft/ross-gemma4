@@ -1023,19 +1023,20 @@ if ! grep -q "mlx_archive_unsupported_reason" scripts/ios-runtime-artifact-inven
     FAIL=1
 fi
 
-if ! grep -q 'inventory_has_present_lane "installed_gguf"' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
-   ! grep -q "broken installed GGUF primary" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
+if ! grep -q 'inventory_has_present_mtp_pair' scripts/ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "broken installed GGUF primary" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null ||
+   ! grep -q "split-pack MTP evidence" scripts/test-ios-morning-runtime-checkpoint-plan.sh 2>/dev/null; then
     echo "❌ FAIL: morning MTP checkpoint plan can run draft proof without a usable installed GGUF primary."
     FAIL=1
 fi
 
-if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present" docs/IOS_RUNTIME.md 2>/dev/null ||
-   ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
-    echo "❌ FAIL: docs do not state that MTP proof needs both installed GGUF primary and installed MTP draft inventory."
+if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present.*same manifest" docs/IOS_RUNTIME.md 2>/dev/null ||
+   ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present.*same tier and same manifest" docs/REAL_MODEL_QA_REPORT_TEMPLATE.md 2>/dev/null; then
+    echo "❌ FAIL: docs do not state that MTP proof needs both installed GGUF primary and installed MTP draft inventory from the same manifest pack."
     FAIL=1
 fi
 
-if ! grep -q "installed_gguf status=present.*installed_mtp_draft status=present" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
+if ! grep -q "same manifest.*installed_gguf status=present.*installed_mtp_draft status=present" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
    ! grep -q "every benchmark summary stage must keep draft acceleration active" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null ||
    ! grep -q "context_tokens=1024" docs/MODEL_ARTIFACT_STATUS.md 2>/dev/null; then
     echo "❌ FAIL: model artifact status does not reflect paired MTP inventory and per-stage draft proof requirements."
