@@ -178,7 +178,7 @@ coreai_adapter_looks_usable() {
 
   [[ -d "$path" ]] || return 1
   if [[ -f "$path/config.json" ]] &&
-     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
+     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' -o -name '*.gguf' -o -name '*.bin' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
     return 1
   fi
   find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
@@ -775,6 +775,8 @@ def coreai_adapter_looks_usable(path: pathlib.Path) -> bool:
     if (path / "config.json").is_file() and (
         any(file_size(child) > 0 for child in path.glob("**/*.safetensors"))
         or any(file_size(child) > 0 for child in path.glob("**/*.safetensors.index.json"))
+        or any(file_size(child) > 0 for child in path.glob("**/*.gguf"))
+        or any(file_size(child) > 0 for child in path.glob("**/*.bin"))
     ):
         return False
     return any(child.is_file() and file_size(child) > 0 for child in path.rglob("*"))

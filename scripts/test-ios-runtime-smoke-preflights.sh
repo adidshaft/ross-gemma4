@@ -214,6 +214,14 @@ run_expect_exit_2 \
   "MLX directory passed as CoreAI adapter" \
   "$SIM_SMOKE" --runtime coreml --artifact-kind foundation_adapter --model "$usable_mlx"
 
+foreign_coreml_dir="$tmpdir/foreign-coreai-adapter.mlmodelc"
+mkdir -p "$foreign_coreml_dir"
+printf '{}' >"$foreign_coreml_dir/config.json"
+printf 'GGUFbad' >"$foreign_coreml_dir/model.gguf"
+run_expect_exit_2 \
+  "foreign CoreAI adapter directory contents" \
+  "$SIM_SMOKE" --runtime coreml --artifact-kind coreml_model --model "$foreign_coreml_dir"
+
 txt_coreml_file="$tmpdir/not-a-coreml-adapter.txt"
 printf 'adapter' >"$txt_coreml_file"
 run_expect_exit_2 \

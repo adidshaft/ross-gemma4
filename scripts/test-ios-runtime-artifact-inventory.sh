@@ -123,6 +123,19 @@ printf 'adapter' > "$tmpdir/foundation-adapter.mlmodelc/model.bin"
 "$INVENTORY" --search-root "$tmpdir" > /tmp/ross-runtime-inventory.out
 grep -q "lane=coreai_adapter status=present" /tmp/ross-runtime-inventory.out
 
+foreign_coreai_root="$tmpdir/foreign-coreai"
+foreign_coreai_dir="$foreign_coreai_root/foreign-adapter.mlmodelc"
+mkdir -p "$foreign_coreai_dir"
+printf '{}' > "$foreign_coreai_dir/config.json"
+printf 'GGUFbad' > "$foreign_coreai_dir/model.gguf"
+"$INVENTORY" --search-root "$foreign_coreai_root" > /tmp/ross-runtime-inventory.out
+grep -q "lane=coreai_adapter status=missing .*reason=no_mlmodel_or_mlmodelc_adapter_found" /tmp/ross-runtime-inventory.out
+if grep -q "foreign-adapter.mlmodelc" /tmp/ross-runtime-inventory.out; then
+  echo "Did not expect foreign GGUF/CoreAI adapter-shaped directory to satisfy adapter inventory." >&2
+  cat /tmp/ross-runtime-inventory.out >&2
+  exit 1
+fi
+
 tiny="$tmpdir/tiny-draft.gguf"
 printf 'GGUF' > "$tiny"
 rm -f "$tmpdir/gemma-draft.gguf"

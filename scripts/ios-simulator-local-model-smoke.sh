@@ -407,7 +407,7 @@ coreai_adapter_looks_usable() {
 
   [[ -d "$path" ]] || return 1
   if [[ -f "$path/config.json" ]] &&
-     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
+     find "$path" -maxdepth 3 -type f \( -name '*.safetensors' -o -name '*.safetensors.index.json' -o -name '*.gguf' -o -name '*.bin' \) -size +0c -print -quit 2>/dev/null | grep -q .; then
     return 1
   fi
   find "$path" -type f -size +0c -print -quit 2>/dev/null | grep -q .
