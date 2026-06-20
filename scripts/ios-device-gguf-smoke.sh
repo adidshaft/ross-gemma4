@@ -567,6 +567,55 @@ def validate_required_draft_failure_metrics(fields):
             )
             sys.exit(1)
 
+def emit_failure_identity_diagnostic_guard(identity, *, outcome):
+    suffix = "on_failure" if outcome == "fail" else "on_timeout"
+    if identity is None:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=missing_runtime_identity_{suffix} requested=gemma_local_runtime",
+            file=sys.stderr,
+        )
+        return
+
+    availability_error = runtime_identity_availability_error(identity)
+    if availability_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_unavailable_{suffix} requested=gemma_local_runtime "
+            f"{availability_error}",
+            file=sys.stderr,
+        )
+        return
+
+    artifact_error = runtime_identity_artifact_error(identity, "gemma_local_runtime")
+    if artifact_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_artifact_mismatch_{suffix} requested=gemma_local_runtime "
+            f"{artifact_error}",
+            file=sys.stderr,
+        )
+        return
+
+    resource_error = runtime_identity_resource_error(identity)
+    if resource_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_resource_missing_{suffix} requested=gemma_local_runtime "
+            f"{resource_error}",
+            file=sys.stderr,
+        )
+        return
+
+    diagnostic_error = runtime_identity_diagnostic_error(identity)
+    if diagnostic_error:
+        print(
+            "ROSS_SMOKE_GUARD_FAIL "
+            f"reason=runtime_identity_diagnostic_error_{suffix} requested=gemma_local_runtime "
+            f"{diagnostic_error}",
+            file=sys.stderr,
+        )
+
 outcome = None
 identity = None
 matrix_fields = None
@@ -635,6 +684,7 @@ if outcome == "pass":
 
 if outcome == "fail":
     validate_identity_guard(identity, require_identity=False)
+    emit_failure_identity_diagnostic_guard(identity, outcome="fail")
     validate_required_draft_failure_metrics(fail_fields)
     print(failure_summary_line(identity, fail_fields, matrix_fields))
     sys.exit(1)

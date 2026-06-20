@@ -113,6 +113,14 @@ ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime requested_runtime=gemma_
 EOF
       exit 0
     fi
+    if [[ "${FAKE_TERMINAL_FAIL:-}" == "1" ]]; then
+      cat <<EOF
+Launched application with com.ross.ios bundle identifier.
+ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=$runtime_error_detail context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true error=nil
+ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=gemma_local_runtime requested_runtime=gemma_local_runtime tier=quick_start profile=$smoke_profile stage=active_pack error=${FAKE_TERMINAL_FAIL_ERROR:-manifest_primary_unusable_artifact} runtime_error_detail=${FAKE_TERMINAL_FAIL_ERROR:-manifest_primary_unusable_artifact} elapsed=1.00s
+EOF
+      exit 0
+    fi
     cat <<EOF
 Launched application with com.ross.ios bundle identifier.
 ROSS_RUNTIME_IDENTITY provider=AlphaLlamaCppProvider requested_runtime=gemma_local_runtime actual_runtime=gemma_local_runtime pack_runtime=gemma_local_runtime model_format=local_model_artifact checksum_verified=true artifact_path_type=file artifact_path=$artifact acceleration=standard draft_tokens=nil draft_model=nil draft_model_path_type=nil draft_status=no_draft_configured draft_error_detail=no_draft_configured runtime_error_detail=$runtime_error_detail context_tokens=4096 gpu_offload=n_gpu_layers:0 fallback=none available=true
@@ -302,6 +310,36 @@ fi
 if ! grep -q "runtime_identity_diagnostic_error" "$tmpdir/gguf-diagnostic-identity.out"; then
   echo "FAIL: diagnostic GGUF runtime identity did not hit diagnostic guard." >&2
   cat "$tmpdir/gguf-diagnostic-identity.out" >&2 || true
+  exit 1
+fi
+
+set +e
+PATH="$fake_bin:$PATH" \
+  FAKE_DEVICE_ROOT="$fake_device_root" \
+  FAKE_COPY_LOG="$copy_log" \
+  FAKE_ENV_LOG="$env_log" \
+  FAKE_RUNTIME_ERROR_DETAIL="manifest_primary_unusable_artifact" \
+  FAKE_TERMINAL_FAIL=1 \
+  bash "$DEVICE_SMOKE" \
+    --device fake-device \
+    --bundle-id com.ross.ios \
+    --model "$tmpdir/model.gguf" \
+    --tier quickStart \
+    --pack-id unit-pack \
+    --stage-timeout 5 \
+    >"$tmpdir/gguf-terminal-fail-diagnostic-identity.out" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 1 ]]; then
+  echo "FAIL: terminal failed GGUF smoke with diagnostic identity should exit 1, got $rc" >&2
+  cat "$tmpdir/gguf-terminal-fail-diagnostic-identity.out" >&2 || true
+  exit 1
+fi
+if ! grep -q "runtime_identity_diagnostic_error_on_failure" "$tmpdir/gguf-terminal-fail-diagnostic-identity.out" ||
+   ! grep -q "ROSS_SMOKE_FAILURE_SUMMARY" "$tmpdir/gguf-terminal-fail-diagnostic-identity.out" ||
+   ! grep -q "failure_runtime_proof_error=runtime_diagnostic_error" "$tmpdir/gguf-terminal-fail-diagnostic-identity.out"; then
+  echo "FAIL: terminal failed GGUF smoke did not emit diagnostic identity guard and failure summary." >&2
+  cat "$tmpdir/gguf-terminal-fail-diagnostic-identity.out" >&2 || true
   exit 1
 fi
 
